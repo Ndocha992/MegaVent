@@ -153,7 +153,7 @@ Distributed under the MIT License. See [LICENSE.md](LICENSE.md) for details.
 
 ## Contact
 
-**Project Lead**: Abel Mae  
+**Project Lead**: Abel Maeba
 **Email**: abel@megavent.com  
 **University**: Kabarak University
 
