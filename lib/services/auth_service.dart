@@ -2,6 +2,10 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:megavent/models/admin.dart';
+import 'package:megavent/models/attendee.dart';
+import 'package:megavent/models/organizer.dart';
+import 'package:megavent/models/staff.dart';
 
 class AuthService extends ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -23,21 +27,13 @@ class AuthService extends ChangeNotifier {
   // User state changes
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
-  // Register student with email and password
-  Future<Map<String, dynamic>> registerStudent({
+  // Register attendee with email and password
+  Future<Map<String, dynamic>> registerAttendee({
     required String fullName,
     required String email,
     required String password,
-    required String studentId,
     required String phone,
-    required String course,
-    required double yearOfStudy,
     String? profileImage,
-    Map<String, dynamic>? identificationImages,
-    required String mpesaPhone,
-    required String institutionName,
-    Map<String, dynamic>? guarantorDetails,
-    required bool Function(String) emailValidator,
   }) async {
     _setLoading(true);
     try {
@@ -45,26 +41,16 @@ class AuthService extends ChangeNotifier {
       if (fullName.isEmpty ||
           email.isEmpty ||
           password.isEmpty ||
-          studentId.isEmpty ||
-          phone.isEmpty ||
-          mpesaPhone.isEmpty ||
-          institutionName.isEmpty) {
+          phone.isEmpty) {
         return {'success': false, 'message': 'All fields are required'};
       }
 
-      // Check if email is a university email
-      if (!emailValidator(email)) {
-        return {
-          'success': false,
-          'message': 'Please use a valid university email'
-        };
-      }
-
       // Check if email is already used
-      final emailQuery = await _firestore
-          .collection('users')
-          .where('email', isEqualTo: email)
-          .get();
+      final emailQuery =
+          await _firestore
+              .collection('users')
+              .where('email', isEqualTo: email)
+              .get();
 
       if (emailQuery.docs.isNotEmpty) {
         return {'success': false, 'message': 'Email already registered'};
@@ -82,23 +68,43 @@ class AuthService extends ChangeNotifier {
       // Send email verification
       await credential.user!.sendEmailVerification();
 
-      // Create student document
-      Student student = Student(
+      // Create attendee document
+      Attendee attendee = Attendee(
         id: credential.user!.uid,
         fullName: fullName,
+        email: email,
+        phone: phone,
+        profileImage: profileImage,
+        emailVerified: false,
+        isActive: true,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
 
+      // Create in attendees collection
       await _firestore
-          .collection('students')
+          .collection('attendees')
           .doc(credential.user!.uid)
-          .set(student.toMap());
+          .set(attendee.toMap());
+
+      // Create in users collection for unified queries
+      await _firestore.collection('users').doc(credential.user!.uid).set({
+        'id': credential.user!.uid,
+        'fullName': fullName,
+        'email': email,
+        'phone': phone,
+        'role': 'attendee',
+        'profileImage': profileImage,
+        'isActive': true,
+        'emailVerified': false,
+        'createdAt': DateTime.now(),
+        'updatedAt': DateTime.now(),
+      });
 
       return {
         'success': true,
         'message': 'Registration successful! Please verify your email.',
-        'user': student
+        'user': attendee,
       };
     } on FirebaseAuthException catch (e) {
       String errorMessage;
@@ -122,41 +128,38 @@ class AuthService extends ChangeNotifier {
       }
       return {
         'success': false,
-        'message': 'Registration failed. Please try again later.'
+        'message': 'Registration failed. Please try again later.',
       };
     } finally {
       _setLoading(false);
     }
   }
 
-  // Register provider with email and password
-  Future<Map<String, dynamic>> registerProvider({
-    required String businessName,
+  // Register organizer with email and password
+  Future<Map<String, dynamic>> registerOrganizer({
+    required String fullName,
     required String email,
+    required String password,
+    required String phone,
+    String? organization,
+    String? profileImage,
   }) async {
     _setLoading(true);
     try {
       // Validate inputs
-      if (businessName.isEmpty ||
+      if (fullName.isEmpty ||
           email.isEmpty ||
           password.isEmpty ||
           phone.isEmpty) {
         return {'success': false, 'message': 'All fields are required'};
       }
 
-      // Check if email is valid
-      if (!emailValidator(email)) {
-        return {
-          'success': false,
-          'message': 'Please use a valid business email'
-        };
-      }
-
       // Check if email is already used
-      final emailQuery = await _firestore
-          .collection('users')
-          .where('email', isEqualTo: email)
-          .get();
+      final emailQuery =
+          await _firestore
+              .collection('users')
+              .where('email', isEqualTo: email)
+              .get();
 
       if (emailQuery.docs.isNotEmpty) {
         return {'success': false, 'message': 'Email already registered'};
@@ -169,29 +172,53 @@ class AuthService extends ChangeNotifier {
       );
 
       // Update display name
-      await credential.user!.updateDisplayName(businessName);
+      await credential.user!.updateDisplayName(fullName);
 
       // Send email verification
       await credential.user!.sendEmailVerification();
 
-      // Create provider document
-      Provider provider = Provider(
+      // Create organizer document
+      Organizer organizer = Organizer(
         id: credential.user!.uid,
-        businessName: businessName,
-        businessEmail: email,
+        fullName: fullName,
+        email: email,
+        phone: phone,
+        organization: organization,
+        profileImage: profileImage,
+        emailVerified: false,
+        isApproved: false,
+        isActive: false, // Inactive until approved
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
 
+      // Create in organizers collection
       await _firestore
-          .collection('providers')
+          .collection('organizers')
           .doc(credential.user!.uid)
-          .set(provider.toMap());
+          .set(organizer.toMap());
+
+      // Create in users collection for unified queries
+      await _firestore.collection('users').doc(credential.user!.uid).set({
+        'id': credential.user!.uid,
+        'fullName': fullName,
+        'email': email,
+        'phone': phone,
+        'role': 'organizer',
+        'organization': organization,
+        'profileImage': profileImage,
+        'isActive': false,
+        'isApproved': false,
+        'emailVerified': false,
+        'createdAt': DateTime.now(),
+        'updatedAt': DateTime.now(),
+      });
 
       return {
         'success': true,
-        'message': 'Registration successful! Please verify your email.',
-        'user': provider
+        'message':
+            'Registration successful! Please verify your email and wait for approval.',
+        'user': organizer,
       };
     } on FirebaseAuthException catch (e) {
       String errorMessage;
@@ -215,7 +242,458 @@ class AuthService extends ChangeNotifier {
       }
       return {
         'success': false,
-        'message': 'Registration failed. Please try again later.'
+        'message': 'Registration failed. Please try again later.',
+      };
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Create Admin (only callable by existing Admin)
+  Future<Map<String, dynamic>> createAdmin({
+    required String fullName,
+    required String email,
+    required String password,
+    required String phone,
+    String? profileImage,
+  }) async {
+    _setLoading(true);
+    try {
+      // Check if current user is a Admin
+      final currentUserData = await getUserData();
+      if (!currentUserData['success'] || currentUserData['role'] != 'admin') {
+        return {'success': false, 'message': 'Unauthorized access'};
+      }
+
+      // Validate inputs
+      if (fullName.isEmpty ||
+          email.isEmpty ||
+          password.isEmpty ||
+          phone.isEmpty) {
+        return {'success': false, 'message': 'All fields are required'};
+      }
+
+      // Check if email is already used
+      final emailQuery =
+          await _firestore
+              .collection('users')
+              .where('email', isEqualTo: email)
+              .get();
+
+      if (emailQuery.docs.isNotEmpty) {
+        return {'success': false, 'message': 'Email already registered'};
+      }
+
+      // Create user in Firebase Auth
+      UserCredential credential = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      // Update display name
+      await credential.user!.updateDisplayName(fullName);
+
+      // Create Admin document
+      Admin admin = Admin(
+        id: credential.user!.uid,
+        fullName: fullName,
+        email: email,
+        phone: phone,
+        profileImage: profileImage,
+        emailVerified: true, // Auto-verified for admins
+        isActive: true,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        createdBy: currentUser!.uid,
+        adminLevel: '',
+        permissions: [],
+      );
+
+      // Create in admins collection
+      await _firestore
+          .collection('admins')
+          .doc(credential.user!.uid)
+          .set(admin.toMap());
+
+      // Create in users collection
+      await _firestore.collection('users').doc(credential.user!.uid).set({
+        'id': credential.user!.uid,
+        'fullName': fullName,
+        'email': email,
+        'phone': phone,
+        'role': 'admin',
+        'profileImage': profileImage,
+        'isActive': true,
+        'emailVerified': true,
+        'createdAt': DateTime.now(),
+        'updatedAt': DateTime.now(),
+        'createdBy': currentUser!.uid,
+      });
+
+      return {
+        'success': true,
+        'message': 'Admin created successfully!',
+        'user': admin,
+      };
+    } on FirebaseAuthException catch (e) {
+      String errorMessage;
+      switch (e.code) {
+        case 'email-already-in-use':
+          errorMessage = 'Email already in use';
+          break;
+        case 'weak-password':
+          errorMessage = 'Password is too weak';
+          break;
+        case 'invalid-email':
+          errorMessage = 'Invalid email format';
+          break;
+        default:
+          errorMessage = 'Failed to create Admin. Please try again.';
+      }
+      return {'success': false, 'message': errorMessage};
+    } catch (e) {
+      if (e is FirebaseException && e.code == 'unavailable') {
+        return {'success': false, 'message': 'No internet connection'};
+      }
+      return {
+        'success': false,
+        'message': 'Failed to create Admin. Please try again later.',
+      };
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Create staff member (only callable by organizer)
+  Future<Map<String, dynamic>> createStaff({
+    required String fullName,
+    required String email,
+    required String password,
+    required String phone,
+    required String role, // e.g., 'event_manager', 'coordinator', etc.
+    String? profileImage,
+  }) async {
+    _setLoading(true);
+    try {
+      // Check if current user is an organizer
+      final currentUserData = await getUserData();
+      if (!currentUserData['success'] ||
+          currentUserData['role'] != 'organizer') {
+        return {
+          'success': false,
+          'message': 'Only organizers can create staff',
+        };
+      }
+
+      // Check if organizer is approved and active
+      final organizer = currentUserData['user'] as Organizer;
+      if (!organizer.isApproved || !organizer.isActive) {
+        return {
+          'success': false,
+          'message': 'Your organizer account must be approved first',
+        };
+      }
+
+      // Validate inputs
+      if (fullName.isEmpty ||
+          email.isEmpty ||
+          password.isEmpty ||
+          phone.isEmpty ||
+          role.isEmpty) {
+        return {'success': false, 'message': 'All fields are required'};
+      }
+
+      // Check if email is already used
+      final emailQuery =
+          await _firestore
+              .collection('users')
+              .where('email', isEqualTo: email)
+              .get();
+
+      if (emailQuery.docs.isNotEmpty) {
+        return {'success': false, 'message': 'Email already registered'};
+      }
+
+      // Create user in Firebase Auth
+      UserCredential credential = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      // Update display name
+      await credential.user!.updateDisplayName(fullName);
+
+      // Create staff document
+      Staff staff = Staff(
+        id: credential.user!.uid,
+        fullName: fullName,
+        email: email,
+        phone: phone,
+        role: role,
+        profileImage: profileImage,
+        organizerId: organizer.id,
+        organization: organizer.organization,
+        emailVerified: false,
+        isActive: true,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        createdBy: currentUser!.uid,
+      );
+
+      // Send email verification
+      await credential.user!.sendEmailVerification();
+
+      // Create in staff collection
+      await _firestore
+          .collection('staff')
+          .doc(credential.user!.uid)
+          .set(staff.toMap());
+
+      // Create in users collection
+      await _firestore.collection('users').doc(credential.user!.uid).set({
+        'id': credential.user!.uid,
+        'fullName': fullName,
+        'email': email,
+        'phone': phone,
+        'role': 'staff',
+        'staffRole': role,
+        'organizerId': organizer.id,
+        'organization': organizer.organization,
+        'profileImage': profileImage,
+        'isActive': true,
+        'emailVerified': false,
+        'createdAt': DateTime.now(),
+        'updatedAt': DateTime.now(),
+        'createdBy': currentUser!.uid,
+      });
+
+      return {
+        'success': true,
+        'message': 'Staff member created successfully!',
+        'user': staff,
+      };
+    } on FirebaseAuthException catch (e) {
+      String errorMessage;
+      switch (e.code) {
+        case 'email-already-in-use':
+          errorMessage = 'Email already in use';
+          break;
+        case 'weak-password':
+          errorMessage = 'Password is too weak';
+          break;
+        case 'invalid-email':
+          errorMessage = 'Invalid email format';
+          break;
+        default:
+          errorMessage = 'Failed to create staff member. Please try again.';
+      }
+      return {'success': false, 'message': errorMessage};
+    } catch (e) {
+      if (e is FirebaseException && e.code == 'unavailable') {
+        return {'success': false, 'message': 'No internet connection'};
+      }
+      return {
+        'success': false,
+        'message': 'Failed to create staff member. Please try again later.',
+      };
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Login with email/password
+  Future<Map<String, dynamic>> loginWithEmailAndPassword(
+    String email,
+    String password,
+  ) async {
+    _setLoading(true);
+    try {
+      if (email.isEmpty || password.isEmpty) {
+        return {'success': false, 'message': 'Email and password are required'};
+      }
+
+      UserCredential credential = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      // Check email verification for non-admin users
+      if (!credential.user!.emailVerified) {
+        // Check if user is Admin (they don't need email verification)
+        DocumentSnapshot userDoc =
+            await _firestore
+                .collection('users')
+                .doc(credential.user!.uid)
+                .get();
+
+        if (userDoc.exists && userDoc.data() != null) {
+          Map<String, dynamic> userData =
+              userDoc.data() as Map<String, dynamic>;
+          if (userData['role'] != 'admin') {
+            await _auth.signOut();
+            return {
+              'success': false,
+              'message': 'Please verify your email before logging in',
+            };
+          }
+        } else {
+          await _auth.signOut();
+          return {
+            'success': false,
+            'message': 'Please verify your email before logging in',
+          };
+        }
+      }
+
+      // Get user data based on role
+      return await getUserData();
+    } on FirebaseAuthException catch (e) {
+      String errorMessage;
+      switch (e.code) {
+        case 'user-not-found':
+          errorMessage = 'No user found with this email';
+          break;
+        case 'wrong-password':
+          errorMessage = 'Incorrect password';
+          break;
+        case 'user-disabled':
+          errorMessage = 'This account has been disabled';
+          break;
+        case 'invalid-email':
+          errorMessage = 'Invalid email format';
+          break;
+        default:
+          errorMessage = 'Login failed. Please try again.';
+      }
+      return {'success': false, 'message': errorMessage};
+    } catch (e) {
+      if (e is FirebaseException && e.code == 'unavailable') {
+        return {'success': false, 'message': 'No internet connection'};
+      }
+      return {
+        'success': false,
+        'message': 'Login failed. Please try again later.',
+      };
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Get user data based on type
+  Future<Map<String, dynamic>> getUserData() async {
+    if (currentUser == null) {
+      return {'success': false, 'message': 'No user signed in'};
+    }
+
+    _setLoading(true);
+    try {
+      // Try to get Admin data
+      DocumentSnapshot adminDoc =
+          await _firestore.collection('admins').doc(currentUser!.uid).get();
+      if (adminDoc.exists) {
+        Admin admin = Admin.fromFirestore(adminDoc);
+        return {'success': true, 'user': admin, 'role': 'admin'};
+      }
+
+      // Try to get organizer data
+      DocumentSnapshot organizerDoc =
+          await _firestore.collection('organizers').doc(currentUser!.uid).get();
+      if (organizerDoc.exists) {
+        Organizer organizer = Organizer.fromFirestore(organizerDoc);
+        return {'success': true, 'user': organizer, 'role': 'organizer'};
+      }
+
+      // Try to get attendee data
+      DocumentSnapshot attendeeDoc =
+          await _firestore.collection('attendees').doc(currentUser!.uid).get();
+      if (attendeeDoc.exists) {
+        Attendee attendee = Attendee.fromFirestore(attendeeDoc);
+        return {'success': true, 'user': attendee, 'role': 'attendee'};
+      }
+
+      // Try to get staff data
+      DocumentSnapshot staffDoc =
+          await _firestore.collection('staff').doc(currentUser!.uid).get();
+      if (staffDoc.exists) {
+        Staff staff = Staff.fromFirestore(staffDoc);
+        return {'success': true, 'user': staff, 'role': 'staff'};
+      }
+
+      return {'success': false, 'message': 'User data not found'};
+    } catch (e) {
+      if (e is FirebaseException && e.code == 'unavailable') {
+        return {'success': false, 'message': 'No internet connection'};
+      }
+      return {'success': false, 'message': 'Failed to retrieve user data'};
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Check if email is verified
+  Future<bool> checkEmailVerified() async {
+    try {
+      // Reload user to get latest verification status
+      await currentUser?.reload();
+      return currentUser?.emailVerified ?? false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Resend email verification
+  Future<Map<String, dynamic>> resendVerificationEmail() async {
+    _setLoading(true);
+    try {
+      if (currentUser == null) {
+        return {'success': false, 'message': 'No user is currently signed in'};
+      }
+
+      await currentUser!.sendEmailVerification();
+      return {'success': true, 'message': 'Verification email sent'};
+    } catch (e) {
+      if (e is FirebaseException && e.code == 'unavailable') {
+        return {'success': false, 'message': 'No internet connection'};
+      }
+      return {
+        'success': false,
+        'message': 'Failed to send verification email. Please try again.',
+      };
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Password reset
+  Future<Map<String, dynamic>> sendPasswordResetEmail(String email) async {
+    _setLoading(true);
+    try {
+      if (email.isEmpty) {
+        return {'success': false, 'message': 'Email is required'};
+      }
+
+      await _auth.sendPasswordResetEmail(email: email);
+      return {'success': true, 'message': 'Password reset email sent'};
+    } on FirebaseAuthException catch (e) {
+      String errorMessage;
+      switch (e.code) {
+        case 'user-not-found':
+          errorMessage = 'No user found with this email';
+          break;
+        case 'invalid-email':
+          errorMessage = 'Invalid email format';
+          break;
+        default:
+          errorMessage = 'Password reset failed. Please try again.';
+      }
+      return {'success': false, 'message': errorMessage};
+    } catch (e) {
+      if (e is FirebaseException && e.code == 'unavailable') {
+        return {'success': false, 'message': 'No internet connection'};
+      }
+      return {
+        'success': false,
+        'message': 'Password reset failed. Please try again later.',
       };
     } finally {
       _setLoading(false);
@@ -236,14 +714,14 @@ class AuthService extends ChangeNotifier {
       if (currentPassword.isEmpty || newPassword.isEmpty) {
         return {
           'success': false,
-          'message': 'Current password and new password are required'
+          'message': 'Current password and new password are required',
         };
       }
 
       if (currentPassword == newPassword) {
         return {
           'success': false,
-          'message': 'New password must be different from current password'
+          'message': 'New password must be different from current password',
         };
       }
 
@@ -293,212 +771,8 @@ class AuthService extends ChangeNotifier {
       }
       return {
         'success': false,
-        'message': 'Failed to change password. Please try again later.'
+        'message': 'Failed to change password. Please try again later.',
       };
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  // Login with email/password
-  Future<Map<String, dynamic>> loginWithEmailAndPassword(
-    String email,
-    String password,
-  ) async {
-    _setLoading(true);
-    try {
-      if (email.isEmpty || password.isEmpty) {
-        return {'success': false, 'message': 'Email and password are required'};
-      }
-
-      UserCredential credential = await _auth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-
-      // Check email verification
-      if (!credential.user!.emailVerified) {
-        await _auth.signOut();
-        return {
-          'success': false,
-          'message': 'Please verify your email before logging in'
-        };
-      }
-
-      // Determine user type and get appropriate data
-      // Check if student
-      DocumentSnapshot studentDoc = await _firestore
-          .collection('students')
-          .doc(credential.user!.uid)
-          .get();
-      if (studentDoc.exists) {
-        Student student = Student.fromFirestore(studentDoc);
-        return {
-          'success': true,
-          'message': 'Login successful',
-          'user': student,
-          'role': 'student'
-        };
-      }
-
-      // Check if provider
-      DocumentSnapshot providerDoc = await _firestore
-          .collection('providers')
-          .doc(credential.user!.uid)
-          .get();
-      if (providerDoc.exists) {
-        Provider provider = Provider.fromFirestore(providerDoc);
-        return {
-          'success': true,
-          'message': 'Login successful',
-          'user': provider,
-          'role': 'provider'
-        };
-      }
-
-      // If we get here, user has auth account but no document in Firestore
-      await _auth.signOut();
-      return {'success': false, 'message': 'User account not found'};
-    } on FirebaseAuthException catch (e) {
-      String errorMessage;
-      switch (e.code) {
-        case 'user-not-found':
-          errorMessage = 'No user found with this email';
-          break;
-        case 'wrong-password':
-          errorMessage = 'Incorrect password';
-          break;
-        case 'user-disabled':
-          errorMessage = 'This account has been disabled';
-          break;
-        case 'invalid-email':
-          errorMessage = 'Invalid email format';
-          break;
-        default:
-          errorMessage = 'Login failed. Please try again.';
-      }
-      return {'success': false, 'message': errorMessage};
-    } catch (e) {
-      if (e is FirebaseException && e.code == 'unavailable') {
-        return {'success': false, 'message': 'No internet connection'};
-      }
-      return {
-        'success': false,
-        'message': 'Login failed. Please try again later.'
-      };
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  // Check if email is verified
-  Future<bool> checkEmailVerified() async {
-    try {
-      // Reload user to get latest verification status
-      await currentUser?.reload();
-      return currentUser?.emailVerified ?? false;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  // Resend email verification
-  Future<Map<String, dynamic>> resendVerificationEmail() async {
-    _setLoading(true);
-    try {
-      if (currentUser == null) {
-        return {'success': false, 'message': 'No user is currently signed in'};
-      }
-
-      await currentUser!.sendEmailVerification();
-      return {'success': true, 'message': 'Verification email sent'};
-    } catch (e) {
-      if (e is FirebaseException && e.code == 'unavailable') {
-        return {'success': false, 'message': 'No internet connection'};
-      }
-      return {
-        'success': false,
-        'message': 'Failed to send verification email. Please try again.'
-      };
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  // Password reset
-  Future<Map<String, dynamic>> sendPasswordResetEmail(String email) async {
-    _setLoading(true);
-    try {
-      if (email.isEmpty) {
-        return {'success': false, 'message': 'Email is required'};
-      }
-
-      await _auth.sendPasswordResetEmail(email: email);
-      return {'success': true, 'message': 'Password reset email sent'};
-    } on FirebaseAuthException catch (e) {
-      String errorMessage;
-      switch (e.code) {
-        case 'user-not-found':
-          errorMessage = 'No user found with this email';
-          break;
-        case 'invalid-email':
-          errorMessage = 'Invalid email format';
-          break;
-        default:
-          errorMessage = 'Password reset failed. Please try again.';
-      }
-      return {'success': false, 'message': errorMessage};
-    } catch (e) {
-      if (e is FirebaseException && e.code == 'unavailable') {
-        return {'success': false, 'message': 'No internet connection'};
-      }
-      return {
-        'success': false,
-        'message': 'Password reset failed. Please try again later.'
-      };
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  // Get user data based on type
-  Future<Map<String, dynamic>> getUserData() async {
-    if (currentUser == null) {
-      return {'success': false, 'message': 'No user signed in'};
-    }
-
-    _setLoading(true);
-    try {
-      // Try to get admin data
-      DocumentSnapshot adminDoc =
-          await _firestore.collection('admins').doc(currentUser!.uid).get();
-      if (adminDoc.exists) {
-        Admin admin = Admin.fromFirestore(adminDoc);
-        return {'success': true, 'user': admin, 'role': 'admin'};
-      }
-
-      // Try to get student data
-      DocumentSnapshot studentDoc =
-          await _firestore.collection('students').doc(currentUser!.uid).get();
-      if (studentDoc.exists) {
-        Student student = Student.fromFirestore(studentDoc);
-        return {'success': true, 'user': student, 'role': 'student'};
-      }
-
-      // Try to get provider data
-      DocumentSnapshot providerDoc =
-          await _firestore.collection('providers').doc(currentUser!.uid).get();
-      if (providerDoc.exists) {
-        Provider provider = Provider.fromFirestore(providerDoc);
-        return {'success': true, 'user': provider, 'role': 'provider'};
-      }
-
-      return {'success': false, 'message': 'User data not found'};
-    } catch (e) {
-      if (e is FirebaseException && e.code == 'unavailable') {
-        return {'success': false, 'message': 'No internet connection'};
-      }
-      return {'success': false, 'message': 'Failed to retrieve user data'};
     } finally {
       _setLoading(false);
     }
@@ -516,7 +790,7 @@ class AuthService extends ChangeNotifier {
       }
       return {
         'success': false,
-        'message': 'Failed to sign out. Please try again.'
+        'message': 'Failed to sign out. Please try again.',
       };
     } finally {
       _setLoading(false);
