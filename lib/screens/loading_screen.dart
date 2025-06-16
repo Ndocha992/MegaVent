@@ -8,46 +8,97 @@ class LoadingScreen extends StatelessWidget {
 
   const LoadingScreen({
     super.key,
-    this.message = 'Processing your request...',
+    this.message = 'Creating amazing events...',
     this.isFullScreen = true,
   });
 
   @override
   Widget build(BuildContext context) {
     final Widget loadingContent = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 25),
+      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 28),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 20,
+            color: AppConstants.primaryColor.withOpacity(0.15),
+            blurRadius: 30,
             spreadRadius: 0,
-            offset: const Offset(0, 10),
+            offset: const Offset(0, 15),
           ),
         ],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Custom SpinKit animation
+          // Custom animated logo container
           Container(
-            width: 80,
-            height: 80,
+            width: 90,
+            height: 90,
             decoration: BoxDecoration(
-              color: AppConstants.primaryLightColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(15),
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: AppConstants.logoGradient,
+              ),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: AppConstants.primaryColor.withOpacity(0.3),
+                  blurRadius: 20,
+                  spreadRadius: 0,
+                  offset: const Offset(0, 8),
+                ),
+              ],
             ),
-            child: const Padding(
-              padding: EdgeInsets.all(5.0),
-              child: SpinKitDoubleBounce(
-                color: AppConstants.primaryColor,
-                size: 70.0,
+            child: Stack(
+              children: [
+                // Animated spinning outer ring
+                const Positioned.fill(
+                  child: SpinKitRing(
+                    color: Colors.white,
+                    size: 90.0,
+                    lineWidth: 3.0,
+                  ),
+                ),
+                // Logo in center
+                Center(
+                  child: Container(
+                    width: 45,
+                    height: 45,
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.event,
+                      color: AppConstants.primaryColor,
+                      size: 24,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          // App name
+          ShaderMask(
+            shaderCallback:
+                (bounds) => const LinearGradient(
+                  colors: AppConstants.primaryGradient,
+                ).createShader(bounds),
+            child: const Text(
+              'MegaVent',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
               ),
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
+          // Loading message
           Text(
             message,
             style: AppConstants.bodyMedium.copyWith(
@@ -57,10 +108,19 @@ class LoadingScreen extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
-          const Text(
+          // Secondary message
+          Text(
             'Please wait...',
-            style: AppConstants.bodySmallSecondary,
+            style: AppConstants.bodySmallSecondary.copyWith(
+              color: AppConstants.textSecondaryColor.withOpacity(0.7),
+            ),
             textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 20),
+          // Animated dots
+          const SpinKitThreeBounce(
+            color: AppConstants.primaryColor,
+            size: 20.0,
           ),
         ],
       ),
@@ -68,7 +128,16 @@ class LoadingScreen extends StatelessWidget {
 
     if (isFullScreen) {
       return Container(
-        color: Colors.black.withOpacity(0.5),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.black.withOpacity(0.7),
+              Colors.black.withOpacity(0.5),
+            ],
+          ),
+        ),
         child: Center(child: loadingContent),
       );
     } else {
@@ -101,7 +170,7 @@ class LoadingOverlay {
       _overlayEntry = OverlayEntry(
         builder:
             (context) =>
-                LoadingScreen(message: message ?? 'Processing your request...'),
+                LoadingScreen(message: message ?? 'Creating amazing events...'),
       );
 
       Overlay.of(context).insert(_overlayEntry!);

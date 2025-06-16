@@ -1,4 +1,4 @@
-# MIT License
+MIT License
 
 Copyright (c) 2025 MegaVent
 
@@ -19,34 +19,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
----
-
-## Additional License Information
-
-### Third-Party Libraries
-
-This project uses several third-party libraries and packages, each with their own licenses:
-
-- **Flutter Framework**: BSD 3-Clause License
-- **Firebase SDK**: Apache License 2.0
-- **qr_flutter**: BSD 3-Clause License
-- **mobile_scanner**: BSD 3-Clause License
-- **flutter_riverpod**: MIT License
-
-Please refer to each package's individual license file for specific terms and conditions.
-
-### Trademark Notice
-
-"MegaVent" is a trademark of the MegaVent project. Any use of the MegaVent name or logo requires explicit permission from the project maintainers.
-
-### Attribution
-
-If you use this software in your own projects, we appreciate (but do not require) attribution in your project documentation or about section.
-
-### Contact
-
-For licensing questions or commercial use inquiries, please contact:
-- **Project Lead**: Abel Mae
-- **Email**: abel@megavent.com
-- **University**: Kabarak University
