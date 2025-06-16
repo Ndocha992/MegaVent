@@ -1,0 +1,62 @@
+{
+  "project_info": {
+    "project_number": "421825036732",
+    "project_id": "megavent-3b356",
+    "storage_bucket": "megavent-3b356.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:421825036732:android:f0e6249e4154588b54ebb9",
+        "android_client_info": {
+          "package_name": "com.abelndocha.megavent"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "421825036732-32m3icd5l1ccetpj8v3dttvl15bds130.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.abelndocha.megavent",
+            "certificate_hash": "5fc6a5842919d704b5dfe2c381e96bdb1bbb47f9"
+          }
+        },
+        {
+          "client_id": "421825036732-ksu3n88lmfpgm1cqkn1go7i0lhpj1olv.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.abelndocha.megavent",
+            "certificate_hash": "9c6dcdd9a361398cc33c247f2e60dbf4e6ba071d"
+          }
+        },
+        {
+          "client_id": "421825036732-s651hfs3mueluf244ngg2ttlp5gpbgn5.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAUKc3uT6ksR4rXOXw6LCZzo4AhCTDs3mY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "421825036732-s651hfs3mueluf244ngg2ttlp5gpbgn5.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "421825036732-igp9gqdr6eht45294e1blu4f45pdctl4.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.abelndocha.megavent"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
