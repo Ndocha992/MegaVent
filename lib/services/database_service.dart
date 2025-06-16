@@ -1,8 +1,10 @@
-import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:megavent/services/cloudinary.dart';
+import 'package:megavent/models/attendee.dart';
+import 'package:megavent/models/organizer.dart';
+import 'package:megavent/models/staff.dart';
+import 'package:megavent/models/admin.dart';
 
 class DatabaseService extends ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -21,120 +23,336 @@ class DatabaseService extends ChangeNotifier {
   // Get current user
   User? get currentUser => _auth.currentUser;
 
-  // Get all students
-  Future<Map<String, dynamic>> getAllStudents() async {
+  // Get all attendees
+  Future<Map<String, dynamic>> getAllAttendees() async {
     _setLoading(true);
     try {
-      final studentDocs = await _firestore.collection('students').get();
+      final attendeeDocs = await _firestore.collection('attendees').get();
 
-      List<Student> students = [];
-      for (var doc in studentDocs.docs) {
-        students.add(Student.fromFirestore(doc));
+      List<Attendee> attendees = [];
+      for (var doc in attendeeDocs.docs) {
+        attendees.add(Attendee.fromFirestore(doc));
       }
 
-      return {'success': true, 'data': students};
+      return {'success': true, 'data': attendees};
     } catch (e) {
       if (e is FirebaseException && e.code == 'unavailable') {
         return {'success': false, 'message': 'No internet connection'};
       }
-      return {'success': false, 'message': 'Failed to retrieve students data'};
+      return {'success': false, 'message': 'Failed to retrieve attendees data'};
     } finally {
       _setLoading(false);
     }
   }
 
-  // Get current user profile
-  Future<Map<String, dynamic>> getCurrentUserProfile() async {
+  // Get all organizers
+  Future<Map<String, dynamic>> getAllOrganizers() async {
     _setLoading(true);
     try {
-      if (currentUser == null) {
-        return {'success': false, 'message': 'No user is currently signed in'};
+      final organizerDocs = await _firestore.collection('organizers').get();
+
+      List<Organizer> organizers = [];
+      for (var doc in organizerDocs.docs) {
+        organizers.add(Organizer.fromFirestore(doc));
       }
 
-      // Check if student
-      DocumentSnapshot studentDoc =
-          await _firestore.collection('students').doc(currentUser!.uid).get();
-      if (studentDoc.exists) {
-        Student student = Student.fromFirestore(studentDoc);
-        return {
-          'success': true,
-          'data': student,
-          'role': 'student',
-          'verified': student.verified,
-        };
-      }
-
-      // Check if provider
-      DocumentSnapshot providerDoc =
-          await _firestore.collection('providers').doc(currentUser!.uid).get();
-      if (providerDoc.exists) {
-        Provider provider = Provider.fromFirestore(providerDoc);
-        return {
-          'success': true,
-          'data': provider,
-          'role': 'provider',
-          'verified': provider.verified,
-        };
-      }
-
-      return {'success': false, 'message': 'User profile not found'};
+      return {'success': true, 'data': organizers};
     } catch (e) {
       if (e is FirebaseException && e.code == 'unavailable') {
         return {'success': false, 'message': 'No internet connection'};
       }
-      return {'success': false, 'message': 'Failed to retrieve user profile'};
+      return {
+        'success': false,
+        'message': 'Failed to retrieve organizers data',
+      };
     } finally {
       _setLoading(false);
     }
   }
 
-  // Update user profile (works for both students and providers)
-  Future<Map<String, dynamic>> updateUserProfile(
-    Map<String, dynamic> data,
+  // Get all staff members
+  Future<Map<String, dynamic>> getAllStaff({String? organizerId}) async {
+    _setLoading(true);
+    try {
+      Query query = _firestore.collection('staff');
+
+      if (organizerId != null) {
+        query = query.where('organizerId', isEqualTo: organizerId);
+      }
+
+      final staffDocs = await query.get();
+
+      List<Staff> staff = [];
+      for (var doc in staffDocs.docs) {
+        staff.add(Staff.fromFirestore(doc));
+      }
+
+      return {'success': true, 'data': staff};
+    } catch (e) {
+      if (e is FirebaseException && e.code == 'unavailable') {
+        return {'success': false, 'message': 'No internet connection'};
+      }
+      return {'success': false, 'message': 'Failed to retrieve staff data'};
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Get all Admins
+  Future<Map<String, dynamic>> getAllAdmins() async {
+    _setLoading(true);
+    try {
+      final adminDocs = await _firestore.collection('admins').get();
+
+      List<Admin> admins = [];
+      for (var doc in adminDocs.docs) {
+        admins.add(Admin.fromFirestore(doc));
+      }
+
+      return {'success': true, 'data': admins};
+    } catch (e) {
+      if (e is FirebaseException && e.code == 'unavailable') {
+        return {'success': false, 'message': 'No internet connection'};
+      }
+      return {'success': false, 'message': 'Failed to retrieve Admins data'};
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Get pending organizers (for admin approval)
+  Future<Map<String, dynamic>> getPendingOrganizers() async {
+    _setLoading(true);
+    try {
+      final organizerDocs =
+          await _firestore
+              .collection('organizers')
+              .where('isApproved', isEqualTo: false)
+              .orderBy('createdAt', descending: true)
+              .get();
+
+      List<Organizer> organizers = [];
+      for (var doc in organizerDocs.docs) {
+        organizers.add(Organizer.fromFirestore(doc));
+      }
+
+      return {'success': true, 'data': organizers};
+    } catch (e) {
+      if (e is FirebaseException && e.code == 'unavailable') {
+        return {'success': false, 'message': 'No internet connection'};
+      }
+      return {
+        'success': false,
+        'message': 'Failed to retrieve pending organizers',
+      };
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Get approved organizers
+  Future<Map<String, dynamic>> getApprovedOrganizers() async {
+    _setLoading(true);
+    try {
+      final organizerDocs =
+          await _firestore
+              .collection('organizers')
+              .where('isApproved', isEqualTo: true)
+              .where('isActive', isEqualTo: true)
+              .orderBy('createdAt', descending: true)
+              .get();
+
+      List<Organizer> organizers = [];
+      for (var doc in organizerDocs.docs) {
+        organizers.add(Organizer.fromFirestore(doc));
+      }
+
+      return {'success': true, 'data': organizers};
+    } catch (e) {
+      if (e is FirebaseException && e.code == 'unavailable') {
+        return {'success': false, 'message': 'No internet connection'};
+      }
+      return {
+        'success': false,
+        'message': 'Failed to retrieve approved organizers',
+      };
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Approve organizer
+  Future<Map<String, dynamic>> approveOrganizer(String organizerId) async {
+    _setLoading(true);
+    try {
+      // Update organizer document
+      await _firestore.collection('organizers').doc(organizerId).update({
+        'isApproved': true,
+        'isActive': true,
+        'approvedAt': DateTime.now(),
+        'approvedBy': currentUser?.uid,
+        'updatedAt': DateTime.now(),
+      });
+
+      // Update user document
+      await _firestore.collection('users').doc(organizerId).update({
+        'isApproved': true,
+        'isActive': true,
+        'approvedAt': DateTime.now(),
+        'approvedBy': currentUser?.uid,
+        'updatedAt': DateTime.now(),
+      });
+
+      return {'success': true, 'message': 'Organizer approved successfully'};
+    } catch (e) {
+      if (e is FirebaseException && e.code == 'unavailable') {
+        return {'success': false, 'message': 'No internet connection'};
+      }
+      return {'success': false, 'message': 'Failed to approve organizer'};
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Reject/Suspend organizer
+  Future<Map<String, dynamic>> rejectOrganizer(
+    String organizerId,
+    String reason,
   ) async {
     _setLoading(true);
     try {
-      if (currentUser == null) {
-        return {'success': false, 'message': 'No user signed in'};
+      // Update organizer document
+      await _firestore.collection('organizers').doc(organizerId).update({
+        'isApproved': false,
+        'isActive': false,
+        'rejectionReason': reason,
+        'rejectedAt': DateTime.now(),
+        'rejectedBy': currentUser?.uid,
+        'updatedAt': DateTime.now(),
+      });
+
+      // Update user document
+      await _firestore.collection('users').doc(organizerId).update({
+        'isApproved': false,
+        'isActive': false,
+        'rejectionReason': reason,
+        'rejectedAt': DateTime.now(),
+        'rejectedBy': currentUser?.uid,
+        'updatedAt': DateTime.now(),
+      });
+
+      return {'success': true, 'message': 'Organizer rejected successfully'};
+    } catch (e) {
+      if (e is FirebaseException && e.code == 'unavailable') {
+        return {'success': false, 'message': 'No internet connection'};
       }
+      return {'success': false, 'message': 'Failed to reject organizer'};
+    } finally {
+      _setLoading(false);
+    }
+  }
 
-      // Get current user profile to determine role
-      final profileResult = await getCurrentUserProfile();
-      if (!profileResult['success']) {
-        return profileResult;
+  // Suspend/Deactivate user
+  Future<Map<String, dynamic>> suspendUser(
+    String userId,
+    String userType,
+    String reason,
+  ) async {
+    _setLoading(true);
+    try {
+      // Update in specific collection
+      await _firestore.collection(userType).doc(userId).update({
+        'isActive': false,
+        'suspensionReason': reason,
+        'suspendedAt': DateTime.now(),
+        'suspendedBy': currentUser?.uid,
+        'updatedAt': DateTime.now(),
+      });
+
+      // Update in users collection
+      await _firestore.collection('users').doc(userId).update({
+        'isActive': false,
+        'suspensionReason': reason,
+        'suspendedAt': DateTime.now(),
+        'suspendedBy': currentUser?.uid,
+        'updatedAt': DateTime.now(),
+      });
+
+      return {'success': true, 'message': 'User suspended successfully'};
+    } catch (e) {
+      if (e is FirebaseException && e.code == 'unavailable') {
+        return {'success': false, 'message': 'No internet connection'};
       }
+      return {'success': false, 'message': 'Failed to suspend user'};
+    } finally {
+      _setLoading(false);
+    }
+  }
 
-      String role = profileResult['role'];
-      String userId = currentUser!.uid;
+  // Reactivate user
+  Future<Map<String, dynamic>> reactivateUser(
+    String userId,
+    String userType,
+  ) async {
+    _setLoading(true);
+    try {
+      // Update in specific collection
+      await _firestore.collection(userType).doc(userId).update({
+        'isActive': true,
+        'suspensionReason': FieldValue.delete(),
+        'suspendedAt': FieldValue.delete(),
+        'suspendedBy': FieldValue.delete(),
+        'reactivatedAt': DateTime.now(),
+        'reactivatedBy': currentUser?.uid,
+        'updatedAt': DateTime.now(),
+      });
 
-      // Update the appropriate collection based on user role
-      if (role == 'student') {
-        await _firestore.collection('students').doc(userId).update({
-          ...data,
-          'updatedAt': DateTime.now(),
-        });
+      // Update in users collection
+      await _firestore.collection('users').doc(userId).update({
+        'isActive': true,
+        'suspensionReason': FieldValue.delete(),
+        'suspendedAt': FieldValue.delete(),
+        'suspendedBy': FieldValue.delete(),
+        'reactivatedAt': DateTime.now(),
+        'reactivatedBy': currentUser?.uid,
+        'updatedAt': DateTime.now(),
+      });
 
-        // If fullName is updated, also update it in users collection
-        if (data.containsKey('fullName')) {
-          await _firestore.collection('users').doc(userId).update({
-            'fullName': data['fullName'],
-          });
-        }
-      } else if (role == 'provider') {
-        await _firestore.collection('providers').doc(userId).update({
-          ...data,
-          'updatedAt': DateTime.now(),
-        });
-
-        // If businessName is updated, also update it in users collection
-        if (data.containsKey('businessName')) {
-          await _firestore.collection('users').doc(userId).update({
-            'fullName': data['businessName'],
-          });
-        }
-      } else {
-        return {'success': false, 'message': 'Invalid user role'};
+      return {'success': true, 'message': 'User reactivated successfully'};
+    } catch (e) {
+      if (e is FirebaseException && e.code == 'unavailable') {
+        return {'success': false, 'message': 'No internet connection'};
       }
+      return {'success': false, 'message': 'Failed to reactivate user'};
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Update user profile
+  Future<Map<String, dynamic>> updateUserProfile({
+    required String userId,
+    required String userType,
+    required Map<String, dynamic> updates,
+  }) async {
+    _setLoading(true);
+    try {
+      // Add timestamp
+      updates['updatedAt'] = DateTime.now();
+      updates['updatedBy'] = currentUser?.uid;
+
+      // Update in specific collection
+      await _firestore.collection(userType).doc(userId).update(updates);
+
+      // Update in users collection (exclude collection-specific fields)
+      Map<String, dynamic> userUpdates = Map.from(updates);
+      userUpdates.removeWhere(
+        (key, value) =>
+            key.startsWith('organization') && userType != 'organizers' ||
+            key.startsWith('staff') && userType != 'staff',
+      );
+
+      await _firestore.collection('users').doc(userId).update(userUpdates);
 
       return {'success': true, 'message': 'Profile updated successfully'};
     } catch (e) {
@@ -147,90 +365,279 @@ class DatabaseService extends ChangeNotifier {
     }
   }
 
-  // Alternative version using batch upload for better performance
-  Future<Map<String, dynamic>> uploadIdentificationImages({
-    required File nationalIdFront,
-    required File nationalIdBack,
-    required File studentIdFront,
-    required File studentIdBack,
-  }) async {
+  // Get user by ID
+  Future<Map<String, dynamic>> getUserById(String userId) async {
     _setLoading(true);
     try {
-      if (currentUser == null) {
-        return {'success': false, 'message': 'No user signed in'};
+      // Get from users collection first to determine type
+      DocumentSnapshot userDoc =
+          await _firestore.collection('users').doc(userId).get();
+
+      if (!userDoc.exists) {
+        return {'success': false, 'message': 'User not found'};
       }
 
-      // Get current user profile to determine role
-      final profileResult = await getCurrentUserProfile();
-      if (!profileResult['success']) {
-        return profileResult;
+      Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
+      String role = userData['role'];
+
+      // Get detailed data from specific collection
+      DocumentSnapshot detailedDoc;
+      dynamic user;
+
+      switch (role) {
+        case 'attendee':
+          detailedDoc =
+              await _firestore.collection('attendees').doc(userId).get();
+          if (detailedDoc.exists) {
+            user = Attendee.fromFirestore(detailedDoc);
+          }
+          break;
+        case 'organizer':
+          detailedDoc =
+              await _firestore.collection('organizers').doc(userId).get();
+          if (detailedDoc.exists) {
+            user = Organizer.fromFirestore(detailedDoc);
+          }
+          break;
+        case 'staff':
+          detailedDoc = await _firestore.collection('staff').doc(userId).get();
+          if (detailedDoc.exists) {
+            user = Staff.fromFirestore(detailedDoc);
+          }
+          break;
+        case 'admin':
+          detailedDoc = await _firestore.collection('admins').doc(userId).get();
+          if (detailedDoc.exists) {
+            user = Admin.fromFirestore(detailedDoc);
+          }
+          break;
+        default:
+          return {'success': false, 'message': 'Invalid user role'};
       }
 
-      String role = profileResult['role'];
-      String userId = currentUser!.uid;
-
-      // Upload all images using batch upload
-      final uploadResults = await Cloudinary.uploadIdentificationImages(
-        userId: userId,
-        nationalIdFront: nationalIdFront,
-        nationalIdBack: nationalIdBack,
-        studentIdFront: studentIdFront,
-        studentIdBack: studentIdBack,
-      );
-
-      // Check if all uploads were successful
-      final failedUploads =
-          uploadResults.entries
-              .where((entry) => entry.value == null)
-              .map((entry) => entry.key)
-              .toList();
-
-      if (failedUploads.isNotEmpty) {
-        return {
-          'success': false,
-          'message': 'Failed to upload: ${failedUploads.join(', ')}',
-        };
+      if (user == null) {
+        return {'success': false, 'message': 'User details not found'};
       }
 
-      // Prepare identification images data with Cloudinary URLs
-      Map<String, dynamic> identificationData = {
-        'nationalIdFront': uploadResults['nationalIdFront']!,
-        'nationalIdBack': uploadResults['nationalIdBack']!,
-        'studentIdFront': uploadResults['studentIdFront']!,
-        'studentIdBack': uploadResults['studentIdBack']!,
-        'uploadedAt': DateTime.now(),
-      };
-
-      // Update the appropriate collection based on user role
-      if (role == 'student') {
-        await _firestore.collection('students').doc(userId).update({
-          'identificationImages': identificationData,
-          'updatedAt': DateTime.now(),
-        });
-      } else if (role == 'provider') {
-        await _firestore.collection('providers').doc(userId).update({
-          'identificationImages': identificationData,
-          'updatedAt': DateTime.now(),
-        });
-      } else {
-        return {'success': false, 'message': 'Invalid user role'};
-      }
-
-      return {
-        'success': true,
-        'message': 'Documents uploaded successfully',
-        'imageUrls': identificationData,
-      };
+      return {'success': true, 'user': user, 'role': role};
     } catch (e) {
       if (e is FirebaseException && e.code == 'unavailable') {
         return {'success': false, 'message': 'No internet connection'};
       }
-      return {
-        'success': false,
-        'message': 'Failed to upload documents: ${e.toString()}',
-      };
+      return {'success': false, 'message': 'Failed to retrieve user data'};
     } finally {
       _setLoading(false);
     }
+  }
+
+  // Search users
+  Future<Map<String, dynamic>> searchUsers({
+    required String searchTerm,
+    String? role,
+    int limit = 20,
+  }) async {
+    _setLoading(true);
+    try {
+      Query query = _firestore.collection('users');
+
+      if (role != null && role.isNotEmpty) {
+        query = query.where('role', isEqualTo: role);
+      }
+
+      // For name search, we'll use a simple approach with where clause
+      // Note: For better search, consider using Algolia or similar service
+      if (searchTerm.isNotEmpty) {
+        query = query
+            .where('fullName', isGreaterThanOrEqualTo: searchTerm)
+            .where('fullName', isLessThanOrEqualTo: '$searchTerm\uf8ff');
+      }
+
+      query = query.limit(limit);
+
+      final userDocs = await query.get();
+      List<Map<String, dynamic>> users = [];
+
+      for (var doc in userDocs.docs) {
+        Map<String, dynamic> userData = doc.data() as Map<String, dynamic>;
+        users.add(userData);
+      }
+
+      return {'success': true, 'data': users};
+    } catch (e) {
+      if (e is FirebaseException && e.code == 'unavailable') {
+        return {'success': false, 'message': 'No internet connection'};
+      }
+      return {'success': false, 'message': 'Failed to search users'};
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Get user statistics
+  Future<Map<String, dynamic>> getUserStatistics() async {
+    _setLoading(true);
+    try {
+      // Get counts for each user type
+      final attendeesCount =
+          await _firestore.collection('attendees').count().get();
+      final organizersCount =
+          await _firestore.collection('organizers').count().get();
+      final staffCount = await _firestore.collection('staff').count().get();
+      final adminsCount = await _firestore.collection('admins').count().get();
+
+      // Get pending organizers count
+      final pendingOrganizersCount =
+          await _firestore
+              .collection('organizers')
+              .where('isApproved', isEqualTo: false)
+              .count()
+              .get();
+
+      // Get active users count
+      final activeUsersCount =
+          await _firestore
+              .collection('users')
+              .where('isActive', isEqualTo: true)
+              .count()
+              .get();
+
+      Map<String, dynamic> stats = {
+        'totalUsers':
+            attendeesCount.count! +
+            organizersCount.count! +
+            staffCount.count! +
+            adminsCount.count!,
+        'attendees': attendeesCount.count!,
+        'organizers': organizersCount.count!,
+        'staff': staffCount.count!,
+        'admins': adminsCount.count!,
+        'pendingOrganizers': pendingOrganizersCount.count!,
+        'activeUsers': activeUsersCount.count!,
+      };
+
+      return {'success': true, 'data': stats};
+    } catch (e) {
+      if (e is FirebaseException && e.code == 'unavailable') {
+        return {'success': false, 'message': 'No internet connection'};
+      }
+      return {'success': false, 'message': 'Failed to retrieve statistics'};
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Delete user (soft delete by deactivating)
+  Future<Map<String, dynamic>> deleteUser(
+    String userId,
+    String userType,
+  ) async {
+    _setLoading(true);
+    try {
+      // Instead of hard delete, we'll deactivate the user
+      await _firestore.collection(userType).doc(userId).update({
+        'isActive': false,
+        'isDeleted': true,
+        'deletedAt': DateTime.now(),
+        'deletedBy': currentUser?.uid,
+        'updatedAt': DateTime.now(),
+      });
+
+      await _firestore.collection('users').doc(userId).update({
+        'isActive': false,
+        'isDeleted': true,
+        'deletedAt': DateTime.now(),
+        'deletedBy': currentUser?.uid,
+        'updatedAt': DateTime.now(),
+      });
+
+      return {'success': true, 'message': 'User deleted successfully'};
+    } catch (e) {
+      if (e is FirebaseException && e.code == 'unavailable') {
+        return {'success': false, 'message': 'No internet connection'};
+      }
+      return {'success': false, 'message': 'Failed to delete user'};
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Bulk operations for admin
+  Future<Map<String, dynamic>> bulkUpdateUsers({
+    required List<String> userIds,
+    required String userType,
+    required Map<String, dynamic> updates,
+  }) async {
+    _setLoading(true);
+    try {
+      WriteBatch batch = _firestore.batch();
+
+      updates['updatedAt'] = DateTime.now();
+      updates['updatedBy'] = currentUser?.uid;
+
+      for (String userId in userIds) {
+        // Update in specific collection
+        DocumentReference userTypeRef = _firestore
+            .collection(userType)
+            .doc(userId);
+        batch.update(userTypeRef, updates);
+
+        // Update in users collection
+        DocumentReference userRef = _firestore.collection('users').doc(userId);
+        batch.update(userRef, updates);
+      }
+
+      await batch.commit();
+
+      return {'success': true, 'message': 'Bulk update completed successfully'};
+    } catch (e) {
+      if (e is FirebaseException && e.code == 'unavailable') {
+        return {'success': false, 'message': 'No internet connection'};
+      }
+      return {'success': false, 'message': 'Failed to perform bulk update'};
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Stream methods for real-time updates
+  Stream<List<Organizer>> streamPendingOrganizers() {
+    return _firestore
+        .collection('organizers')
+        .where('isApproved', isEqualTo: false)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map(
+          (snapshot) =>
+              snapshot.docs.map((doc) => Organizer.fromFirestore(doc)).toList(),
+        );
+  }
+
+  Stream<List<dynamic>> streamUsersByType(String userType) {
+    return _firestore
+        .collection(userType)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+          switch (userType) {
+            case 'attendees':
+              return snapshot.docs
+                  .map((doc) => Attendee.fromFirestore(doc))
+                  .toList();
+            case 'organizers':
+              return snapshot.docs
+                  .map((doc) => Organizer.fromFirestore(doc))
+                  .toList();
+            case 'staff':
+              return snapshot.docs
+                  .map((doc) => Staff.fromFirestore(doc))
+                  .toList();
+            case 'admins':
+              return snapshot.docs
+                  .map((doc) => Admin.fromFirestore(doc))
+                  .toList();
+            default:
+              return [];
+          }
+        });
   }
 }
