@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:megavent/utils/constants.dart';
+import 'package:megavent/services/auth_service.dart';
+import 'package:provider/provider.dart';
 
-class CustomSidebar extends StatelessWidget {
+class OrganizerSidebar extends StatelessWidget {
   final String currentRoute;
   final Function(String) onNavigate;
 
-  const CustomSidebar({
+  const OrganizerSidebar({
     super.key,
     required this.currentRoute,
     required this.onNavigate,
@@ -15,24 +17,25 @@ class CustomSidebar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Drawer(
       backgroundColor: Colors.white,
-      child: Column(
-        children: [
-          // Header
-          Container(
-            height: 200,
-            width: double.infinity,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: AppConstants.primaryGradient,
+      child: SafeArea(
+        child: Column(
+          children: [
+            // Header - Removed fixed height container to prevent overflow
+            Container(
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: AppConstants.primaryGradient,
+                ),
               ),
-            ),
-            child: SafeArea(
               child: Padding(
                 padding: const EdgeInsets.all(20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize:
+                      MainAxisSize.min, // Added this to prevent overflow
                   children: [
                     Container(
                       width: 60,
@@ -68,83 +71,105 @@ class CustomSidebar extends StatelessWidget {
                 ),
               ),
             ),
-          ),
-          
-          // Menu Items
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              child: Column(
-                children: [
-                  _buildMenuItem(
-                    icon: Icons.dashboard_outlined,
-                    activeIcon: Icons.dashboard,
-                    title: 'Dashboard',
-                    route: '/dashboard',
-                    isActive: currentRoute == '/dashboard',
-                  ),
-                  _buildMenuItem(
-                    icon: Icons.event_outlined,
-                    activeIcon: Icons.event,
-                    title: 'Events',
-                    route: '/events',
-                    isActive: currentRoute == '/events',
-                  ),
-                  _buildMenuItem(
-                    icon: Icons.people_outline,
-                    activeIcon: Icons.people,
-                    title: 'Staff',
-                    route: '/staff',
-                    isActive: currentRoute == '/staff',
-                  ),
-                  _buildMenuItem(
-                    icon: Icons.group_outlined,
-                    activeIcon: Icons.group,
-                    title: 'Attendees',
-                    route: '/attendees',
-                    isActive: currentRoute == '/attendees',
-                  ),
-                  _buildMenuItem(
-                    icon: Icons.person_outline,
-                    activeIcon: Icons.person,
-                    title: 'Profile',
-                    route: '/profile',
-                    isActive: currentRoute == '/profile',
-                  ),
-                  const Spacer(),
-                  
-                  // Logout
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: AppConstants.errorColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: ListTile(
-                        leading: const Icon(
-                          Icons.logout,
-                          color: AppConstants.errorColor,
+
+            // Menu Items - Wrapped in Flexible instead of Expanded to prevent overflow
+            Flexible(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Column(
+                  children: [
+                    _buildMenuItem(
+                      icon: Icons.dashboard_outlined,
+                      activeIcon: Icons.dashboard,
+                      title: 'Dashboard',
+                      route: '/dashboard',
+                      isActive: currentRoute == '/dashboard',
+                    ),
+                    _buildMenuItem(
+                      icon: Icons.event_outlined,
+                      activeIcon: Icons.event,
+                      title: 'Events',
+                      route: '/events',
+                      isActive: currentRoute == '/events',
+                    ),
+                    _buildMenuItem(
+                      icon: Icons.people_outline,
+                      activeIcon: Icons.people,
+                      title: 'Staff',
+                      route: '/staff',
+                      isActive: currentRoute == '/staff',
+                    ),
+                    _buildMenuItem(
+                      icon: Icons.group_outlined,
+                      activeIcon: Icons.group,
+                      title: 'Attendees',
+                      route: '/attendees',
+                      isActive: currentRoute == '/attendees',
+                    ),
+                    _buildMenuItem(
+                      icon: Icons.person_outline,
+                      activeIcon: Icons.person,
+                      title: 'Profile',
+                      route: '/profile',
+                      isActive: currentRoute == '/profile',
+                    ),
+                    const Spacer(),
+
+                    // Logout - Updated to use AuthService
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: AppConstants.errorColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        title: const Text(
-                          'Log Out',
-                          style: TextStyle(
-                            color: AppConstants.errorColor,
-                            fontWeight: FontWeight.w600,
-                          ),
+                        child: Consumer<AuthService>(
+                          builder: (context, authService, child) {
+                            return ListTile(
+                              leading:
+                                  authService.isLoading
+                                      ? const SizedBox(
+                                        width: 24,
+                                        height: 24,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                AppConstants.errorColor,
+                                              ),
+                                        ),
+                                      )
+                                      : const Icon(
+                                        Icons.logout,
+                                        color: AppConstants.errorColor,
+                                      ),
+                              title: Text(
+                                authService.isLoading
+                                    ? 'Logging out...'
+                                    : 'Log Out',
+                                style: const TextStyle(
+                                  color: AppConstants.errorColor,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              onTap:
+                                  authService.isLoading
+                                      ? null
+                                      : () {
+                                        _showLogoutDialog(context, authService);
+                                      },
+                            );
+                          },
                         ),
-                        onTap: () {
-                          _showLogoutDialog(context);
-                        },
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 20),
-                ],
+                    const SizedBox(height: 20),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -159,14 +184,15 @@ class CustomSidebar extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: Container(
-        decoration: isActive
-            ? BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: AppConstants.primaryGradient,
-                ),
-                borderRadius: BorderRadius.circular(12),
-              )
-            : null,
+        decoration:
+            isActive
+                ? BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: AppConstants.primaryGradient,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                )
+                : null,
         child: ListTile(
           leading: Icon(
             isActive ? activeIcon : icon,
@@ -185,28 +211,85 @@ class CustomSidebar extends StatelessWidget {
     );
   }
 
-  void _showLogoutDialog(BuildContext context) {
+  void _showLogoutDialog(BuildContext context, AuthService authService) {
     showDialog(
       context: context,
-      builder: (BuildContext context) {
+      barrierDismissible: false, // Prevent dismissing during logout
+      builder: (BuildContext dialogContext) {
         return AlertDialog(
           title: const Text('Confirm Logout'),
           content: const Text('Are you sure you want to log out?'),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () => Navigator.of(dialogContext).pop(),
               child: const Text('Cancel'),
             ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                // Handle logout logic here
-                onNavigate('/login');
+            Consumer<AuthService>(
+              builder: (context, authService, child) {
+                return ElevatedButton(
+                  onPressed:
+                      authService.isLoading
+                          ? null
+                          : () async {
+                            try {
+                              final result = await authService.signOut();
+
+                              if (result['success']) {
+                                // Close dialog
+                                Navigator.of(dialogContext).pop();
+
+                                // Navigate to login screen
+                                Navigator.of(context).pushNamedAndRemoveUntil(
+                                  '/login',
+                                  (route) => false,
+                                );
+                              } else {
+                                // Close dialog first
+                                Navigator.of(dialogContext).pop();
+
+                                // Show error message
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      result['message'] ?? 'Logout failed',
+                                    ),
+                                    backgroundColor: AppConstants.errorColor,
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              // Close dialog
+                              Navigator.of(dialogContext).pop();
+
+                              // Show error message
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Logout failed: ${e.toString()}',
+                                  ),
+                                  backgroundColor: AppConstants.errorColor,
+                                ),
+                              );
+                            }
+                          },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppConstants.errorColor,
+                  ),
+                  child:
+                      authService.isLoading
+                          ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
+                            ),
+                          )
+                          : const Text('Log Out'),
+                );
               },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppConstants.errorColor,
-              ),
-              child: const Text('Log Out'),
             ),
           ],
         );

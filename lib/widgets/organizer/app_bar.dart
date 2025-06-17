@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:megavent/utils/constants.dart';
 
-class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
+class OrganizerAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
   final VoidCallback? onMenuPressed;
   final List<Widget>? actions;
   final bool showBackButton;
 
-  const CustomAppBar({
+  const OrganizerAppBar({
     super.key,
     required this.title,
     this.onMenuPressed,
@@ -29,17 +29,18 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
           ),
         ),
       ),
-      leading: showBackButton
-          ? IconButton(
-              onPressed: () => Navigator.of(context).pop(),
-              icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-            )
-          : IconButton(
-              onPressed: onMenuPressed,
-              icon: const Icon(Icons.menu, color: Colors.white),
-            ),
+      // Remove automatic leading widget
+      automaticallyImplyLeading: false,
+      // Custom title with logo and app name on the left
       title: Row(
         children: [
+          // Show back button if needed, otherwise just show logo
+          if (showBackButton)
+            IconButton(
+              onPressed: () => Navigator.of(context).pop(),
+              icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+              padding: EdgeInsets.zero,
+            ),
           Container(
             width: 32,
             height: 32,
@@ -64,17 +65,16 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
           ),
         ],
       ),
-      actions: actions ??
-          [
-            IconButton(
-              onPressed: () {},
-              icon: const Icon(Icons.notifications_outlined, color: Colors.white),
-            ),
-            IconButton(
-              onPressed: () {},
-              icon: const Icon(Icons.person_outline, color: Colors.white),
-            ),
-          ],
+      // Move hamburger menu to actions (right side)
+      actions: [
+        if (!showBackButton)
+          IconButton(
+            onPressed: onMenuPressed,
+            icon: const Icon(Icons.menu, color: Colors.white),
+          ),
+        // Include any additional actions passed to the widget
+        if (actions != null) ...actions!,
+      ],
     );
   }
 
