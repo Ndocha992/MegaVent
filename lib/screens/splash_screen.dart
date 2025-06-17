@@ -40,7 +40,7 @@ class _SplashScreenState extends State<SplashScreen>
     _startAnimations();
 
     // Check authentication after animation completes
-    Future.delayed(const Duration(milliseconds: 3000), () {
+    Future.delayed(const Duration(seconds: 7), () {
       _checkAuthStatus();
     });
   }
@@ -363,46 +363,12 @@ class _SplashScreenState extends State<SplashScreen>
                         ),
                         child: Stack(
                           children: [
-                            // Inner logo design matching your brand
+                            // App logo instead of calendar icon
                             Center(
-                              child: Container(
-                                width: 90,
-                                height: 90,
-                                decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                    colors: AppConstants.logoGradient,
-                                  ),
-                                  borderRadius: BorderRadius.circular(22),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: AppConstants.primaryColor
-                                          .withOpacity(0.3),
-                                      blurRadius: 15,
-                                      offset: const Offset(0, 5),
-                                    ),
-                                  ],
-                                ),
-                                child: Stack(
-                                  children: [
-                                    // Hexagonal pattern to match your logo
-                                    Center(
-                                      child: CustomPaint(
-                                        size: const Size(60, 60),
-                                        painter: HexagonPainter(),
-                                      ),
-                                    ),
-                                    // Event icon
-                                    const Center(
-                                      child: Icon(
-                                        Icons.event_available,
-                                        color: Colors.white,
-                                        size: 35,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                              child: Image.asset(
+                                'assets/icons/logo.png',
+                                width: 100,
+                                height: 100,
                               ),
                             ),
                             // Shine effect
@@ -515,64 +481,59 @@ class _SplashScreenState extends State<SplashScreen>
         children: [
           // Animated background
           _buildAnimatedBackground(),
-          // Main content
-          SafeArea(
+          // Main content - Centered properly
+          Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                const Spacer(flex: 2),
                 // Logo
                 _buildLogo(),
-                const SizedBox(height: 50),
+                const SizedBox(height: 20),
                 // App name and tagline
                 _buildAppName(),
-                const Spacer(flex: 2),
-                // Loading indicator
+                const SizedBox(height: 130),
+                // Loading indicator at bottom
                 FadeTransition(
                   opacity: _textFadeAnimation,
-                  child: Column(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 12,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(30),
-                          border: Border.all(
-                            color: Colors.white.withOpacity(0.3),
-                            width: 1,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(30),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white.withOpacity(0.9),
+                            ),
                           ),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  Colors.white.withOpacity(0.9),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Text(
-                              'Loading amazing experiences...',
-                              style: AppConstants.bodyMedium.copyWith(
-                                color: Colors.white.withOpacity(0.9),
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
+                        const SizedBox(width: 12),
+                        Text(
+                          'Loading amazing experiences...',
+                          style: AppConstants.bodyMedium.copyWith(
+                            color: Colors.white.withOpacity(0.9),
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-                const SizedBox(height: 60),
               ],
             ),
           ),

@@ -1,7 +1,15 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:megavent/screens/admin/admin_dashboard.dart';
+import 'package:megavent/screens/attendee/attendee_dashboard.dart';
+import 'package:megavent/screens/organizer/organizer_dashboard.dart';
+import 'package:megavent/screens/staff/staff_dashboard.dart';
 import 'package:megavent/services/auth_service.dart';
 import 'package:megavent/utils/constants.dart';
+import 'package:megavent/widgets/verification/verification_header.dart';
+import 'package:megavent/widgets/verification/verification_instructions_card.dart';
+import 'package:megavent/widgets/verification/verification_progress_card.dart';
+import 'package:megavent/widgets/verification/verification_actions.dart';
 import 'package:provider/provider.dart';
 
 class VerificationScreen extends StatefulWidget {
@@ -17,6 +25,7 @@ class _VerificationScreenState extends State<VerificationScreen>
   late Timer _countdownTimer;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
 
   // Countdown for resend functionality (5 minutes)
   int _countdownSeconds = 300; // 5 minutes in seconds
@@ -34,14 +43,24 @@ class _VerificationScreenState extends State<VerificationScreen>
     super.initState();
 
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 1200),
       vsync: this,
     );
 
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _animationController,
-        curve: Curves.easeIn,
+        curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
+      ),
+    );
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: const Interval(0.3, 1.0, curve: Curves.easeOut),
       ),
     );
 
@@ -62,8 +81,9 @@ class _VerificationScreenState extends State<VerificationScreen>
       _verificationTimer.cancel();
     }
 
-    _verificationTimer =
-        Timer.periodic(const Duration(seconds: 5), (timer) async {
+    _verificationTimer = Timer.periodic(const Duration(seconds: 5), (
+      timer,
+    ) async {
       final authService = Provider.of<AuthService>(context, listen: false);
       final isVerified = await authService.checkEmailVerified();
 
@@ -80,34 +100,192 @@ class _VerificationScreenState extends State<VerificationScreen>
         // Small delay to show the success message
         Future.delayed(const Duration(seconds: 1), () async {
           if (mounted) {
-            final userData = await authService.getUserData();
-            if (userData['success'] == true) {
-              // switch (userData['role']) {
-              //   case 'admin':
-              //     Navigator.pushReplacement(
-              //       context,
-              //       MaterialPageRoute(builder: (_) => const AdminDashboard()),
-              //     );
-              //     break;
-              //   case 'student':
-              //     Navigator.pushReplacement(
-              //       context,
-              //       MaterialPageRoute(builder: (_) => const StudentDashboard()),
-              //     );
-              //     break;
-              //   case 'provider':
-              //     Navigator.pushReplacement(
-              //       context,
-              //       MaterialPageRoute(
-              //           builder: (_) => const ProviderDashboard()),
-              //     );
-              //     break;
-              // }
-            }
+            await _handleVerificationSuccess();
           }
         });
       }
     });
+  }
+
+  Future<void> _handleVerificationSuccess() async {
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final userData = await authService.getUserData();
+
+    if (userData['success'] == true) {
+      final userRole = userData['role'];
+      final userStatus = userData['status']; // Assuming you have status field
+
+      // For organizers, check if they're approved
+      if (userRole == 'organizer') {
+        if (userStatus == 'pending' || userStatus != 'active') {
+          // Show organizer approval pending dialog
+          _showOrganizerPendingDialog();
+          return;
+        }
+      }
+
+      // For all other cases, navigate to respective dashboard
+      switch (userRole) {
+        case 'admin':
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const AdminDashboard()),
+          );
+          break;
+        case 'attendee':
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const AttendeeDashboard()),
+          );
+          break;
+        case 'organizer':
+          // Only navigate if organizer is approved
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const OrganizerDashboard()),
+          );
+          break;
+        case 'staff':
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const StaffDashboard()),
+          );
+          break;
+        default:
+          Navigator.pushReplacementNamed(context, '/login');
+      }
+    } else {
+      // If getUserData fails, redirect to login
+      Navigator.pushReplacementNamed(context, '/login');
+    }
+  }
+
+  void _showOrganizerPendingDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppConstants.warningColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.schedule,
+                  color: AppConstants.warningColor,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Email Verified!',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: AppConstants.primaryColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Your email has been successfully verified! However, your organizer account is still pending admin approval.',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: AppConstants.textSecondaryColor,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppConstants.warningColor.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: AppConstants.warningColor.withOpacity(0.2),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.admin_panel_settings_outlined,
+                      size: 16,
+                      color: AppConstants.warningColor,
+                    ),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
+                        'Waiting for admin activation',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: AppConstants.warningColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'You will be notified via email once your account is approved. You can then log in with your credentials.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppConstants.textSecondaryColor,
+                  height: 1.3,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                // Sign out the user and redirect to login
+                _signOutAndRedirectToLogin();
+              },
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text(
+                'Back to Login',
+                style: TextStyle(
+                  color: AppConstants.primaryColor,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _signOutAndRedirectToLogin() async {
+    final authService = Provider.of<AuthService>(context, listen: false);
+    await authService.signOut();
+    if (mounted) {
+      Navigator.pushReplacementNamed(context, '/login');
+    }
   }
 
   void _startCountdown() {
@@ -185,9 +363,9 @@ class _VerificationScreenState extends State<VerificationScreen>
       );
 
       // Small delay to show the success message
-      Future.delayed(const Duration(seconds: 1), () {
+      Future.delayed(const Duration(seconds: 1), () async {
         if (mounted) {
-          Navigator.pushReplacementNamed(context, '/home');
+          await _handleVerificationSuccess();
         }
       });
     } else {
@@ -195,7 +373,7 @@ class _VerificationScreenState extends State<VerificationScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Email not verified yet. Please check your inbox.'),
-          backgroundColor: Color(0xFFFF9800), // Orange warning color
+          backgroundColor: AppConstants.warningColor,
         ),
       );
     }
@@ -218,426 +396,47 @@ class _VerificationScreenState extends State<VerificationScreen>
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFFF9FAFC),
-              Color(0xFFEEF1F7),
-            ],
+            colors: [Color(0xFFF9FAFC), Color(0xFFEEF1F7)],
           ),
         ),
         child: SafeArea(
           child: FadeTransition(
             opacity: _fadeAnimation,
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.max,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    // Logo with shadow
-                    Container(
-                      width: 100,
-                      height: 100,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.white,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.12),
-                            blurRadius: 20,
-                            spreadRadius: 1,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
-                      ),
-                      child: Center(
-                        child: Image.asset(
-                          'assets/icons/logo.png',
-                          width: 60,
-                          height: 60,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 32),
+            child: SlideTransition(
+              position: _slideAnimation,
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      // Header with logo and title
+                      const VerificationHeader(),
+                      const SizedBox(height: 32),
 
-                    // Title and subtitle
-                    Text(
-                      'Verify Your Email',
-                      style: AppConstants.displaySmall.copyWith(
-                        fontWeight: FontWeight.bold,
+                      // Verification Instructions Card
+                      VerificationInstructionsCard(
+                        countdownDisplay: _countdownDisplay,
+                        canResend: _canResend,
+                        isLoading: _isLoading,
+                        onResendPressed: _resendVerificationEmail,
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppConstants.primaryColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        'We\'ve sent a verification link to your email',
-                        style: AppConstants.bodyMedium.copyWith(
-                          color: AppConstants.primaryColor,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 32),
+                      const SizedBox(height: 24),
 
-                    // Verification Instructions Card
-                    Container(
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            spreadRadius: 0,
-                            blurRadius: 15,
-                            offset: const Offset(0, 5),
-                          ),
-                        ],
+                      // Progress tracking card
+                      const VerificationProgressCard(),
+                      const SizedBox(height: 32),
+
+                      // Action buttons
+                      VerificationActions(
+                        isLoading: _isLoading,
+                        onCheckVerification: _checkVerificationManually,
+                        onChangeEmail: () {
+                          Navigator.pushReplacementNamed(context, '/login');
+                        },
                       ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.max,
-                          children: [
-                            // Email icon
-                            Container(
-                              width: 60,
-                              height: 60,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFE8F5E9),
-                                borderRadius: BorderRadius.circular(30),
-                              ),
-                              child: const Icon(
-                                Icons.mark_email_read,
-                                color: AppConstants.successColor,
-                                size: 30,
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-
-                            // Instructions text
-                            Text(
-                              'Check your inbox for the verification email',
-                              textAlign: TextAlign.center,
-                              style: AppConstants.bodyLarge.copyWith(
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'Click the link in the email to verify your account',
-                              textAlign: TextAlign.center,
-                              style: AppConstants.bodyMediumSecondary,
-                            ),
-                            const SizedBox(height: 20),
-
-                            // Countdown timer
-                            Container(
-                              width: double.infinity,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF5F5F5),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: const Color(0xFFE0E0E0),
-                                  width: 1,
-                                ),
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.max,
-                                  children: [
-                                    const Text(
-                                      'Resend available in:',
-                                      style: AppConstants.bodyMediumSecondary,
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      _canResend
-                                          ? 'Available now'
-                                          : _countdownDisplay,
-                                      style:
-                                          AppConstants.headlineSmall.copyWith(
-                                        color: const Color(0xFF1A2980),
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-
-                            // Resend Code button
-                            _isLoading
-                                ? const CircularProgressIndicator()
-                                : OutlinedButton(
-                                    onPressed: _canResend
-                                        ? () => _resendVerificationEmail()
-                                        : null,
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: const Color(0xFF1A2980),
-                                      minimumSize: Size(
-                                          MediaQuery.of(context).size.width,
-                                          48),
-                                      padding: const EdgeInsets.all(8),
-                                      side: BorderSide(
-                                        color: _canResend
-                                            ? const Color(0xFF1A2980)
-                                            : const Color(0xFF1A2980)
-                                                .withOpacity(0.5),
-                                        width: 1,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(24),
-                                      ),
-                                    ),
-                                    child: Text(
-                                      _canResend
-                                          ? 'Resend Verification Email'
-                                          : 'Wait to Resend',
-                                      style: AppConstants.bodyMedium.copyWith(
-                                        color: _canResend
-                                            ? const Color(0xFF1A2980)
-                                            : const Color(0xFF1A2980)
-                                                .withOpacity(0.5),
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 16,
-                                      ),
-                                    ),
-                                  ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-
-                    // Progress tracking card
-                    Container(
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            spreadRadius: 0,
-                            blurRadius: 15,
-                            offset: const Offset(0, 5),
-                          ),
-                        ],
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.max,
-                          children: [
-                            const Text(
-                              'Verification Progress',
-                              style: AppConstants.headlineSmall,
-                            ),
-                            const SizedBox(height: 24),
-
-                            // Progress bar
-                            Row(
-                              mainAxisSize: MainAxisSize.max,
-                              children: [
-                                Expanded(
-                                  child: Container(
-                                    height: 8,
-                                    decoration: BoxDecoration(
-                                      color: AppConstants.successColor
-                                          .withOpacity(0.2),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Align(
-                                      alignment: Alignment.centerLeft,
-                                      child: Container(
-                                        width: double.infinity,
-                                        height: 8,
-                                        decoration: BoxDecoration(
-                                          color: AppConstants.successColor,
-                                          borderRadius:
-                                              BorderRadius.circular(4),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Container(
-                                    height: 8,
-                                    decoration: BoxDecoration(
-                                      color: AppConstants.successColor
-                                          .withOpacity(0.2),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Align(
-                                      alignment: Alignment.centerLeft,
-                                      child: Container(
-                                        width: double.infinity,
-                                        height: 8,
-                                        decoration: BoxDecoration(
-                                          color: AppConstants.successColor,
-                                          borderRadius:
-                                              BorderRadius.circular(4),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Container(
-                                    height: 8,
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFE0E0E0),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 16),
-
-                            // Progress steps
-                            Row(
-                              mainAxisSize: MainAxisSize.max,
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    children: [
-                                      Container(
-                                        width: 24,
-                                        height: 24,
-                                        decoration: const BoxDecoration(
-                                          color: AppConstants.successColor,
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: const Icon(
-                                          Icons.check,
-                                          color: Colors.white,
-                                          size: 16,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        'Account',
-                                        textAlign: TextAlign.center,
-                                        style: AppConstants.bodyMedium.copyWith(
-                                          color: AppConstants.successColor,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Expanded(
-                                  child: Column(
-                                    children: [
-                                      Container(
-                                        width: 24,
-                                        height: 24,
-                                        decoration: const BoxDecoration(
-                                          color: AppConstants.successColor,
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: const Icon(
-                                          Icons.check,
-                                          color: Colors.white,
-                                          size: 16,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        'Email',
-                                        textAlign: TextAlign.center,
-                                        style: AppConstants.bodyMedium.copyWith(
-                                          color: AppConstants.successColor,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Expanded(
-                                  child: Column(
-                                    children: [
-                                      Container(
-                                        width: 24,
-                                        height: 24,
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          shape: BoxShape.circle,
-                                          border: Border.all(
-                                            color:
-                                                AppConstants.textSecondaryColor,
-                                            width: 1,
-                                          ),
-                                        ),
-                                        child: const Icon(
-                                          Icons.circle,
-                                          color: Colors.white,
-                                          size: 16,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        'Complete',
-                                        textAlign: TextAlign.center,
-                                        style: AppConstants.bodyMedium.copyWith(
-                                          color:
-                                              AppConstants.textSecondaryColor,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-
-                    // Change Email button
-                    TextButton(
-                      onPressed: () {
-                        // Handle change email
-                        Navigator.pushReplacementNamed(context, '/login');
-                      },
-                      style: TextButton.styleFrom(
-                        foregroundColor: AppConstants.primaryColor,
-                      ),
-                      child: Text(
-                        'Change Email Address',
-                        style: AppConstants.bodyMedium.copyWith(
-                          color: AppConstants.primaryColor,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Check verification status button
-                    _isLoading
-                        ? const CircularProgressIndicator()
-                        : AppConstants.gradientButton(
-                            text: 'Check Verification Status',
-                            onPressed: () => _checkVerificationManually(),
-                          ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
