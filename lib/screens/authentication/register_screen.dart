@@ -25,7 +25,8 @@ class _RegisterScreenState extends State<RegisterScreen>
   final TextEditingController _fullNameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _organizationController = TextEditingController();
 
@@ -103,6 +104,149 @@ class _RegisterScreenState extends State<RegisterScreen>
     setState(() => _confirmPasswordVisible = !_confirmPasswordVisible);
   }
 
+  void _showOrganizerApprovalDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppConstants.warningColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.schedule,
+                  color: AppConstants.warningColor,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Registration Submitted',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: AppConstants.primaryColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Your organizer account has been created successfully! Please note:',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: AppConstants.textSecondaryColor,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppConstants.primaryColor.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: AppConstants.primaryColor.withOpacity(0.2),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.email_outlined,
+                          size: 16,
+                          color: AppConstants.primaryColor,
+                        ),
+                        const SizedBox(width: 8),
+                        const Expanded(
+                          child: Text(
+                            'Step 1: Verify your email address',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              color: AppConstants.primaryColor,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.admin_panel_settings_outlined,
+                          size: 16,
+                          color: AppConstants.warningColor,
+                        ),
+                        const SizedBox(width: 8),
+                        const Expanded(
+                          child: Text(
+                            'Step 2: Wait for admin approval',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              color: AppConstants.primaryColor,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                '⚠️ Even after email verification, you will need admin approval before you can access your organizer account.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppConstants.warningColor,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.pushReplacementNamed(context, '/verify-email');
+              },
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text(
+                'Continue to Email Verification',
+                style: TextStyle(
+                  color: AppConstants.primaryColor,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void _register() async {
     if (!_agreedToTerms) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -137,9 +281,10 @@ class _RegisterScreenState extends State<RegisterScreen>
             email: _emailController.text,
             password: _passwordController.text,
             phone: _phoneController.text,
-            organization: _organizationController.text.isNotEmpty 
-                ? _organizationController.text 
-                : null,
+            organization:
+                _organizationController.text.isNotEmpty
+                    ? _organizationController.text
+                    : null,
             profileImage: _profileImageBase64,
           );
         }
@@ -148,12 +293,30 @@ class _RegisterScreenState extends State<RegisterScreen>
         setState(() => _isLoading = false);
 
         if (result['success'] == true && mounted) {
-          if (_selectedRole == 'organizer') {
-            // Show approval pending message for organizers
-            _showApprovalPendingDialog();
-          } else {
-            Navigator.pushReplacementNamed(context, '/verify-email');
-          }
+          // Show success message first
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                _selectedRole == 'organizer'
+                    ? 'Account created! Please verify your email and wait for admin approval.'
+                    : 'Account created successfully! Please verify your email to continue.',
+              ),
+              backgroundColor: AppConstants.successColor,
+            ),
+          );
+
+          // Small delay to show the success message
+          Future.delayed(const Duration(milliseconds: 1500), () {
+            if (mounted) {
+              if (_selectedRole == 'organizer') {
+                // Show organizer-specific approval dialog
+                _showOrganizerApprovalDialog();
+              } else {
+                // For attendees, go directly to verification screen
+                Navigator.pushReplacementNamed(context, '/verify-email');
+              }
+            }
+          });
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -173,56 +336,6 @@ class _RegisterScreenState extends State<RegisterScreen>
         );
       }
     }
-  }
-
-  void _showApprovalPendingDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppConstants.warningColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.pending_actions,
-                  color: AppConstants.warningColor,
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Text(
-                'Approval Pending',
-                style: AppConstants.titleLarge,
-              ),
-            ],
-          ),
-          content: const Text(
-            'Your organizer account has been created successfully! However, it requires approval from an administrator before you can start creating events. You will receive an email notification once approved.',
-            style: AppConstants.bodyMedium,
-          ),
-          actions: [
-            AppConstants.gradientButton(
-              text: 'Got it',
-              onPressed: () {
-                Navigator.of(context).pop();
-                Navigator.pushReplacementNamed(context, '/login');
-              },
-              width: double.infinity,
-              height: 44,
-            ),
-          ],
-        );
-      },
-    );
   }
 
   @override
@@ -284,8 +397,10 @@ class _RegisterScreenState extends State<RegisterScreen>
                           organizationFocusNode: _organizationFocusNode,
                           passwordVisible: _passwordVisible,
                           confirmPasswordVisible: _confirmPasswordVisible,
-                          onPasswordVisibilityToggle: _onPasswordVisibilityToggle,
-                          onConfirmPasswordVisibilityToggle: _onConfirmPasswordVisibilityToggle,
+                          onPasswordVisibilityToggle:
+                              _onPasswordVisibilityToggle,
+                          onConfirmPasswordVisibilityToggle:
+                              _onConfirmPasswordVisibilityToggle,
                         ),
                         const SizedBox(height: 20),
 
@@ -302,14 +417,16 @@ class _RegisterScreenState extends State<RegisterScreen>
 
                         // Register Button
                         AppConstants.gradientButton(
-                          text: _selectedRole == 'organizer' 
-                              ? 'Submit for Approval' 
-                              : 'Create Account',
+                          text:
+                              _selectedRole == 'organizer'
+                                  ? 'Submit for Approval'
+                                  : 'Create Account',
                           onPressed: _agreedToTerms ? _register : () {},
                           isLoading: _isLoading,
-                          gradientColors: _selectedRole == 'organizer'
-                              ? AppConstants.eventPrimaryGradient
-                              : AppConstants.primaryGradient,
+                          gradientColors:
+                              _selectedRole == 'organizer'
+                                  ? AppConstants.eventPrimaryGradient
+                                  : AppConstants.primaryGradient,
                         ),
                         const SizedBox(height: 24),
 
@@ -324,10 +441,11 @@ class _RegisterScreenState extends State<RegisterScreen>
                               ),
                             ),
                             TextButton(
-                              onPressed: () => Navigator.pushReplacementNamed(
-                                context,
-                                '/login',
-                              ),
+                              onPressed:
+                                  () => Navigator.pushReplacementNamed(
+                                    context,
+                                    '/login',
+                                  ),
                               child: Text(
                                 'Sign In',
                                 style: AppConstants.bodyMedium.copyWith(

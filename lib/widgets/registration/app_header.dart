@@ -8,31 +8,28 @@ class AppHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
+        const SizedBox(height: 24),
         // App Logo with Gradient
         Container(
-          width: 80,
-          height: 80,
+          width: 120,
+          height: 120,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: AppConstants.logoGradient,
-            ),
+            color: Colors.white.withOpacity(0.6),
             boxShadow: [
               BoxShadow(
-                color: AppConstants.primaryColor.withOpacity(0.3),
+                color: AppConstants.primaryColor.withOpacity(0.2),
                 blurRadius: 20,
                 spreadRadius: 1,
-                offset: const Offset(0, 8),
+                offset: const Offset(0, 10),
               ),
             ],
           ),
           child: Center(
             child: Image.asset(
               'assets/icons/logo.png',
-              width: 50,
-              height: 50,
+              width: 90,
+              height: 90,
             ),
           ),
         ),
