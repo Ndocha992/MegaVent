@@ -88,11 +88,7 @@ class OrganizerDashboard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const Icon(
-                    Icons.celebration,
-                    color: Colors.white,
-                    size: 40,
-                  ),
+                  const Icon(Icons.celebration, color: Colors.white, size: 40),
                 ],
               ),
             ),
@@ -101,20 +97,27 @@ class OrganizerDashboard extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: _buildStatCard('Events', '12', Icons.event, AppConstants.primaryColor),
+                  child: _buildStatCard(
+                    'Events',
+                    '12',
+                    Icons.event,
+                    AppConstants.primaryColor,
+                  ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
-                  child: _buildStatCard('Attendees', '248', Icons.people, AppConstants.secondaryColor),
+                  child: _buildStatCard(
+                    'Attendees',
+                    '248',
+                    Icons.people,
+                    AppConstants.secondaryColor,
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: 24),
             // Quick Actions
-            Text(
-              'Quick Actions',
-              style: AppConstants.headlineSmall,
-            ),
+            Text('Quick Actions', style: AppConstants.headlineSmall),
             const SizedBox(height: 16),
             Expanded(
               child: GridView.count(
@@ -122,10 +125,26 @@ class OrganizerDashboard extends StatelessWidget {
                 crossAxisSpacing: 16,
                 mainAxisSpacing: 16,
                 children: [
-                  _buildActionCard('Create Event', Icons.add_circle_outline, AppConstants.primaryColor),
-                  _buildActionCard('View Events', Icons.event_note, AppConstants.secondaryColor),
-                  _buildActionCard('Analytics', Icons.analytics, AppConstants.accentColor),
-                  _buildActionCard('Settings', Icons.settings, AppConstants.textSecondaryColor),
+                  _buildActionCard(
+                    'Create Event',
+                    Icons.add_circle_outline,
+                    AppConstants.primaryColor,
+                  ),
+                  _buildActionCard(
+                    'View Events',
+                    Icons.event_note,
+                    AppConstants.secondaryColor,
+                  ),
+                  _buildActionCard(
+                    'Analytics',
+                    Icons.analytics,
+                    AppConstants.accentColor,
+                  ),
+                  _buildActionCard(
+                    'Settings',
+                    Icons.settings,
+                    AppConstants.textSecondaryColor,
+                  ),
                 ],
               ),
             ),
@@ -135,7 +154,12 @@ class OrganizerDashboard extends StatelessWidget {
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: AppConstants.cardDecoration,

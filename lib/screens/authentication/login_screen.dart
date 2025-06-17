@@ -207,10 +207,10 @@ class _LoginScreenState extends State<LoginScreen>
       if (result['success'] == true && mounted) {
         final userRole = result['role'];
         final userStatus = result['status'];
-        final isEmailVerified = result['emailVerified'] ?? false;
+        final isEmailVerified = result['emailVerified'] ?? true;
 
-        // Check if email is verified first
-        if (!isEmailVerified) {
+        // Only check email verification if explicitly returned as false
+        if (result.containsKey('emailVerified') && !isEmailVerified) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Please verify your email address first.'),
@@ -221,8 +221,8 @@ class _LoginScreenState extends State<LoginScreen>
           return;
         }
 
-        // For organizers, check if they're approved
-        if (userRole == 'organizer') {
+        // For organizers, check if they're approved (only if status is provided)
+        if (userRole == 'organizer' && result.containsKey('status')) {
           if (userStatus == 'pending' || userStatus != 'active') {
             _showOrganizerPendingDialog();
             return;
@@ -244,10 +244,25 @@ class _LoginScreenState extends State<LoginScreen>
           }
         });
       } else {
+        // Handle specific error cases
+        String errorMessage = result['message'] ?? 'Login failed';
+        Color backgroundColor = AppConstants.errorColor;
+
+        // Special handling for email verification
+        if (result.containsKey('emailVerified') && !result['emailVerified']) {
+          backgroundColor = AppConstants.warningColor;
+          // Navigate to verification screen for unverified emails
+          Future.delayed(const Duration(milliseconds: 1000), () {
+            if (mounted) {
+              Navigator.pushReplacementNamed(context, '/verify-email');
+            }
+          });
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(result['message'] ?? 'Login failed'),
-            backgroundColor: AppConstants.errorColor,
+            content: Text(errorMessage),
+            backgroundColor: backgroundColor,
           ),
         );
       }
