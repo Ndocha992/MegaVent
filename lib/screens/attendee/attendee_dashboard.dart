@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:megavent/utils/constants.dart';
+import 'package:megavent/services/auth_service.dart';
+import 'package:provider/provider.dart';
 
 class AttendeeDashboard extends StatelessWidget {
   const AttendeeDashboard({super.key});
@@ -52,8 +54,8 @@ class AttendeeDashboard extends StatelessWidget {
             icon: const Icon(Icons.notifications_outlined, color: Colors.white),
           ),
           IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.person_outline, color: Colors.white),
+            onPressed: () => _logout(context),
+            icon: const Icon(Icons.logout, color: Colors.white),
           ),
         ],
       ),
@@ -88,11 +90,7 @@ class AttendeeDashboard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const Icon(
-                    Icons.celebration,
-                    color: Colors.white,
-                    size: 40,
-                  ),
+                  const Icon(Icons.celebration, color: Colors.white, size: 40),
                 ],
               ),
             ),
@@ -101,20 +99,27 @@ class AttendeeDashboard extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: _buildStatCard('Events', '12', Icons.event, AppConstants.primaryColor),
+                  child: _buildStatCard(
+                    'Events',
+                    '12',
+                    Icons.event,
+                    AppConstants.primaryColor,
+                  ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
-                  child: _buildStatCard('Attendees', '248', Icons.people, AppConstants.secondaryColor),
+                  child: _buildStatCard(
+                    'Attendees',
+                    '248',
+                    Icons.people,
+                    AppConstants.secondaryColor,
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: 24),
             // Quick Actions
-            Text(
-              'Quick Actions',
-              style: AppConstants.headlineSmall,
-            ),
+            Text('Quick Actions', style: AppConstants.headlineSmall),
             const SizedBox(height: 16),
             Expanded(
               child: GridView.count(
@@ -122,10 +127,26 @@ class AttendeeDashboard extends StatelessWidget {
                 crossAxisSpacing: 16,
                 mainAxisSpacing: 16,
                 children: [
-                  _buildActionCard('Create Event', Icons.add_circle_outline, AppConstants.primaryColor),
-                  _buildActionCard('View Events', Icons.event_note, AppConstants.secondaryColor),
-                  _buildActionCard('Analytics', Icons.analytics, AppConstants.accentColor),
-                  _buildActionCard('Settings', Icons.settings, AppConstants.textSecondaryColor),
+                  _buildActionCard(
+                    'Create Event',
+                    Icons.add_circle_outline,
+                    AppConstants.primaryColor,
+                  ),
+                  _buildActionCard(
+                    'View Events',
+                    Icons.event_note,
+                    AppConstants.secondaryColor,
+                  ),
+                  _buildActionCard(
+                    'Analytics',
+                    Icons.analytics,
+                    AppConstants.accentColor,
+                  ),
+                  _buildActionCard(
+                    'Settings',
+                    Icons.settings,
+                    AppConstants.textSecondaryColor,
+                  ),
                 ],
               ),
             ),
@@ -135,7 +156,38 @@ class AttendeeDashboard extends StatelessWidget {
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+  void _logout(BuildContext context) async {
+    final authService = Provider.of<AuthService>(context, listen: false);
+
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    final result = await authService.signOut();
+
+    // Close loading dialog
+    Navigator.of(context).pop();
+
+    if (result['success']) {
+      // Navigate to login screen or wherever you want after logout
+      Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+    } else {
+      // Show error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result['message']), backgroundColor: Colors.red),
+      );
+    }
+  }
+
+  Widget _buildStatCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: AppConstants.cardDecoration,

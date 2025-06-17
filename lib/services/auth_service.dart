@@ -75,8 +75,7 @@ class AuthService extends ChangeNotifier {
         email: email,
         phone: phone,
         profileImage: profileImage,
-        emailVerified: false,
-        isActive: true,
+        isApproved: true,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
@@ -95,8 +94,7 @@ class AuthService extends ChangeNotifier {
         'phone': phone,
         'role': 'attendee',
         'profileImage': profileImage,
-        'isActive': true,
-        'emailVerified': false,
+        'isApproved': true,
         'createdAt': DateTime.now(),
         'updatedAt': DateTime.now(),
       });
@@ -185,9 +183,7 @@ class AuthService extends ChangeNotifier {
         phone: phone,
         organization: organization,
         profileImage: profileImage,
-        emailVerified: false,
         isApproved: false,
-        isActive: false, // Inactive until approved
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
@@ -207,9 +203,7 @@ class AuthService extends ChangeNotifier {
         'role': 'organizer',
         'organization': organization,
         'profileImage': profileImage,
-        'isActive': false,
         'isApproved': false,
-        'emailVerified': false,
         'createdAt': DateTime.now(),
         'updatedAt': DateTime.now(),
       });
@@ -300,11 +294,9 @@ class AuthService extends ChangeNotifier {
         email: email,
         phone: phone,
         profileImage: profileImage,
-        emailVerified: true, // Auto-verified for admins
-        isActive: true,
+        isApproved: true,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
-        createdBy: currentUser!.uid,
         adminLevel: '',
         permissions: [],
       );
@@ -323,11 +315,9 @@ class AuthService extends ChangeNotifier {
         'phone': phone,
         'role': 'admin',
         'profileImage': profileImage,
-        'isActive': true,
-        'emailVerified': true,
+        'isApproved': true,
         'createdAt': DateTime.now(),
         'updatedAt': DateTime.now(),
-        'createdBy': currentUser!.uid,
       });
 
       return {
@@ -370,7 +360,6 @@ class AuthService extends ChangeNotifier {
     required String email,
     required String password,
     required String phone,
-    required String role, // e.g., 'event_manager', 'coordinator', etc.
     String? profileImage,
   }) async {
     _setLoading(true);
@@ -387,7 +376,7 @@ class AuthService extends ChangeNotifier {
 
       // Check if organizer is approved and active
       final organizer = currentUserData['user'] as Organizer;
-      if (!organizer.isApproved || !organizer.isActive) {
+      if (!organizer.isApproved || !organizer.isApproved) {
         return {
           'success': false,
           'message': 'Your organizer account must be approved first',
@@ -398,8 +387,7 @@ class AuthService extends ChangeNotifier {
       if (fullName.isEmpty ||
           email.isEmpty ||
           password.isEmpty ||
-          phone.isEmpty ||
-          role.isEmpty) {
+          phone.isEmpty) {
         return {'success': false, 'message': 'All fields are required'};
       }
 
@@ -429,15 +417,12 @@ class AuthService extends ChangeNotifier {
         fullName: fullName,
         email: email,
         phone: phone,
-        role: role,
         profileImage: profileImage,
         organizerId: organizer.id,
         organization: organizer.organization,
-        emailVerified: false,
-        isActive: true,
+        isApproved: true,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
-        createdBy: currentUser!.uid,
       );
 
       // Send email verification
@@ -456,15 +441,12 @@ class AuthService extends ChangeNotifier {
         'email': email,
         'phone': phone,
         'role': 'staff',
-        'staffRole': role,
         'organizerId': organizer.id,
         'organization': organizer.organization,
         'profileImage': profileImage,
-        'isActive': true,
-        'emailVerified': false,
+        'isApproved': true,
         'createdAt': DateTime.now(),
         'updatedAt': DateTime.now(),
-        'createdBy': currentUser!.uid,
       });
 
       return {
@@ -517,32 +499,13 @@ class AuthService extends ChangeNotifier {
         password: password,
       );
 
-      // Check email verification for non-admin users
+      // Check email verification for ALL users (including admins)
       if (!credential.user!.emailVerified) {
-        // Check if user is Admin (they don't need email verification)
-        DocumentSnapshot userDoc =
-            await _firestore
-                .collection('users')
-                .doc(credential.user!.uid)
-                .get();
-
-        if (userDoc.exists && userDoc.data() != null) {
-          Map<String, dynamic> userData =
-              userDoc.data() as Map<String, dynamic>;
-          if (userData['role'] != 'admin') {
-            await _auth.signOut();
-            return {
-              'success': false,
-              'message': 'Please verify your email before logging in',
-            };
-          }
-        } else {
-          await _auth.signOut();
-          return {
-            'success': false,
-            'message': 'Please verify your email before logging in',
-          };
-        }
+        await _auth.signOut();
+        return {
+          'success': false,
+          'message': 'Please verify your email before logging in',
+        };
       }
 
       // Get user data based on role

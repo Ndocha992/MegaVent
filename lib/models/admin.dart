@@ -8,21 +8,9 @@ class Admin {
   final String? profileImage;
   final String adminLevel; // 'super_admin', 'admin', 'moderator'
   final List<String> permissions; // List of permissions/roles
-  final bool emailVerified;
-  final bool isActive;
-  final bool? isDeleted;
+  final bool isApproved;
   final DateTime createdAt;
   final DateTime updatedAt;
-  final String? createdBy;
-  final String? suspensionReason;
-  final DateTime? suspendedAt;
-  final String? suspendedBy;
-  final DateTime? reactivatedAt;
-  final String? reactivatedBy;
-  final DateTime? deletedAt;
-  final String? deletedBy;
-  final String? updatedBy;
-  final DateTime? lastLoginAt;
 
   Admin({
     required this.id,
@@ -32,21 +20,9 @@ class Admin {
     this.profileImage,
     required this.adminLevel,
     required this.permissions,
-    required this.emailVerified,
-    required this.isActive,
-    this.isDeleted,
+    required this.isApproved,
     required this.createdAt,
     required this.updatedAt,
-    this.createdBy,
-    this.suspensionReason,
-    this.suspendedAt,
-    this.suspendedBy,
-    this.reactivatedAt,
-    this.reactivatedBy,
-    this.deletedAt,
-    this.deletedBy,
-    this.updatedBy,
-    this.lastLoginAt,
   });
 
   // Convert to Map for Firestore
@@ -59,28 +35,16 @@ class Admin {
       'profileImage': profileImage,
       'adminLevel': adminLevel,
       'permissions': permissions,
-      'emailVerified': emailVerified,
-      'isActive': isActive,
-      'isDeleted': isDeleted,
+      'isApproved': isApproved,
       'createdAt': createdAt,
       'updatedAt': updatedAt,
-      'createdBy': createdBy,
-      'suspensionReason': suspensionReason,
-      'suspendedAt': suspendedAt,
-      'suspendedBy': suspendedBy,
-      'reactivatedAt': reactivatedAt,
-      'reactivatedBy': reactivatedBy,
-      'deletedAt': deletedAt,
-      'deletedBy': deletedBy,
-      'updatedBy': updatedBy,
-      'lastLoginAt': lastLoginAt,
     };
   }
 
   // Create from Firestore DocumentSnapshot
   factory Admin.fromFirestore(DocumentSnapshot doc) {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-    
+
     return Admin(
       id: doc.id,
       fullName: data['fullName'] ?? '',
@@ -89,21 +53,9 @@ class Admin {
       profileImage: data['profileImage'],
       adminLevel: data['adminLevel'] ?? 'admin',
       permissions: List<String>.from(data['permissions'] ?? []),
-      emailVerified: data['emailVerified'] ?? false,
-      isActive: data['isActive'] ?? true,
-      isDeleted: data['isDeleted'],
+      isApproved: data['isApproved'] ?? true,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      createdBy: data['createdBy'],
-      suspensionReason: data['suspensionReason'],
-      suspendedAt: (data['suspendedAt'] as Timestamp?)?.toDate(),
-      suspendedBy: data['suspendedBy'],
-      reactivatedAt: (data['reactivatedAt'] as Timestamp?)?.toDate(),
-      reactivatedBy: data['reactivatedBy'],
-      deletedAt: (data['deletedAt'] as Timestamp?)?.toDate(),
-      deletedBy: data['deletedBy'],
-      updatedBy: data['updatedBy'],
-      lastLoginAt: (data['lastLoginAt'] as Timestamp?)?.toDate(),
     );
   }
 
@@ -117,33 +69,15 @@ class Admin {
       profileImage: map['profileImage'],
       adminLevel: map['adminLevel'] ?? 'admin',
       permissions: List<String>.from(map['permissions'] ?? []),
-      emailVerified: map['emailVerified'] ?? false,
-      isActive: map['isActive'] ?? true,
-      isDeleted: map['isDeleted'],
-      createdAt: map['createdAt'] is Timestamp 
-          ? (map['createdAt'] as Timestamp).toDate()
-          : map['createdAt'] ?? DateTime.now(),
-      updatedAt: map['updatedAt'] is Timestamp 
-          ? (map['updatedAt'] as Timestamp).toDate()
-          : map['updatedAt'] ?? DateTime.now(),
-      createdBy: map['createdBy'],
-      suspensionReason: map['suspensionReason'],
-      suspendedAt: map['suspendedAt'] is Timestamp 
-          ? (map['suspendedAt'] as Timestamp).toDate()
-          : map['suspendedAt'],
-      suspendedBy: map['suspendedBy'],
-      reactivatedAt: map['reactivatedAt'] is Timestamp 
-          ? (map['reactivatedAt'] as Timestamp).toDate()
-          : map['reactivatedAt'],
-      reactivatedBy: map['reactivatedBy'],
-      deletedAt: map['deletedAt'] is Timestamp 
-          ? (map['deletedAt'] as Timestamp).toDate()
-          : map['deletedAt'],
-      deletedBy: map['deletedBy'],
-      updatedBy: map['updatedBy'],
-      lastLoginAt: map['lastLoginAt'] is Timestamp 
-          ? (map['lastLoginAt'] as Timestamp).toDate()
-          : map['lastLoginAt'],
+      isApproved: map['isApproved'] ?? true,
+      createdAt:
+          map['createdAt'] is Timestamp
+              ? (map['createdAt'] as Timestamp).toDate()
+              : map['createdAt'] ?? DateTime.now(),
+      updatedAt:
+          map['updatedAt'] is Timestamp
+              ? (map['updatedAt'] as Timestamp).toDate()
+              : map['updatedAt'] ?? DateTime.now(),
     );
   }
 
@@ -156,21 +90,9 @@ class Admin {
     String? profileImage,
     String? adminLevel,
     List<String>? permissions,
-    bool? emailVerified,
-    bool? isActive,
-    bool? isDeleted,
+    bool? isApproved,
     DateTime? createdAt,
     DateTime? updatedAt,
-    String? createdBy,
-    String? suspensionReason,
-    DateTime? suspendedAt,
-    String? suspendedBy,
-    DateTime? reactivatedAt,
-    String? reactivatedBy,
-    DateTime? deletedAt,
-    String? deletedBy,
-    String? updatedBy,
-    DateTime? lastLoginAt,
   }) {
     return Admin(
       id: id ?? this.id,
@@ -180,37 +102,25 @@ class Admin {
       profileImage: profileImage ?? this.profileImage,
       adminLevel: adminLevel ?? this.adminLevel,
       permissions: permissions ?? this.permissions,
-      emailVerified: emailVerified ?? this.emailVerified,
-      isActive: isActive ?? this.isActive,
-      isDeleted: isDeleted ?? this.isDeleted,
+      isApproved: isApproved ?? this.isApproved,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
-      createdBy: createdBy ?? this.createdBy,
-      suspensionReason: suspensionReason ?? this.suspensionReason,
-      suspendedAt: suspendedAt ?? this.suspendedAt,
-      suspendedBy: suspendedBy ?? this.suspendedBy,
-      reactivatedAt: reactivatedAt ?? this.reactivatedAt,
-      reactivatedBy: reactivatedBy ?? this.reactivatedBy,
-      deletedAt: deletedAt ?? this.deletedAt,
-      deletedBy: deletedBy ?? this.deletedBy,
-      updatedBy: updatedBy ?? this.updatedBy,
-      lastLoginAt: lastLoginAt ?? this.lastLoginAt,
     );
   }
 
   // Getter for formatted admin level display
   String get formattedAdminLevel {
-    return adminLevel.replaceAll('_', ' ').split(' ')
+    return adminLevel
+        .replaceAll('_', ' ')
+        .split(' ')
         .map((word) => word[0].toUpperCase() + word.substring(1).toLowerCase())
         .join(' ');
   }
 
   // Getter for status display
   String get status {
-    if (isDeleted == true) return 'Deleted';
-    if (!isActive && suspensionReason != null) return 'Suspended';
-    if (!isActive) return 'Inactive';
-    if (!emailVerified) return 'Unverified';
+    if (!isApproved) return 'Suspended';
+    if (!isApproved) return 'Inactive';
     return 'Active';
   }
 
@@ -242,7 +152,7 @@ class Admin {
 
   @override
   String toString() {
-    return 'Admin(id: $id, fullName: $fullName, email: $email, adminLevel: $adminLevel, isActive: $isActive)';
+    return 'Admin(id: $id, fullName: $fullName, email: $email, adminLevel: $adminLevel, isApproved: $isApproved)';
   }
 
   @override
