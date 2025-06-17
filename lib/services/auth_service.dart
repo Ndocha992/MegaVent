@@ -75,8 +75,7 @@ class AuthService extends ChangeNotifier {
         email: email,
         phone: phone,
         profileImage: profileImage,
-        emailVerified: false,
-        isActive: true,
+        isApproved: true,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
@@ -95,8 +94,7 @@ class AuthService extends ChangeNotifier {
         'phone': phone,
         'role': 'attendee',
         'profileImage': profileImage,
-        'isActive': true,
-        'emailVerified': false,
+        'isApproved': true,
         'createdAt': DateTime.now(),
         'updatedAt': DateTime.now(),
       });
@@ -185,9 +183,7 @@ class AuthService extends ChangeNotifier {
         phone: phone,
         organization: organization,
         profileImage: profileImage,
-        emailVerified: false,
         isApproved: false,
-        isActive: false, // Inactive until approved
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
@@ -207,9 +203,7 @@ class AuthService extends ChangeNotifier {
         'role': 'organizer',
         'organization': organization,
         'profileImage': profileImage,
-        'isActive': false,
         'isApproved': false,
-        'emailVerified': false,
         'createdAt': DateTime.now(),
         'updatedAt': DateTime.now(),
       });
@@ -300,11 +294,9 @@ class AuthService extends ChangeNotifier {
         email: email,
         phone: phone,
         profileImage: profileImage,
-        emailVerified: true, // Auto-verified for admins
-        isActive: true,
+        isApproved: true,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
-        createdBy: currentUser!.uid,
         adminLevel: '',
         permissions: [],
       );
@@ -323,11 +315,9 @@ class AuthService extends ChangeNotifier {
         'phone': phone,
         'role': 'admin',
         'profileImage': profileImage,
-        'isActive': true,
-        'emailVerified': true,
+        'isApproved': true,
         'createdAt': DateTime.now(),
         'updatedAt': DateTime.now(),
-        'createdBy': currentUser!.uid,
       });
 
       return {
@@ -370,7 +360,6 @@ class AuthService extends ChangeNotifier {
     required String email,
     required String password,
     required String phone,
-    required String role, // e.g., 'event_manager', 'coordinator', etc.
     String? profileImage,
   }) async {
     _setLoading(true);
@@ -387,7 +376,7 @@ class AuthService extends ChangeNotifier {
 
       // Check if organizer is approved and active
       final organizer = currentUserData['user'] as Organizer;
-      if (!organizer.isApproved || !organizer.isActive) {
+      if (!organizer.isApproved || !organizer.isApproved) {
         return {
           'success': false,
           'message': 'Your organizer account must be approved first',
@@ -398,8 +387,7 @@ class AuthService extends ChangeNotifier {
       if (fullName.isEmpty ||
           email.isEmpty ||
           password.isEmpty ||
-          phone.isEmpty ||
-          role.isEmpty) {
+          phone.isEmpty) {
         return {'success': false, 'message': 'All fields are required'};
       }
 
@@ -429,15 +417,12 @@ class AuthService extends ChangeNotifier {
         fullName: fullName,
         email: email,
         phone: phone,
-        role: role,
         profileImage: profileImage,
         organizerId: organizer.id,
         organization: organizer.organization,
-        emailVerified: false,
-        isActive: true,
+        isApproved: true,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
-        createdBy: currentUser!.uid,
       );
 
       // Send email verification
@@ -456,15 +441,12 @@ class AuthService extends ChangeNotifier {
         'email': email,
         'phone': phone,
         'role': 'staff',
-        'staffRole': role,
         'organizerId': organizer.id,
         'organization': organizer.organization,
         'profileImage': profileImage,
-        'isActive': true,
-        'emailVerified': false,
+        'isApproved': true,
         'createdAt': DateTime.now(),
         'updatedAt': DateTime.now(),
-        'createdBy': currentUser!.uid,
       });
 
       return {
@@ -501,7 +483,7 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  // Login with email/password
+  // Login with email/password - UPDATED METHOD
   Future<Map<String, dynamic>> loginWithEmailAndPassword(
     String email,
     String password,
@@ -517,36 +499,51 @@ class AuthService extends ChangeNotifier {
         password: password,
       );
 
-      // Check email verification for non-admin users
-      if (!credential.user!.emailVerified) {
-        // Check if user is Admin (they don't need email verification)
-        DocumentSnapshot userDoc =
-            await _firestore
-                .collection('users')
-                .doc(credential.user!.uid)
-                .get();
+      // Reload user to get the latest verification status
+      await credential.user!.reload();
+      User? refreshedUser = _auth.currentUser;
 
-        if (userDoc.exists && userDoc.data() != null) {
-          Map<String, dynamic> userData =
-              userDoc.data() as Map<String, dynamic>;
-          if (userData['role'] != 'admin') {
-            await _auth.signOut();
-            return {
-              'success': false,
-              'message': 'Please verify your email before logging in',
-            };
-          }
-        } else {
+      // Check email verification - but be more intelligent about it
+      if (refreshedUser != null && !refreshedUser.emailVerified) {
+        // First check if user data exists in Firestore (might be pre-verified)
+        DocumentSnapshot userDoc =
+            await _firestore.collection('users').doc(refreshedUser.uid).get();
+
+        if (!userDoc.exists) {
           await _auth.signOut();
           return {
             'success': false,
-            'message': 'Please verify your email before logging in',
+            'message': 'User account not found. Please register first.',
           };
         }
+
+        // If user exists in Firestore but email not verified, sign them out
+        await _auth.signOut();
+        return {
+          'success': false,
+          'message': 'Please verify your email before logging in',
+          'emailVerified': false,
+        };
       }
 
       // Get user data based on role
-      return await getUserData();
+      final userData = await getUserData();
+
+      if (!userData['success']) {
+        await _auth.signOut();
+        return userData;
+      }
+
+      // Add additional verification status and role info
+      userData['emailVerified'] = refreshedUser?.emailVerified ?? true;
+
+      // For organizers, check approval status
+      if (userData['role'] == 'organizer') {
+        final organizer = userData['user'];
+        userData['status'] = organizer.isApproved ? 'active' : 'pending';
+      }
+
+      return userData;
     } on FirebaseAuthException catch (e) {
       String errorMessage;
       switch (e.code) {
@@ -561,6 +558,9 @@ class AuthService extends ChangeNotifier {
           break;
         case 'invalid-email':
           errorMessage = 'Invalid email format';
+          break;
+        case 'too-many-requests':
+          errorMessage = 'Too many login attempts. Please try again later.';
           break;
         default:
           errorMessage = 'Login failed. Please try again.';
@@ -579,7 +579,7 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  // Get user data based on type
+  // Get user data based on type - UPDATED METHOD
   Future<Map<String, dynamic>> getUserData() async {
     if (currentUser == null) {
       return {'success': false, 'message': 'No user signed in'};
@@ -587,57 +587,147 @@ class AuthService extends ChangeNotifier {
 
     _setLoading(true);
     try {
-      // Try to get Admin data
-      DocumentSnapshot adminDoc =
-          await _firestore.collection('admins').doc(currentUser!.uid).get();
-      if (adminDoc.exists) {
-        Admin admin = Admin.fromFirestore(adminDoc);
-        return {'success': true, 'user': admin, 'role': 'admin'};
+      String userId = currentUser!.uid;
+
+      // Try to get from users collection first for role identification
+      DocumentSnapshot userDoc =
+          await _firestore.collection('users').doc(userId).get();
+
+      if (!userDoc.exists) {
+        return {'success': false, 'message': 'User data not found'};
       }
 
-      // Try to get organizer data
-      DocumentSnapshot organizerDoc =
-          await _firestore.collection('organizers').doc(currentUser!.uid).get();
-      if (organizerDoc.exists) {
-        Organizer organizer = Organizer.fromFirestore(organizerDoc);
-        return {'success': true, 'user': organizer, 'role': 'organizer'};
+      Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
+      String userRole = userData['role'] ?? '';
+
+      // Get detailed data from specific collection based on role
+      switch (userRole) {
+        case 'admin':
+          DocumentSnapshot adminDoc =
+              await _firestore.collection('admins').doc(userId).get();
+          if (adminDoc.exists) {
+            Admin admin = Admin.fromFirestore(adminDoc);
+            return {
+              'success': true,
+              'user': admin,
+              'role': 'admin',
+              'emailVerified': currentUser!.emailVerified,
+            };
+          }
+          break;
+
+        case 'organizer':
+          DocumentSnapshot organizerDoc =
+              await _firestore.collection('organizers').doc(userId).get();
+          if (organizerDoc.exists) {
+            Organizer organizer = Organizer.fromFirestore(organizerDoc);
+            return {
+              'success': true,
+              'user': organizer,
+              'role': 'organizer',
+              'status': organizer.isApproved ? 'active' : 'pending',
+              'emailVerified': currentUser!.emailVerified,
+            };
+          }
+          break;
+
+        case 'attendee':
+          DocumentSnapshot attendeeDoc =
+              await _firestore.collection('attendees').doc(userId).get();
+          if (attendeeDoc.exists) {
+            Attendee attendee = Attendee.fromFirestore(attendeeDoc);
+            return {
+              'success': true,
+              'user': attendee,
+              'role': 'attendee',
+              'emailVerified': currentUser!.emailVerified,
+            };
+          }
+          break;
+
+        case 'staff':
+          DocumentSnapshot staffDoc =
+              await _firestore.collection('staff').doc(userId).get();
+          if (staffDoc.exists) {
+            Staff staff = Staff.fromFirestore(staffDoc);
+            return {
+              'success': true,
+              'user': staff,
+              'role': 'staff',
+              'emailVerified': currentUser!.emailVerified,
+            };
+          }
+          break;
+
+        default:
+          return {'success': false, 'message': 'Unknown user role: $userRole'};
       }
 
-      // Try to get attendee data
-      DocumentSnapshot attendeeDoc =
-          await _firestore.collection('attendees').doc(currentUser!.uid).get();
-      if (attendeeDoc.exists) {
-        Attendee attendee = Attendee.fromFirestore(attendeeDoc);
-        return {'success': true, 'user': attendee, 'role': 'attendee'};
-      }
-
-      // Try to get staff data
-      DocumentSnapshot staffDoc =
-          await _firestore.collection('staff').doc(currentUser!.uid).get();
-      if (staffDoc.exists) {
-        Staff staff = Staff.fromFirestore(staffDoc);
-        return {'success': true, 'user': staff, 'role': 'staff'};
-      }
-
-      return {'success': false, 'message': 'User data not found'};
+      return {'success': false, 'message': 'User profile data not found'};
     } catch (e) {
       if (e is FirebaseException && e.code == 'unavailable') {
         return {'success': false, 'message': 'No internet connection'};
       }
-      return {'success': false, 'message': 'Failed to retrieve user data'};
+      return {
+        'success': false,
+        'message': 'Failed to retrieve user data: ${e.toString()}',
+      };
     } finally {
       _setLoading(false);
     }
   }
 
-  // Check if email is verified
+  // Check if email is verified with proper refresh - UPDATED METHOD
   Future<bool> checkEmailVerified() async {
     try {
+      if (currentUser == null) return false;
+
       // Reload user to get latest verification status
-      await currentUser?.reload();
-      return currentUser?.emailVerified ?? false;
+      await currentUser!.reload();
+
+      // Get the refreshed user
+      User? refreshedUser = _auth.currentUser;
+
+      return refreshedUser?.emailVerified ?? false;
     } catch (e) {
+      print('Error checking email verification: $e');
       return false;
+    }
+  }
+
+  // Add this method to handle verification status more intelligently
+  Future<Map<String, dynamic>> checkUserVerificationStatus() async {
+    try {
+      if (currentUser == null) {
+        return {'verified': false, 'message': 'No user signed in'};
+      }
+
+      // Reload user first
+      await currentUser!.reload();
+      User? refreshedUser = _auth.currentUser;
+
+      if (refreshedUser == null) {
+        return {'verified': false, 'message': 'User session expired'};
+      }
+
+      // Check if email is verified
+      bool emailVerified = refreshedUser.emailVerified;
+
+      // Also check if user exists in Firestore
+      DocumentSnapshot userDoc =
+          await _firestore.collection('users').doc(refreshedUser.uid).get();
+
+      if (!userDoc.exists) {
+        return {'verified': false, 'message': 'User profile not found'};
+      }
+
+      return {
+        'verified': emailVerified,
+        'message': emailVerified ? 'Email verified' : 'Email not verified',
+        'userExists': true,
+      };
+    } catch (e) {
+      return {'verified': false, 'message': 'Verification check failed: $e'};
     }
   }
 

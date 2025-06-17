@@ -14,8 +14,13 @@ class LoadingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final double containerWidth = screenWidth > 400 ? 360 : screenWidth * 0.85;
+    
     final Widget loadingContent = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 28),
+      width: containerWidth,
+      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
+      margin: const EdgeInsets.symmetric(horizontal: 20),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
@@ -31,7 +36,7 @@ class LoadingScreen extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Custom animated logo container
+          // Static logo container without spinning ring
           Container(
             width: 90,
             height: 90,
@@ -51,50 +56,31 @@ class LoadingScreen extends StatelessWidget {
                 ),
               ],
             ),
-            child: Stack(
-              children: [
-                // Animated spinning outer ring
-                const Positioned.fill(
-                  child: SpinKitRing(
-                    color: Colors.white,
-                    size: 90.0,
-                    lineWidth: 3.0,
-                  ),
+            child: Center(
+              child: Container(
+                width: 45,
+                height: 45,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
                 ),
-                // Logo in center
-                Center(
-                  child: Container(
-                    width: 45,
-                    height: 45,
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.event,
-                      color: AppConstants.primaryColor,
-                      size: 24,
-                    ),
-                  ),
+                child: const Icon(
+                  Icons.event,
+                  color: AppConstants.primaryColor,
+                  size: 24,
                 ),
-              ],
+              ),
             ),
           ),
           const SizedBox(height: 24),
-          // App name
-          ShaderMask(
-            shaderCallback:
-                (bounds) => const LinearGradient(
-                  colors: AppConstants.primaryGradient,
-                ).createShader(bounds),
-            child: const Text(
-              'MegaVent',
-              style: TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
+          // App name without shader mask gradient
+          const Text(
+            'MegaVent',
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: AppConstants.primaryColor,
             ),
           ),
           const SizedBox(height: 12),
