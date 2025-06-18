@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/data/fake_data.dart';
 import 'package:megavent/widgets/organizer/app_bar.dart';
-import 'package:megavent/widgets/organizer/latest_attendees_card.dart';
-import 'package:megavent/widgets/organizer/latest_events_card.dart';
-import 'package:megavent/widgets/organizer/latest_staff_card.dart';
-import 'package:megavent/widgets/organizer/quick_actions_grid.dart';
+import 'package:megavent/widgets/organizer/dashboard/latest_attendees_card.dart';
+import 'package:megavent/widgets/organizer/dashboard/latest_events_card.dart';
+import 'package:megavent/widgets/organizer/dashboard/latest_staff_card.dart';
+import 'package:megavent/widgets/organizer/dashboard/quick_actions_grid.dart';
 import 'package:megavent/widgets/organizer/sidebar.dart';
-import 'package:megavent/widgets/organizer/stats_overview.dart';
-import 'package:megavent/widgets/organizer/welcome_card.dart';
+import 'package:megavent/widgets/organizer/dashboard/stats_overview.dart';
+import 'package:megavent/widgets/organizer/dashboard/welcome_card.dart';
 
 class OrganizerDashboard extends StatefulWidget {
   const OrganizerDashboard({super.key});

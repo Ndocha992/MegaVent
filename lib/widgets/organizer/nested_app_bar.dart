@@ -36,8 +36,8 @@ class NestedScreenAppBar extends StatelessWidget
         children: [
           // Styled Back Button - Increased size
           Container(
-            width: 50,
-            height: 50,
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: Colors.white.withOpacity(0.2),
