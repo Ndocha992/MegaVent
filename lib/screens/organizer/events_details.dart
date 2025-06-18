@@ -1,0 +1,39 @@
+import 'package:flutter/material.dart';
+import 'package:megavent/utils/constants.dart';
+import 'package:megavent/widgets/organizer/app_bar.dart';
+import 'package:megavent/widgets/organizer/sidebar.dart';
+
+class EventsDetails extends StatefulWidget {
+  const EventsDetails({super.key});
+
+  @override
+  State<EventsDetails> createState() => _EventsDetailsState();
+}
+
+class _EventsDetailsState extends State<EventsDetails> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  String currentRoute = '/organizer-events';
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      key: _scaffoldKey,
+      backgroundColor: AppConstants.backgroundColor,
+      appBar: OrganizerAppBar(
+        title: 'MegaVent',
+        onMenuPressed: () => _scaffoldKey.currentState?.openDrawer(),
+      ),
+      drawer: OrganizerSidebar(currentRoute: currentRoute),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Welcome Section
+            Text('EVENTS DETAILS SCREEN'),
+          ],
+        ),
+      ),
+    );
+  }
+}

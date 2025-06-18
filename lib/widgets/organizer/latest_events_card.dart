@@ -16,7 +16,12 @@ class LatestEventsCard extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text('Latest Events', style: AppConstants.headlineSmall),
-            TextButton(onPressed: () {}, child: const Text('View All')),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pushReplacementNamed('/organizer-events');
+              },
+              child: const Text('View All'),
+            ),
           ],
         ),
         const SizedBox(height: 16),

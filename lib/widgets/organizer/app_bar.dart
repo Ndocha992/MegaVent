@@ -5,14 +5,12 @@ class OrganizerAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
   final VoidCallback? onMenuPressed;
   final List<Widget>? actions;
-  final bool showBackButton;
 
   const OrganizerAppBar({
     super.key,
     required this.title,
     this.onMenuPressed,
     this.actions,
-    this.showBackButton = false,
   });
 
   @override
@@ -20,6 +18,7 @@ class OrganizerAppBar extends StatelessWidget implements PreferredSizeWidget {
     return AppBar(
       backgroundColor: Colors.transparent,
       elevation: 0,
+      toolbarHeight: 100, // Increased from default 56
       flexibleSpace: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -34,44 +33,62 @@ class OrganizerAppBar extends StatelessWidget implements PreferredSizeWidget {
       // Custom title with logo and app name on the left
       title: Row(
         children: [
-          // Show back button if needed, otherwise just show logo
-          if (showBackButton)
-            IconButton(
-              onPressed: () => Navigator.of(context).pop(),
-              icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-              padding: EdgeInsets.zero,
-            ),
+          // App Logo - Increased size
           Container(
-            width: 32,
-            height: 32,
+            width: 50,
+            height: 50,
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
+              shape: BoxShape.circle,
+              color: Colors.white.withOpacity(0.9),
+              boxShadow: [
+                BoxShadow(
+                  color: AppConstants.primaryColor.withOpacity(0.3),
+                  blurRadius: 10,
+                  spreadRadius: 2,
+                  offset: const Offset(0, 3),
+                ),
+              ],
             ),
-            child: const Icon(
-              Icons.event,
-              color: AppConstants.primaryColor,
-              size: 20,
+            child: Center(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(25),
+                child: Image.asset(
+                  'assets/icons/logo.png',
+                  width: 40,
+                  height: 40,
+                  fit: BoxFit.cover,
+                ),
+              ),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 16),
           Text(
             title,
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 20,
+              fontSize: 24, // Increased from 20
               fontWeight: FontWeight.bold,
+              letterSpacing: 0.5,
             ),
           ),
         ],
       ),
       // Move hamburger menu to actions (right side)
       actions: [
-        if (!showBackButton)
-          IconButton(
+        // Hamburger menu with better styling
+        Container(
+          margin: const EdgeInsets.only(right: 8),
+          child: IconButton(
             onPressed: onMenuPressed,
-            icon: const Icon(Icons.menu, color: Colors.white),
+            icon: const Icon(
+              Icons.menu,
+              color: Colors.white,
+              size: 28, // Increased icon size
+            ),
+            padding: const EdgeInsets.all(12),
+            splashRadius: 24,
           ),
+        ),
         // Include any additional actions passed to the widget
         if (actions != null) ...actions!,
       ],
@@ -79,5 +96,5 @@ class OrganizerAppBar extends StatelessWidget implements PreferredSizeWidget {
   }
 
   @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+  Size get preferredSize => const Size.fromHeight(100); // Increased from kToolbarHeight (56)
 }

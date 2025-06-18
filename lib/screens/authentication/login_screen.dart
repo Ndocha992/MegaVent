@@ -329,233 +329,248 @@ class _LoginScreenState extends State<LoginScreen>
               opacity: _fadeAnimation,
               child: SlideTransition(
                 position: _slideAnimation,
-                child: SingleChildScrollView(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        const SizedBox(height: 24),
-                        // App Logo with Gradient
-                        Container(
-                          width: 120,
-                          height: 120,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.white.withOpacity(0.6),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppConstants.primaryColor.withOpacity(
-                                  0.2,
-                                ),
-                                blurRadius: 20,
-                                spreadRadius: 1,
-                                offset: const Offset(0, 10),
-                              ),
-                            ],
-                          ),
-                          child: Center(
-                            child: Image.asset(
-                              'assets/icons/logo.png',
-                              width: 90,
-                              height: 90,
-                            ),
-                          ),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    return SingleChildScrollView(
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          minHeight: constraints.maxHeight,
                         ),
-                        const SizedBox(height: 32),
-
-                        // Welcome Header
-                        Text(
-                          'Welcome Back',
-                          style: AppConstants.displaySmall.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: AppConstants.textColor,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppConstants.primaryColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            'Sign in to access MegaVent',
-                            style: AppConstants.bodyMedium.copyWith(
-                              color: AppConstants.primaryColor,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 40),
-
-                        // Login Form Card
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.08),
-                                blurRadius: 20,
-                                spreadRadius: 0,
-                                offset: const Offset(0, 8),
-                              ),
-                            ],
-                          ),
-                          padding: const EdgeInsets.all(32),
-                          child: Form(
-                            key: _formKey,
+                        child: IntrinsicHeight(
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
                             child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                // Email Field
-                                TextFormField(
-                                  controller: _emailController,
-                                  focusNode: _emailFocusNode,
-                                  keyboardType: TextInputType.emailAddress,
-                                  style: AppConstants.bodyLarge.copyWith(
-                                    color: AppConstants.textColor,
-                                  ),
-                                  decoration: AppConstants.inputDecoration(
-                                    labelText: 'Email Address',
-                                    prefixIcon: Icons.email_outlined,
-                                  ),
-                                  validator: (value) {
-                                    if (value == null || value.trim().isEmpty) {
-                                      return 'Please enter your email address';
-                                    }
-                                    if (!RegExp(
-                                      r'^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$',
-                                    ).hasMatch(value.trim())) {
-                                      return 'Please enter a valid email address';
-                                    }
-                                    return null;
-                                  },
-                                  onFieldSubmitted: (_) {
-                                    FocusScope.of(
-                                      context,
-                                    ).requestFocus(_passwordFocusNode);
-                                  },
-                                ),
                                 const SizedBox(height: 24),
-
-                                // Password Field
-                                TextFormField(
-                                  controller: _passwordController,
-                                  focusNode: _passwordFocusNode,
-                                  obscureText: !_passwordVisible,
-                                  style: AppConstants.bodyLarge.copyWith(
-                                    color: AppConstants.textColor,
-                                  ),
-                                  decoration: AppConstants.inputDecoration(
-                                    labelText: 'Password',
-                                    prefixIcon: Icons.lock_outlined,
-                                    suffixIcon: IconButton(
-                                      icon: Icon(
-                                        _passwordVisible
-                                            ? Icons.visibility_outlined
-                                            : Icons.visibility_off_outlined,
-                                        color: AppConstants.textSecondaryColor,
-                                        size: 22,
-                                      ),
-                                      onPressed: () {
-                                        setState(() {
-                                          _passwordVisible = !_passwordVisible;
-                                        });
-                                      },
-                                    ),
-                                  ),
-                                  validator: (value) {
-                                    if (value == null || value.isEmpty) {
-                                      return 'Please enter your password';
-                                    }
-                                    if (value.length < 6) {
-                                      return 'Password must be at least 6 characters';
-                                    }
-                                    return null;
-                                  },
-                                  onFieldSubmitted: (_) => _handleLogin(),
-                                ),
-                                const SizedBox(height: 16),
-
-                                // Forgot Password Link
-                                Align(
-                                  alignment: Alignment.centerRight,
-                                  child: TextButton(
-                                    onPressed:
-                                        () => Navigator.pushNamed(
-                                          context,
-                                          '/forgot-password',
+                                // App Logo with Gradient
+                                Container(
+                                  width: 120,
+                                  height: 120,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.white.withOpacity(0.6),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: AppConstants.primaryColor.withOpacity(
+                                          0.2,
                                         ),
-                                    style: TextButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 4,
+                                        blurRadius: 20,
+                                        spreadRadius: 1,
+                                        offset: const Offset(0, 10),
                                       ),
-                                    ),
-                                    child: Text(
-                                      'Forgot Password?',
-                                      style: AppConstants.bodyMedium.copyWith(
-                                        color: AppConstants.primaryColor,
-                                        fontWeight: FontWeight.w600,
-                                      ),
+                                    ],
+                                  ),
+                                  child: Center(
+                                    child: Image.asset(
+                                      'assets/icons/logo.png',
+                                      width: 90,
+                                      height: 90,
                                     ),
                                   ),
                                 ),
                                 const SizedBox(height: 32),
 
-                                // Login Button
-                                AppConstants.gradientButton(
-                                  text: 'Sign In',
-                                  onPressed: _isLoading ? () {} : _handleLogin,
-                                  isLoading: _isLoading,
+                                // Welcome Header
+                                Text(
+                                  'Welcome Back',
+                                  style: AppConstants.displaySmall.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: AppConstants.textColor,
+                                  ),
                                 ),
+                                const SizedBox(height: 12),
+
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppConstants.primaryColor.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    'Sign in to access MegaVent',
+                                    style: AppConstants.bodyMedium.copyWith(
+                                      color: AppConstants.primaryColor,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+
+                                // Flexible spacer to push content to center
+                                const Spacer(flex: 1),
+
+                                // Login Form Card
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(20),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.08),
+                                        blurRadius: 20,
+                                        spreadRadius: 0,
+                                        offset: const Offset(0, 8),
+                                      ),
+                                    ],
+                                  ),
+                                  padding: const EdgeInsets.all(32),
+                                  child: Form(
+                                    key: _formKey,
+                                    child: Column(
+                                      children: [
+                                        // Email Field
+                                        TextFormField(
+                                          controller: _emailController,
+                                          focusNode: _emailFocusNode,
+                                          keyboardType: TextInputType.emailAddress,
+                                          style: AppConstants.bodyLarge.copyWith(
+                                            color: AppConstants.textColor,
+                                          ),
+                                          decoration: AppConstants.inputDecoration(
+                                            labelText: 'Email Address',
+                                            prefixIcon: Icons.email_outlined,
+                                          ),
+                                          validator: (value) {
+                                            if (value == null || value.trim().isEmpty) {
+                                              return 'Please enter your email address';
+                                            }
+                                            if (!RegExp(
+                                              r'^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$',
+                                            ).hasMatch(value.trim())) {
+                                              return 'Please enter a valid email address';
+                                            }
+                                            return null;
+                                          },
+                                          onFieldSubmitted: (_) {
+                                            FocusScope.of(
+                                              context,
+                                            ).requestFocus(_passwordFocusNode);
+                                          },
+                                        ),
+                                        const SizedBox(height: 24),
+
+                                        // Password Field
+                                        TextFormField(
+                                          controller: _passwordController,
+                                          focusNode: _passwordFocusNode,
+                                          obscureText: !_passwordVisible,
+                                          style: AppConstants.bodyLarge.copyWith(
+                                            color: AppConstants.textColor,
+                                          ),
+                                          decoration: AppConstants.inputDecoration(
+                                            labelText: 'Password',
+                                            prefixIcon: Icons.lock_outlined,
+                                            suffixIcon: IconButton(
+                                              icon: Icon(
+                                                _passwordVisible
+                                                    ? Icons.visibility_outlined
+                                                    : Icons.visibility_off_outlined,
+                                                color: AppConstants.textSecondaryColor,
+                                                size: 22,
+                                              ),
+                                              onPressed: () {
+                                                setState(() {
+                                                  _passwordVisible = !_passwordVisible;
+                                                });
+                                              },
+                                            ),
+                                          ),
+                                          validator: (value) {
+                                            if (value == null || value.isEmpty) {
+                                              return 'Please enter your password';
+                                            }
+                                            if (value.length < 6) {
+                                              return 'Password must be at least 6 characters';
+                                            }
+                                            return null;
+                                          },
+                                          onFieldSubmitted: (_) => _handleLogin(),
+                                        ),
+                                        const SizedBox(height: 16),
+
+                                        // Forgot Password Link
+                                        Align(
+                                          alignment: Alignment.centerRight,
+                                          child: TextButton(
+                                            onPressed:
+                                                () => Navigator.pushNamed(
+                                                  context,
+                                                  '/forgot-password',
+                                                ),
+                                            style: TextButton.styleFrom(
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 8,
+                                                vertical: 4,
+                                              ),
+                                            ),
+                                            child: Text(
+                                              'Forgot Password?',
+                                              style: AppConstants.bodyMedium.copyWith(
+                                                color: AppConstants.primaryColor,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 32),
+
+                                        // Login Button
+                                        AppConstants.gradientButton(
+                                          text: 'Sign In',
+                                          onPressed: _isLoading ? () {} : _handleLogin,
+                                          isLoading: _isLoading,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+
+                                // Another flexible spacer
+                                const Spacer(flex: 1),
+
+                                // Register Link
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      'Don\'t have an account? ',
+                                      style: AppConstants.bodyMedium.copyWith(
+                                        color: AppConstants.textSecondaryColor,
+                                      ),
+                                    ),
+                                    TextButton(
+                                      onPressed:
+                                          () => Navigator.pushReplacementNamed(
+                                            context,
+                                            '/register',
+                                          ),
+                                      style: TextButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        'Create Account',
+                                        style: AppConstants.bodyMedium.copyWith(
+                                          color: AppConstants.primaryColor,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 24),
                               ],
                             ),
                           ),
                         ),
-                        const SizedBox(height: 32),
-
-                        // Register Link
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              'Don\'t have an account? ',
-                              style: AppConstants.bodyMedium.copyWith(
-                                color: AppConstants.textSecondaryColor,
-                              ),
-                            ),
-                            TextButton(
-                              onPressed:
-                                  () => Navigator.pushReplacementNamed(
-                                    context,
-                                    '/register',
-                                  ),
-                              style: TextButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                              ),
-                              child: Text(
-                                'Create Account',
-                                style: AppConstants.bodyMedium.copyWith(
-                                  color: AppConstants.primaryColor,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 40),
-                      ],
-                    ),
-                  ),
+                      ),
+                    );
+                  },
                 ),
               ),
             ),

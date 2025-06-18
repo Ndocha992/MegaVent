@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:megavent/utils/constants.dart';
 
 class QuickActionsGrid extends StatelessWidget {
-  const QuickActionsGrid({super.key});
+  const QuickActionsGrid({super.key, required Null Function(dynamic route) onNavigate});
 
   @override
   Widget build(BuildContext context) {

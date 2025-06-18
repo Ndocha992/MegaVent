@@ -16,7 +16,12 @@ class LatestStaffCard extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text('Latest Staff', style: AppConstants.headlineSmall),
-            TextButton(onPressed: () {}, child: const Text('View All')),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pushReplacementNamed('/organizer-staff');
+              },
+              child: const Text('View All'),
+            ),
           ],
         ),
         const SizedBox(height: 16),

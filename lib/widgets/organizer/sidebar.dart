@@ -5,49 +5,64 @@ import 'package:provider/provider.dart';
 
 class OrganizerSidebar extends StatelessWidget {
   final String currentRoute;
-  final Function(String) onNavigate;
 
-  const OrganizerSidebar({
-    super.key,
-    required this.currentRoute,
-    required this.onNavigate,
-  });
+  const OrganizerSidebar({super.key, required this.currentRoute});
 
   @override
   Widget build(BuildContext context) {
     return Drawer(
       backgroundColor: Colors.white,
-      child: SafeArea(
-        child: Column(
-          children: [
-            // Header - Removed fixed height container to prevent overflow
-            Container(
-              width: double.infinity,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: AppConstants.primaryGradient,
-                ),
+      child: Column(
+        children: [
+          // Header - Extends to top of screen
+          Container(
+            height:
+                MediaQuery.of(context).size.height *
+                0.28, // Dynamic height based on screen
+            width: double.infinity,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: AppConstants.primaryGradient,
               ),
-              child: Padding(
-                padding: const EdgeInsets.all(20),
+            ),
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                20,
+                MediaQuery.of(context).padding.top +
+                    20, // Dynamic top padding for safe area
+                20,
+                20,
+              ),
+              child: Center(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize:
-                      MainAxisSize.min, // Added this to prevent overflow
+                  crossAxisAlignment:
+                      CrossAxisAlignment.center, // Changed from start to center
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
+                    // App Logo with Gradient
                     Container(
-                      width: 60,
-                      height: 60,
+                      width: 80,
+                      height: 80,
                       decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(15),
+                        shape: BoxShape.circle,
+                        color: Colors.white.withOpacity(0.9),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppConstants.primaryColor.withOpacity(0.2),
+                            blurRadius: 20,
+                            spreadRadius: 1,
+                            offset: const Offset(0, 10),
+                          ),
+                        ],
                       ),
-                      child: const Icon(
-                        Icons.event,
-                        color: AppConstants.primaryColor,
-                        size: 30,
+                      child: Center(
+                        child: Image.asset(
+                          'assets/icons/logo.png',
+                          width: 60,
+                          height: 60,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -60,7 +75,7 @@ class OrganizerSidebar extends StatelessWidget {
                       ),
                     ),
                     const Text(
-                      'Organizer Portal',
+                      'Organizer',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 14,
@@ -71,110 +86,105 @@ class OrganizerSidebar extends StatelessWidget {
                 ),
               ),
             ),
+          ),
 
-            // Menu Items - Wrapped in Flexible instead of Expanded to prevent overflow
-            Flexible(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Column(
-                  children: [
-                    _buildMenuItem(
-                      icon: Icons.dashboard_outlined,
-                      activeIcon: Icons.dashboard,
-                      title: 'Dashboard',
-                      route: '/dashboard',
-                      isActive: currentRoute == '/dashboard',
-                    ),
-                    _buildMenuItem(
-                      icon: Icons.event_outlined,
-                      activeIcon: Icons.event,
-                      title: 'Events',
-                      route: '/events',
-                      isActive: currentRoute == '/events',
-                    ),
-                    _buildMenuItem(
-                      icon: Icons.people_outline,
-                      activeIcon: Icons.people,
-                      title: 'Staff',
-                      route: '/staff',
-                      isActive: currentRoute == '/staff',
-                    ),
-                    _buildMenuItem(
-                      icon: Icons.group_outlined,
-                      activeIcon: Icons.group,
-                      title: 'Attendees',
-                      route: '/attendees',
-                      isActive: currentRoute == '/attendees',
-                    ),
-                    _buildMenuItem(
-                      icon: Icons.person_outline,
-                      activeIcon: Icons.person,
-                      title: 'Profile',
-                      route: '/profile',
-                      isActive: currentRoute == '/profile',
-                    ),
-                    const Spacer(),
-
-                    // Logout - Updated to use AuthService
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: AppConstants.errorColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
+          // Menu Items - Flexible container
+          Expanded(
+            child: Column(
+              children: [
+                // Menu items container - Takes available space
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: Column(
+                      children: [
+                        _buildMenuItem(
+                          context: context,
+                          icon: Icons.dashboard_outlined,
+                          activeIcon: Icons.dashboard,
+                          title: 'Dashboard',
+                          route: '/organizer-dashboard',
+                          isActive: currentRoute == '/organizer-dashboard',
                         ),
-                        child: Consumer<AuthService>(
-                          builder: (context, authService, child) {
-                            return ListTile(
-                              leading:
-                                  authService.isLoading
-                                      ? const SizedBox(
-                                        width: 24,
-                                        height: 24,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          valueColor:
-                                              AlwaysStoppedAnimation<Color>(
-                                                AppConstants.errorColor,
-                                              ),
-                                        ),
-                                      )
-                                      : const Icon(
-                                        Icons.logout,
-                                        color: AppConstants.errorColor,
-                                      ),
-                              title: Text(
-                                authService.isLoading
-                                    ? 'Logging out...'
-                                    : 'Log Out',
-                                style: const TextStyle(
-                                  color: AppConstants.errorColor,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              onTap:
-                                  authService.isLoading
-                                      ? null
-                                      : () {
-                                        _showLogoutDialog(context, authService);
-                                      },
-                            );
-                          },
+                        _buildMenuItem(
+                          context: context,
+                          icon: Icons.event_outlined,
+                          activeIcon: Icons.event,
+                          title: 'Events',
+                          route: '/organizer-events',
+                          isActive: currentRoute == '/organizer-events',
+                        ),
+                        _buildMenuItem(
+                          context: context,
+                          icon: Icons.people_outline,
+                          activeIcon: Icons.people,
+                          title: 'Staff',
+                          route: '/organizer-staff',
+                          isActive: currentRoute == '/organizer-staff',
+                        ),
+                        _buildMenuItem(
+                          context: context,
+                          icon: Icons.group_outlined,
+                          activeIcon: Icons.group,
+                          title: 'Attendees',
+                          route: '/organizer-attendees',
+                          isActive: currentRoute == '/organizer-attendees',
+                        ),
+                        _buildMenuItem(
+                          context: context,
+                          icon: Icons.person_outline,
+                          activeIcon: Icons.person,
+                          title: 'Profile',
+                          route: '/organizer-profile',
+                          isActive: currentRoute == '/organizer-profile',
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Logout - Fixed at bottom with safe area padding
+                Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    16,
+                    0,
+                    16,
+                    MediaQuery.of(context).padding.bottom +
+                        20, // Dynamic bottom padding
+                  ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: AppConstants.errorColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: ListTile(
+                      leading: const Icon(
+                        Icons.logout,
+                        color: AppConstants.errorColor,
+                      ),
+                      title: const Text(
+                        'Log Out',
+                        style: TextStyle(
+                          color: AppConstants.errorColor,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
+                      onTap: () {
+                        _showLogoutDialog(context);
+                      },
                     ),
-                    const SizedBox(height: 20),
-                  ],
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildMenuItem({
+    required BuildContext context,
     required IconData icon,
     required IconData activeIcon,
     required String title,
@@ -205,23 +215,30 @@ class OrganizerSidebar extends StatelessWidget {
               fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
             ),
           ),
-          onTap: () => onNavigate(route),
+          onTap: () {
+            // Close drawer first
+            Navigator.of(context).pop();
+
+            // Navigate with replacement instead of push
+            if (route != currentRoute) {
+              Navigator.of(context).pushReplacementNamed(route);
+            }
+          },
         ),
       ),
     );
   }
 
-  void _showLogoutDialog(BuildContext context, AuthService authService) {
+  void _showLogoutDialog(BuildContext context) {
     showDialog(
       context: context,
-      barrierDismissible: false, // Prevent dismissing during logout
-      builder: (BuildContext dialogContext) {
+      builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Confirm Logout'),
           content: const Text('Are you sure you want to log out?'),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
+              onPressed: () => Navigator.of(context).pop(),
               child: const Text('Cancel'),
             ),
             Consumer<AuthService>(
@@ -231,42 +248,44 @@ class OrganizerSidebar extends StatelessWidget {
                       authService.isLoading
                           ? null
                           : () async {
-                            try {
-                              final result = await authService.signOut();
-
-                              if (result['success']) {
-                                // Close dialog
-                                Navigator.of(dialogContext).pop();
-
-                                // Navigate to login screen
-                                Navigator.of(context).pushNamedAndRemoveUntil(
-                                  '/login',
-                                  (route) => false,
-                                );
-                              } else {
-                                // Close dialog first
-                                Navigator.of(dialogContext).pop();
-
-                                // Show error message
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      result['message'] ?? 'Logout failed',
-                                    ),
-                                    backgroundColor: AppConstants.errorColor,
+                            // Show loading
+                            showDialog(
+                              context: context,
+                              barrierDismissible: false,
+                              builder:
+                                  (context) => const Center(
+                                    child: CircularProgressIndicator(),
                                   ),
-                                );
-                              }
-                            } catch (e) {
-                              // Close dialog
-                              Navigator.of(dialogContext).pop();
+                            );
 
+                            // Perform logout
+                            final result = await authService.signOut();
+
+                            // Close loading dialog
+                            Navigator.of(context).pop();
+
+                            // Close confirmation dialog
+                            Navigator.of(context).pop();
+
+                            if (result['success']) {
+                              // Navigate to login screen
+                              Navigator.of(context).pushNamedAndRemoveUntil(
+                                '/login',
+                                (route) => false,
+                              );
+
+                              // Show success message
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(result['message']),
+                                  backgroundColor: AppConstants.successColor,
+                                ),
+                              );
+                            } else {
                               // Show error message
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text(
-                                    'Logout failed: ${e.toString()}',
-                                  ),
+                                  content: Text(result['message']),
                                   backgroundColor: AppConstants.errorColor,
                                 ),
                               );
@@ -287,7 +306,10 @@ class OrganizerSidebar extends StatelessWidget {
                               ),
                             ),
                           )
-                          : const Text('Log Out'),
+                          : const Text(
+                            'Log Out',
+                            style: TextStyle(color: Colors.white),
+                          ),
                 );
               },
             ),
