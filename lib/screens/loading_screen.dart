@@ -36,69 +36,60 @@ class LoadingScreen extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Static logo container without spinning ring
+          // App Logo with proper sizing relative to loading screen
           Container(
-            width: 90,
-            height: 90,
+            width: 100,
+            height: 100,
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: AppConstants.logoGradient,
-              ),
-              borderRadius: BorderRadius.circular(20),
+              shape: BoxShape.circle,
+              color: Colors.white.withOpacity(0.6),
               boxShadow: [
                 BoxShadow(
-                  color: AppConstants.primaryColor.withOpacity(0.3),
+                  color: AppConstants.primaryColor.withOpacity(0.2),
                   blurRadius: 20,
-                  spreadRadius: 0,
-                  offset: const Offset(0, 8),
+                  spreadRadius: 1,
+                  offset: const Offset(0, 10),
                 ),
               ],
             ),
             child: Center(
-              child: Container(
-                width: 45,
-                height: 45,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.event,
-                  color: AppConstants.primaryColor,
-                  size: 24,
-                ),
+              child: Image.asset(
+                'assets/icons/logo.png',
+                width: 75,
+                height: 75,
               ),
             ),
           ),
           const SizedBox(height: 24),
-          // App name without shader mask gradient
-          const Text(
+          // App name without underlines
+          Text(
             'MegaVent',
             style: TextStyle(
               fontFamily: 'Poppins',
               fontSize: 24,
               fontWeight: FontWeight.bold,
               color: AppConstants.primaryColor,
+              decoration: TextDecoration.none, // Remove underlines
             ),
           ),
           const SizedBox(height: 12),
-          // Loading message
+          // Loading message without underlines
           Text(
             message,
             style: AppConstants.bodyMedium.copyWith(
               color: AppConstants.textColor,
               fontWeight: FontWeight.w500,
+              decoration: TextDecoration.none, // Remove underlines
             ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
-          // Secondary message
+          // Secondary message without underlines
           Text(
             'Please wait...',
             style: AppConstants.bodySmallSecondary.copyWith(
               color: AppConstants.textSecondaryColor.withOpacity(0.7),
+              decoration: TextDecoration.none, // Remove underlines
             ),
             textAlign: TextAlign.center,
           ),

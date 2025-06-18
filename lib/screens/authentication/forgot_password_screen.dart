@@ -122,180 +122,195 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
               opacity: _fadeAnimation,
               child: SlideTransition(
                 position: _slideAnimation,
-                child: SingleChildScrollView(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        const SizedBox(height: 24),
-                        // App Logo with Gradient
-                        Container(
-                          width: 120,
-                          height: 120,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.white.withOpacity(0.6),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppConstants.primaryColor.withOpacity(
-                                  0.2,
-                                ),
-                                blurRadius: 20,
-                                spreadRadius: 1,
-                                offset: const Offset(0, 10),
-                              ),
-                            ],
-                          ),
-                          child: Center(
-                            child: Image.asset(
-                              'assets/icons/logo.png',
-                              width: 90,
-                              height: 90,
-                            ),
-                          ),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    return SingleChildScrollView(
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          minHeight: constraints.maxHeight,
                         ),
-                        const SizedBox(height: 32),
-
-                        // Welcome Header
-                        Text(
-                          'Forgot Password?',
-                          style: AppConstants.displaySmall.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: AppConstants.textColor,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppConstants.primaryColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            'We\'ll send a reset link to your email',
-                            style: AppConstants.bodyMedium.copyWith(
-                              color: AppConstants.primaryColor,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 40),
-
-                        // Form Card
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.08),
-                                blurRadius: 20,
-                                spreadRadius: 0,
-                                offset: const Offset(0, 8),
-                              ),
-                            ],
-                          ),
-                          padding: const EdgeInsets.all(32),
-                          child: Form(
-                            key: _formKey,
+                        child: IntrinsicHeight(
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
                             child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                // Section Header
-                                Text(
-                                  'Reset Your Password',
-                                  style: AppConstants.titleLarge.copyWith(
-                                    color: AppConstants.textColor,
-                                    fontWeight: FontWeight.w600,
+                                const SizedBox(height: 24),
+                                // App Logo with Gradient
+                                Container(
+                                  width: 120,
+                                  height: 120,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.white.withOpacity(0.6),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: AppConstants.primaryColor.withOpacity(
+                                          0.2,
+                                        ),
+                                        blurRadius: 20,
+                                        spreadRadius: 1,
+                                        offset: const Offset(0, 10),
+                                      ),
+                                    ],
                                   ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Enter your email address and we\'ll send you password recovery instructions.',
-                                  style: AppConstants.bodyMedium.copyWith(
-                                    color: AppConstants.textSecondaryColor,
-                                    height: 1.4,
+                                  child: Center(
+                                    child: Image.asset(
+                                      'assets/icons/logo.png',
+                                      width: 90,
+                                      height: 90,
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(height: 32),
 
-                                // Email Field
-                                TextFormField(
-                                  controller: _emailController,
-                                  focusNode: _emailFocusNode,
-                                  keyboardType: TextInputType.emailAddress,
-                                  style: AppConstants.bodyLarge.copyWith(
+                                // Welcome Header
+                                Text(
+                                  'Forgot Password?',
+                                  style: AppConstants.displaySmall.copyWith(
+                                    fontWeight: FontWeight.bold,
                                     color: AppConstants.textColor,
                                   ),
-                                  decoration: AppConstants.inputDecoration(
-                                    labelText: 'Email Address',
-                                    prefixIcon: Icons.email_outlined,
-                                  ),
-                                  validator: (value) {
-                                    if (value == null || value.trim().isEmpty) {
-                                      return 'Please enter your email address';
-                                    }
-                                    if (!RegExp(
-                                      r'^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$',
-                                    ).hasMatch(value.trim())) {
-                                      return 'Please enter a valid email address';
-                                    }
-                                    return null;
-                                  },
-                                  onFieldSubmitted: (_) => _sendResetLink(),
                                 ),
-                                const SizedBox(height: 32),
+                                const SizedBox(height: 12),
 
-                                // Send Reset Link Button
-                                AppConstants.gradientButton(
-                                  text: 'Send Reset Link',
-                                  onPressed:
-                                      _isLoading ? () {} : _sendResetLink,
-                                  isLoading: _isLoading,
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 20,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppConstants.primaryColor.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    'We\'ll send a reset link to your email',
+                                    style: AppConstants.bodyMedium.copyWith(
+                                      color: AppConstants.primaryColor,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
                                 ),
+
+                                // Flexible spacer to push content to center
+                                const Spacer(flex: 1),
+
+                                // Form Card
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(20),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.08),
+                                        blurRadius: 20,
+                                        spreadRadius: 0,
+                                        offset: const Offset(0, 8),
+                                      ),
+                                    ],
+                                  ),
+                                  padding: const EdgeInsets.all(32),
+                                  child: Form(
+                                    key: _formKey,
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        // Section Header
+                                        Text(
+                                          'Reset Your Password',
+                                          style: AppConstants.titleLarge.copyWith(
+                                            color: AppConstants.textColor,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          'Enter your email address and we\'ll send you password recovery instructions.',
+                                          style: AppConstants.bodyMedium.copyWith(
+                                            color: AppConstants.textSecondaryColor,
+                                            height: 1.4,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 32),
+
+                                        // Email Field
+                                        TextFormField(
+                                          controller: _emailController,
+                                          focusNode: _emailFocusNode,
+                                          keyboardType: TextInputType.emailAddress,
+                                          style: AppConstants.bodyLarge.copyWith(
+                                            color: AppConstants.textColor,
+                                          ),
+                                          decoration: AppConstants.inputDecoration(
+                                            labelText: 'Email Address',
+                                            prefixIcon: Icons.email_outlined,
+                                          ),
+                                          validator: (value) {
+                                            if (value == null || value.trim().isEmpty) {
+                                              return 'Please enter your email address';
+                                            }
+                                            if (!RegExp(
+                                              r'^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$',
+                                            ).hasMatch(value.trim())) {
+                                              return 'Please enter a valid email address';
+                                            }
+                                            return null;
+                                          },
+                                          onFieldSubmitted: (_) => _sendResetLink(),
+                                        ),
+                                        const SizedBox(height: 32),
+
+                                        // Send Reset Link Button
+                                        AppConstants.gradientButton(
+                                          text: 'Send Reset Link',
+                                          onPressed:
+                                              _isLoading ? () {} : _sendResetLink,
+                                          isLoading: _isLoading,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+
+                                // Another flexible spacer
+                                const Spacer(flex: 1),
+
+                                // Back to Login Link
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      'Remember your password? ',
+                                      style: AppConstants.bodyMedium.copyWith(
+                                        color: AppConstants.textSecondaryColor,
+                                      ),
+                                    ),
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      style: TextButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        'Sign In',
+                                        style: AppConstants.bodyMedium.copyWith(
+                                          color: AppConstants.primaryColor,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 24),
                               ],
                             ),
                           ),
                         ),
-                        const SizedBox(height: 32),
-
-                        // Back to Login Link
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              'Remember your password? ',
-                              style: AppConstants.bodyMedium.copyWith(
-                                color: AppConstants.textSecondaryColor,
-                              ),
-                            ),
-                            TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              style: TextButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                              ),
-                              child: Text(
-                                'Sign In',
-                                style: AppConstants.bodyMedium.copyWith(
-                                  color: AppConstants.primaryColor,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 40),
-                      ],
-                    ),
-                  ),
+                      ),
+                    );
+                  },
                 ),
               ),
             ),

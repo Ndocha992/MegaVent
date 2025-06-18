@@ -5,6 +5,11 @@ import 'package:megavent/screens/authentication/login_screen.dart';
 import 'package:megavent/screens/authentication/register_screen.dart';
 import 'package:megavent/screens/authentication/verification_screen.dart';
 import 'package:megavent/screens/splash_screen.dart';
+import 'package:megavent/screens/organizer/organizer_dashboard.dart';
+import 'package:megavent/screens/organizer/events.dart';
+import 'package:megavent/screens/organizer/staff.dart';
+import 'package:megavent/screens/organizer/attendees.dart';
+import 'package:megavent/screens/organizer/profile.dart';
 import 'package:megavent/services/auth_service.dart';
 import 'package:megavent/services/database_service.dart';
 import 'package:megavent/utils/constants.dart';
@@ -51,6 +56,11 @@ class MyApp extends StatelessWidget {
         '/register': (context) => const RegisterScreen(),
         '/verify-email': (context) => const VerificationScreen(),
         '/forgot-password': (context) => const ForgotPasswordScreen(),
+        '/organizer-dashboard': (context) => const OrganizerDashboard(),
+        '/organizer-events': (context) => const Events(),
+        '/organizer-staff': (context) => const Staff(),
+        '/organizer-attendees': (context) => const Attendees(),
+        '/organizer-profile': (context) => const Profile(),
       },
     );
   }

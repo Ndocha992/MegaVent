@@ -19,36 +19,6 @@ class OrganizerDashboard extends StatefulWidget {
 
 class _OrganizerDashboardState extends State<OrganizerDashboard> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  String currentRoute = '/dashboard';
-
-  void _onNavigate(String route) {
-    setState(() {
-      currentRoute = route;
-    });
-    Navigator.of(context).pop(); // Close drawer
-
-    // Handle navigation logic here
-    switch (route) {
-      case '/dashboard':
-        // Already on dashboard
-        break;
-      case '/events':
-        // Navigate to events screen
-        break;
-      case '/staff':
-        // Navigate to staff screen
-        break;
-      case '/attendees':
-        // Navigate to attendees screen
-        break;
-      case '/profile':
-        // Navigate to profile screen
-        break;
-      case '/login':
-        // Handle logout
-        break;
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -59,43 +29,30 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
         title: 'MegaVent',
         onMenuPressed: () => _scaffoldKey.currentState?.openDrawer(),
       ),
-      drawer: OrganizerSidebar(
-        currentRoute: currentRoute,
-        onNavigate: _onNavigate,
-      ),
+      drawer: OrganizerSidebar(currentRoute: '/organizer-dashboard'),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Welcome Section
             const WelcomeCard(),
             const SizedBox(height: 24),
-
-            // Stats Overview
             StatsOverview(stats: FakeData.dashboardStats),
             const SizedBox(height: 24),
-
-            // Latest Events
             LatestEventsCard(events: FakeData.getLatestEvents()),
             const SizedBox(height: 24),
-
-            // Latest Attendees
             LatestAttendeesCard(attendees: FakeData.getLatestAttendees()),
             const SizedBox(height: 24),
-
-            // Latest Staff
             LatestStaffCard(staff: FakeData.getLatestStaff()),
             const SizedBox(height: 24),
-
-            // Quick Actions
-            const QuickActionsGrid(),
+            QuickActionsGrid(
+              onNavigate: (route) {
+                Navigator.of(context).pushReplacementNamed(route);
+              },
+            ),
             const SizedBox(height: 24),
-
-            // Additional Dashboard Content
             _buildRecentActivity(),
             const SizedBox(height: 24),
-
             _buildUpcomingEvents(),
           ],
         ),
@@ -164,7 +121,12 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text('Upcoming Events', style: AppConstants.headlineSmall),
-            TextButton(onPressed: () {}, child: const Text('View Calendar')),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pushReplacementNamed('/organizer-events');
+              },
+              child: const Text('View All Events'),
+            ),
           ],
         ),
         const SizedBox(height: 16),
