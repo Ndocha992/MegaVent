@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:megavent/utils/constants.dart';
 
-class NestedScreenAppBar extends StatelessWidget implements PreferredSizeWidget {
+class NestedScreenAppBar extends StatelessWidget
+    implements PreferredSizeWidget {
   final String screenTitle;
   final VoidCallback? onBackPressed;
   final List<Widget>? actions;
@@ -80,20 +81,21 @@ class NestedScreenAppBar extends StatelessWidget implements PreferredSizeWidget 
         ],
       ),
       // Actions on the right side with better styling
-      actions: actions?.map((action) {
-        if (action is IconButton) {
-          return Container(
-            margin: const EdgeInsets.only(right: 8),
-            child: IconButton(
-              onPressed: (action as IconButton).onPressed,
-              icon: action.icon,
-              padding: const EdgeInsets.all(12),
-              splashRadius: 24,
-            ),
-          );
-        }
-        return action;
-      }).toList(),
+      actions:
+          actions?.map((action) {
+            if (action is IconButton) {
+              return Container(
+                margin: const EdgeInsets.only(right: 8),
+                child: IconButton(
+                  onPressed: (action).onPressed,
+                  icon: action.icon,
+                  padding: const EdgeInsets.all(12),
+                  splashRadius: 24,
+                ),
+              );
+            }
+            return action;
+          }).toList(),
     );
   }
 
