@@ -5,8 +5,8 @@ import 'package:megavent/utils/constants.dart';
 import 'package:megavent/data/fake_data.dart';
 import 'package:megavent/widgets/organizer/app_bar.dart';
 import 'package:megavent/widgets/organizer/sidebar.dart';
-import 'package:megavent/widgets/organizer/event_card.dart';
-import 'package:megavent/widgets/organizer/event_filters.dart';
+import 'package:megavent/widgets/organizer/events/event_card.dart';
+import 'package:megavent/widgets/organizer/events/event_filters.dart';
 
 class Events extends StatefulWidget {
   const Events({super.key});
@@ -385,7 +385,9 @@ class _EventsState extends State<Events> with TickerProviderStateMixin {
               onTap: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (context) => const EventsDetails(),
+                    builder:
+                        (context) =>
+                            EventsDetails(event: filteredEvents[index]),
                   ),
                 );
               },

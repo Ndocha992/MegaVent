@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:megavent/screens/organizer/events_details.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/data/fake_data.dart';
-import 'package:megavent/widgets/organizer/event_card.dart';
+import 'package:megavent/widgets/organizer/events/event_card.dart';
 
 class LatestEventsCard extends StatelessWidget {
   final List<Event> events;
