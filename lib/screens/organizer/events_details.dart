@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:megavent/utils/constants.dart';
-import 'package:megavent/widgets/organizer/app_bar.dart';
+import 'package:megavent/widgets/organizer/nested_app_bar.dart';
 import 'package:megavent/widgets/organizer/sidebar.dart';
 
 class EventsDetails extends StatefulWidget {
@@ -19,10 +19,7 @@ class _EventsDetailsState extends State<EventsDetails> {
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: AppConstants.backgroundColor,
-      appBar: OrganizerAppBar(
-        title: 'MegaVent',
-        onMenuPressed: () => _scaffoldKey.currentState?.openDrawer(),
-      ),
+      appBar: NestedScreenAppBar(screenTitle: ''),
       drawer: OrganizerSidebar(currentRoute: currentRoute),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
