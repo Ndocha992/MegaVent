@@ -15,6 +15,13 @@ class AuthService extends ChangeNotifier {
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
+  // ADD THIS GETTER - Check if user is logged in
+  bool get isLoggedIn => _auth.currentUser != null;
+
+  // Alternative getter that also checks email verification
+  bool get isLoggedInAndVerified => 
+      _auth.currentUser != null && (_auth.currentUser?.emailVerified ?? false);
+
   // Set loading state
   void _setLoading(bool value) {
     _isLoading = value;

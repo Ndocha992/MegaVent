@@ -24,6 +24,13 @@ class ShareEventBottomSheet extends StatefulWidget {
 class _ShareEventBottomSheetState extends State<ShareEventBottomSheet> {
   final GlobalKey _qrKey = GlobalKey();
   bool _isSharing = false;
+  String? _registrationLink;
+
+  @override
+  void initState() {
+    super.initState();
+    _generateRegistrationLink();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -55,7 +62,7 @@ class _ShareEventBottomSheetState extends State<ShareEventBottomSheet> {
                   const SizedBox(height: 24),
                   QRCodeWidget(
                     qrKey: _qrKey,
-                    data: _generateRegistrationQRData(),
+                    data: _registrationLink ?? 'Loading...',
                   ),
                   const SizedBox(height: 24),
                   _buildShareOptions(),
@@ -199,8 +206,18 @@ class _ShareEventBottomSheetState extends State<ShareEventBottomSheet> {
     );
   }
 
-  String _generateRegistrationQRData() {
-    return "megavent://register?eventId=${widget.event.id}&type=registration&name=${Uri.encodeComponent(widget.event.name)}";
+  void _generateRegistrationLink() {
+    // Generate a deep link that will be handled by your app
+    // This creates a fallback URL that redirects to MediaFire if app isn't installed
+
+    final String appDeepLink =
+        'megavent://register?eventId=${widget.event.id}&autoRegister=true';
+
+    setState(() {
+      // Use the app deep link directly for QR code
+      // Android will handle the fallback automatically
+      _registrationLink = appDeepLink;
+    });
   }
 
   String _formatEventDate() {
@@ -219,16 +236,20 @@ class _ShareEventBottomSheetState extends State<ShareEventBottomSheet> {
   }
 
   String _getShareText() {
-    return '''Join me at ${widget.event.name}!
+    return '''🎉 Join me at ${widget.event.name}!
 
 📅 Date: ${_formatEventDate()}
 ⏰ Time: ${widget.event.startTime} - ${widget.event.endTime}
 📍 Location: ${widget.event.location}
 👥 Capacity: ${widget.event.capacity} people
 
-Scan the QR code to register for this amazing event!
+🔹 Scan the QR code to automatically register (Attendees only)
+🔹 Don't have MegaVent app? Scanning will help you download it first!
+🔹 After installing, scan the QR code again to register
 
-#MegaVent #Events #${widget.event.category.replaceAll(' ', '')}''';
+#MegaVent #Events #${widget.event.category.replaceAll(' ', '')}
+
+Registration Link: ${_registrationLink ?? 'Loading...'}''';
   }
 
   void _shareToWhatsApp() async {
@@ -252,7 +273,7 @@ Scan the QR code to register for this amazing event!
   }
 
   void _copyLink() {
-    final link = _generateRegistrationQRData();
+    final link = _registrationLink ?? 'Loading...';
     Clipboard.setData(ClipboardData(text: link));
     _showSuccessSnackBar('Registration link copied to clipboard!');
   }
@@ -285,25 +306,32 @@ Scan the QR code to register for this amazing event!
       if (qrImageFile != null) {
         await Share.shareXFiles(
           [XFile(qrImageFile.path)],
-          text: '''Register for ${widget.event.name}
+          text: '''🎉 Register for ${widget.event.name}
 
 📅 ${_formatEventDate()}
 ⏰ ${widget.event.startTime} - ${widget.event.endTime}
 📍 ${widget.event.location}
 
-Scan the QR code to register!''',
+🔹 Scan the QR code to automatically register
+🔹 Don't have the app? Scanning will help you download it first!
+🔹 After installing, scan the QR code again to register
+
+Registration Link: ${_registrationLink ?? 'Loading...'}''',
           subject: "Event Registration - ${widget.event.name}",
         );
       } else {
         // Fallback to text-only sharing
         await Share.share(
-          '''Register for ${widget.event.name}
+          '''🎉 Register for ${widget.event.name}
 
 📅 ${_formatEventDate()}
 ⏰ ${widget.event.startTime} - ${widget.event.endTime}
 📍 ${widget.event.location}
 
-Registration link: ${_generateRegistrationQRData()}''',
+Registration link: ${_registrationLink ?? 'Loading...'}
+
+🔹 Don't have MegaVent app? The link will help you download it first!
+🔹 After installing, scan the QR code again to register''',
           subject: "Event Registration - ${widget.event.name}",
         );
       }

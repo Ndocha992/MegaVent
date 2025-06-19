@@ -75,7 +75,7 @@ class _EventsDetailsState extends State<EventsDetails> {
   void _handleEditEvent() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const EditEvents()),
+      MaterialPageRoute(builder: (context) => EditEvents(event: currentEvent)),
     );
   }
 

@@ -43,7 +43,7 @@ class LatestEventsCard extends StatelessWidget {
                   onTap: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (context) => const EventsDetails(),
+                        builder: (context) => EventsDetails(event: event),
                       ),
                     );
                   },
