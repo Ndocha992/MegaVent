@@ -640,4 +640,279 @@ class DatabaseService extends ChangeNotifier {
           }
         });
   }
+
+  // Get event by ID
+  Future<Map<String, dynamic>> getEventById(String eventId) async {
+    _setLoading(true);
+    try {
+      DocumentSnapshot eventDoc =
+          await _firestore.collection('events').doc(eventId).get();
+
+      if (!eventDoc.exists) {
+        return {'success': false, 'message': 'Event not found'};
+      }
+
+      Map<String, dynamic> eventData = eventDoc.data() as Map<String, dynamic>;
+      eventData['id'] = eventDoc.id;
+
+      return {'success': true, 'event': eventData};
+    } catch (e) {
+      if (e is FirebaseException && e.code == 'unavailable') {
+        return {'success': false, 'message': 'No internet connection'};
+      }
+      return {'success': false, 'message': 'Failed to retrieve event data'};
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Check if user is registered for event
+  Future<Map<String, dynamic>> isUserRegisteredForEvent(
+    String userId,
+    String eventId,
+  ) async {
+    _setLoading(true);
+    try {
+      QuerySnapshot registrationQuery =
+          await _firestore
+              .collection('registrations')
+              .where('userId', isEqualTo: userId)
+              .where('eventId', isEqualTo: eventId)
+              .where('status', isEqualTo: 'registered')
+              .get();
+
+      bool isRegistered = registrationQuery.docs.isNotEmpty;
+
+      return {'success': true, 'isRegistered': isRegistered};
+    } catch (e) {
+      if (e is FirebaseException && e.code == 'unavailable') {
+        return {'success': false, 'message': 'No internet connection'};
+      }
+      return {
+        'success': false,
+        'message': 'Failed to check registration status',
+      };
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Get event capacity information
+  Future<Map<String, dynamic>> getEventCapacityInfo(String eventId) async {
+    _setLoading(true);
+    try {
+      // Get event details
+      DocumentSnapshot eventDoc =
+          await _firestore.collection('events').doc(eventId).get();
+
+      if (!eventDoc.exists) {
+        return {'success': false, 'message': 'Event not found'};
+      }
+
+      Map<String, dynamic> eventData = eventDoc.data() as Map<String, dynamic>;
+      int capacity = eventData['capacity'] ?? 0;
+
+      // Get registration count
+      QuerySnapshot registrationsQuery =
+          await _firestore
+              .collection('registrations')
+              .where('eventId', isEqualTo: eventId)
+              .where('status', isEqualTo: 'registered')
+              .get();
+
+      int registeredCount = registrationsQuery.docs.length;
+      bool isFull = registeredCount >= capacity;
+
+      return {
+        'success': true,
+        'capacity': capacity,
+        'registeredCount': registeredCount,
+        'isFull': isFull,
+        'availableSpots': capacity - registeredCount,
+      };
+    } catch (e) {
+      if (e is FirebaseException && e.code == 'unavailable') {
+        return {'success': false, 'message': 'No internet connection'};
+      }
+      return {'success': false, 'message': 'Failed to check event capacity'};
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Register user for event
+  Future<Map<String, dynamic>> registerUserForEvent(
+    String userId,
+    String eventId,
+  ) async {
+    _setLoading(true);
+    try {
+      // Check if user is already registered
+      final registrationCheck = await isUserRegisteredForEvent(userId, eventId);
+      if (!registrationCheck['success']) {
+        return registrationCheck;
+      }
+
+      if (registrationCheck['isRegistered']) {
+        return {
+          'success': false,
+          'message': 'User is already registered for this event',
+        };
+      }
+
+      // Check event capacity
+      final capacityInfo = await getEventCapacityInfo(eventId);
+      if (!capacityInfo['success']) {
+        return capacityInfo;
+      }
+
+      if (capacityInfo['isFull']) {
+        return {'success': false, 'message': 'Event is full'};
+      }
+
+      // Get event details
+      final eventResult = await getEventById(eventId);
+      if (!eventResult['success']) {
+        return eventResult;
+      }
+
+      // Get user details
+      final userResult = await getUserById(userId);
+      if (!userResult['success']) {
+        return userResult;
+      }
+
+      // Create registration document
+      String registrationId = _firestore.collection('registrations').doc().id;
+
+      Map<String, dynamic> registrationData = {
+        'id': registrationId,
+        'userId': userId,
+        'eventId': eventId,
+        'status': 'registered',
+        'registrationDate': DateTime.now(),
+        'paymentStatus': 'pending', // or 'completed' based on your logic
+        'createdAt': DateTime.now(),
+        'updatedAt': DateTime.now(),
+      };
+
+      // Add registration to database
+      await _firestore
+          .collection('registrations')
+          .doc(registrationId)
+          .set(registrationData);
+
+      // Update event registered count (optional - you can calculate this dynamically)
+      await _firestore.collection('events').doc(eventId).update({
+        'registeredCount': FieldValue.increment(1),
+        'updatedAt': DateTime.now(),
+      });
+
+      return {
+        'success': true,
+        'message': 'Registration successful',
+        'registrationId': registrationId,
+      };
+    } catch (e) {
+      if (e is FirebaseException && e.code == 'unavailable') {
+        return {'success': false, 'message': 'No internet connection'};
+      }
+      return {'success': false, 'message': 'Failed to register for event'};
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Get user's registered events
+  Future<Map<String, dynamic>> getUserRegisteredEvents(String userId) async {
+    _setLoading(true);
+    try {
+      QuerySnapshot registrationsQuery =
+          await _firestore
+              .collection('registrations')
+              .where('userId', isEqualTo: userId)
+              .where('status', isEqualTo: 'registered')
+              .orderBy('registrationDate', descending: true)
+              .get();
+
+      List<Map<String, dynamic>> registeredEvents = [];
+
+      for (var registrationDoc in registrationsQuery.docs) {
+        Map<String, dynamic> registrationData =
+            registrationDoc.data() as Map<String, dynamic>;
+        String eventId = registrationData['eventId'];
+
+        // Get event details
+        DocumentSnapshot eventDoc =
+            await _firestore.collection('events').doc(eventId).get();
+        if (eventDoc.exists) {
+          Map<String, dynamic> eventData =
+              eventDoc.data() as Map<String, dynamic>;
+          eventData['id'] = eventDoc.id;
+          eventData['registrationData'] = registrationData;
+          registeredEvents.add(eventData);
+        }
+      }
+
+      return {'success': true, 'events': registeredEvents};
+    } catch (e) {
+      if (e is FirebaseException && e.code == 'unavailable') {
+        return {'success': false, 'message': 'No internet connection'};
+      }
+      return {
+        'success': false,
+        'message': 'Failed to retrieve registered events',
+      };
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Cancel event registration
+  Future<Map<String, dynamic>> cancelEventRegistration(
+    String userId,
+    String eventId,
+  ) async {
+    _setLoading(true);
+    try {
+      // Find the registration
+      QuerySnapshot registrationsQuery =
+          await _firestore
+              .collection('registrations')
+              .where('userId', isEqualTo: userId)
+              .where('eventId', isEqualTo: eventId)
+              .where('status', isEqualTo: 'registered')
+              .get();
+
+      if (registrationsQuery.docs.isEmpty) {
+        return {'success': false, 'message': 'Registration not found'};
+      }
+
+      // Update registration status
+      String registrationId = registrationsQuery.docs.first.id;
+      await _firestore.collection('registrations').doc(registrationId).update({
+        'status': 'cancelled',
+        'cancelledAt': DateTime.now(),
+        'updatedAt': DateTime.now(),
+      });
+
+      // Update event registered count
+      await _firestore.collection('events').doc(eventId).update({
+        'registeredCount': FieldValue.increment(-1),
+        'updatedAt': DateTime.now(),
+      });
+
+      return {
+        'success': true,
+        'message': 'Registration cancelled successfully',
+      };
+    } catch (e) {
+      if (e is FirebaseException && e.code == 'unavailable') {
+        return {'success': false, 'message': 'No internet connection'};
+      }
+      return {'success': false, 'message': 'Failed to cancel registration'};
+    } finally {
+      _setLoading(false);
+    }
+  }
 }

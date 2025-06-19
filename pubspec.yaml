@@ -52,6 +52,9 @@ dependencies:
   share_plus: ^11.0.0
   qr_flutter: ^4.1.0
   path_provider: ^2.1.5
+  url_launcher: ^6.3.1
+  shared_preferences: ^2.5.3
+  app_links: ^6.4.0
 
 flutter_launcher_icons:
   android: true
