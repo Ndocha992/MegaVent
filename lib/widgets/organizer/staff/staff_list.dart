@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:megavent/utils/constants.dart';
-import 'package:megavent/utils/staff_utils.dart';
+import 'package:megavent/utils/organizer/staff/staff_utils.dart';
 import 'package:megavent/data/fake_data.dart';
 
 class StaffList extends StatelessWidget {

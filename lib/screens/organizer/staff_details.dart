@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:megavent/screens/organizer/edit_staff.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/widgets/organizer/nested_app_bar.dart';
 import 'package:megavent/widgets/organizer/sidebar.dart';
@@ -77,13 +78,8 @@ class _StaffDetailsState extends State<StaffDetails> {
 
   void _handleEditStaff() {
     // Navigate to edit staff screen
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Edit ${currentStaff.name}'),
-        backgroundColor: AppConstants.primaryColor,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => EditStaff(staff: currentStaff)),
     );
   }
 

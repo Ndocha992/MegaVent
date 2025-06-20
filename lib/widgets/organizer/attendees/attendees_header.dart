@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:megavent/utils/constants.dart';
-import 'package:megavent/utils/organizer/staff/staff_utils.dart';
 import 'package:megavent/data/fake_data.dart';
+import 'package:megavent/utils/organizer/attendees/attendees_utils.dart';
 
-class StaffHeader extends StatelessWidget {
-  const StaffHeader({super.key});
+class AttendeesHeader extends StatelessWidget {
+  const AttendeesHeader({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -29,31 +29,34 @@ class StaffHeader extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Staff Management', style: AppConstants.headlineLarge),
+                  Text(
+                    'Attendees Management',
+                    style: AppConstants.headlineLarge,
+                  ),
                   const SizedBox(height: 4),
                   Text(
-                    'Manage your team members and staff',
+                    'Track and manage event attendees',
                     style: AppConstants.bodyLarge.copyWith(
                       color: AppConstants.textSecondaryColor,
                     ),
                   ),
                 ],
               ),
-              StaffCountBadge(count: FakeData.staff.length),
+              AttendeesCountBadge(count: FakeData.attendees.length),
             ],
           ),
           const SizedBox(height: 16),
-          const StaffStatsRow(),
+          const AttendeesStatsRow(),
         ],
       ),
     );
   }
 }
 
-class StaffCountBadge extends StatelessWidget {
+class AttendeesCountBadge extends StatelessWidget {
   final int count;
 
-  const StaffCountBadge({super.key, required this.count});
+  const AttendeesCountBadge({super.key, required this.count});
 
   @override
   Widget build(BuildContext context) {
@@ -66,10 +69,10 @@ class StaffCountBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.people, color: Colors.white, size: 16),
+          const Icon(Icons.group, color: Colors.white, size: 16),
           const SizedBox(width: 8),
           Text(
-            '$count Staff',
+            '$count Attendees',
             style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.w600,
@@ -81,43 +84,43 @@ class StaffCountBadge extends StatelessWidget {
   }
 }
 
-class StaffStatsRow extends StatelessWidget {
-  const StaffStatsRow({super.key});
+class AttendeesStatsRow extends StatelessWidget {
+  const AttendeesStatsRow({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final stats = StaffUtils.getStaffStats(FakeData.staff);
+    final stats = AttendeesUtils.getAttendeesStats(FakeData.attendees);
 
     return Row(
       children: [
-        StaffStatCard(
-          label: 'New',
-          count: stats.newStaff,
-          color: AppConstants.successColor,
-        ),
-        const SizedBox(width: 12),
-        StaffStatCard(
-          label: 'Active',
-          count: stats.activeStaff,
+        AttendeeStatCard(
+          label: 'Registered',
+          count: stats.registered,
           color: AppConstants.primaryColor,
         ),
         const SizedBox(width: 12),
-        StaffStatCard(
-          label: 'Departments',
-          count: stats.departments,
-          color: AppConstants.secondaryColor,
+        AttendeeStatCard(
+          label: 'Attended',
+          count: stats.attended,
+          color: AppConstants.successColor,
+        ),
+        const SizedBox(width: 12),
+        AttendeeStatCard(
+          label: 'No Show',
+          count: stats.noShow,
+          color: AppConstants.errorColor,
         ),
       ],
     );
   }
 }
 
-class StaffStatCard extends StatelessWidget {
+class AttendeeStatCard extends StatelessWidget {
   final String label;
   final int count;
   final Color color;
 
-  const StaffStatCard({
+  const AttendeeStatCard({
     super.key,
     required this.label,
     required this.count,

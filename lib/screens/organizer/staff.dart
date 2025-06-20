@@ -10,7 +10,7 @@ import 'package:megavent/widgets/organizer/staff/staff_header.dart';
 import 'package:megavent/widgets/organizer/staff/staff_tab_bar.dart';
 import 'package:megavent/widgets/organizer/staff/staff_search_filters.dart';
 import 'package:megavent/widgets/organizer/staff/staff_list.dart';
-import 'package:megavent/utils/staff_utils.dart';
+import 'package:megavent/utils/organizer/staff/staff_utils.dart';
 
 class StaffScreen extends StatefulWidget {
   const StaffScreen({super.key});
