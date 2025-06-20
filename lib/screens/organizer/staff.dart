@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:megavent/screens/organizer/create_staff.dart';
+import 'package:megavent/screens/organizer/staff_details.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/data/fake_data.dart';
 import 'package:megavent/widgets/organizer/app_bar.dart';
@@ -70,9 +71,10 @@ class _StaffScreenState extends State<StaffScreen>
   }
 
   void _onStaffTap(Staff staff) {
-    ScaffoldMessenger.of(
+    Navigator.push(
       context,
-    ).showSnackBar(SnackBar(content: Text('Viewing ${staff.name} details')));
+      MaterialPageRoute(builder: (context) => StaffDetails(staff: staff)),
+    );
   }
 
   void _navigateToCreateStaff() {
