@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:megavent/utils/constants.dart';
-import 'package:megavent/widgets/organizer/create_event/custom_text_field.dart';
-import 'package:megavent/widgets/organizer/create_event/section_container.dart';
+import 'package:megavent/widgets/organizer/events/create_event/custom_text_field.dart';
+import 'package:megavent/widgets/organizer/events/create_event/section_container.dart';
 
 class PosterSection extends StatelessWidget {
   final TextEditingController posterUrlController;

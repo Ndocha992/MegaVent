@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/data/fake_data.dart';
-import 'package:megavent/widgets/organizer/event_details/event_actions/search_bar.dart';
-import 'package:megavent/widgets/organizer/event_details/event_actions/stat_card.dart';
+import 'package:megavent/widgets/organizer/events/event_details/event_actions/search_bar.dart';
+import 'package:megavent/widgets/organizer/events/event_details/event_actions/stat_card.dart';
 import 'bottom_sheet_header.dart';
 
 class AttendeesBottomSheet extends StatefulWidget {

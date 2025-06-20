@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:megavent/widgets/organizer/event_details/event_actions/qr_code.dart';
-import 'package:megavent/widgets/organizer/event_details/event_actions/share_button.dart';
+import 'package:megavent/widgets/organizer/events/event_details/event_actions/qr_code.dart';
+import 'package:megavent/widgets/organizer/events/event_details/event_actions/share_button.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';

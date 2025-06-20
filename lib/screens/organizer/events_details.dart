@@ -3,12 +3,12 @@ import 'package:megavent/utils/constants.dart';
 import 'package:megavent/widgets/organizer/nested_app_bar.dart';
 import 'package:megavent/widgets/organizer/sidebar.dart';
 import 'package:megavent/screens/organizer/edit_events.dart';
-import 'package:megavent/widgets/organizer/event_details/event_header.dart';
-import 'package:megavent/widgets/organizer/event_details/event_info_section.dart';
-import 'package:megavent/widgets/organizer/event_details/event_stats_section.dart';
-import 'package:megavent/widgets/organizer/event_details/event_description_section.dart';
-import 'package:megavent/widgets/organizer/event_details/event_location_section.dart';
-import 'package:megavent/widgets/organizer/event_details/event_actions_section.dart';
+import 'package:megavent/widgets/organizer/events/event_details/event_header.dart';
+import 'package:megavent/widgets/organizer/events/event_details/event_info_section.dart';
+import 'package:megavent/widgets/organizer/events/event_details/event_stats_section.dart';
+import 'package:megavent/widgets/organizer/events/event_details/event_description_section.dart';
+import 'package:megavent/widgets/organizer/events/event_details/event_location_section.dart';
+import 'package:megavent/widgets/organizer/events/event_details/event_actions_section.dart';
 import 'package:megavent/data/fake_data.dart';
 
 class EventsDetails extends StatefulWidget {

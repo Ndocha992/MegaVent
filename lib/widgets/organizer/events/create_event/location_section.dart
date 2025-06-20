@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:megavent/widgets/organizer/edit_event/custom_text_field.dart';
-import 'package:megavent/widgets/organizer/edit_event/section_container.dart';
+import 'package:megavent/widgets/organizer/events/create_event/custom_text_field.dart';
+import 'package:megavent/widgets/organizer/events/create_event/section_container.dart';
 
-class EditEventLocation extends StatelessWidget {
+class LocationSection extends StatelessWidget {
   final TextEditingController locationController;
 
-  const EditEventLocation({
+  const LocationSection({
     super.key,
     required this.locationController,
   });

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:megavent/utils/constants.dart';
-import 'package:megavent/widgets/organizer/create_event/section_container.dart';
+import 'package:megavent/widgets/organizer/events/edit_event/section_container.dart';
 
-class CategorySection extends StatelessWidget {
+class EditEventCategory extends StatelessWidget {
   final String selectedCategory;
   final Function(String) onCategoryChanged;
 
-  const CategorySection({
+  const EditEventCategory({
     super.key,
     required this.selectedCategory,
     required this.onCategoryChanged,

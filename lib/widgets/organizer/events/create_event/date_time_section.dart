@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:megavent/widgets/organizer/edit_event/custom_text_field.dart';
-import 'package:megavent/widgets/organizer/edit_event/date_field.dart';
-import 'package:megavent/widgets/organizer/edit_event/section_container.dart';
+import 'package:megavent/widgets/organizer/events/create_event/custom_text_field.dart';
+import 'package:megavent/widgets/organizer/events/create_event/date_field.dart';
+import 'package:megavent/widgets/organizer/events/create_event/section_container.dart';
 
-class EditEventDateTime extends StatelessWidget {
+class DateTimeSection extends StatelessWidget {
   final DateTime startDate;
   final DateTime endDate;
   final TextEditingController startTimeController;
@@ -13,7 +13,7 @@ class EditEventDateTime extends StatelessWidget {
   final Function(String) onStartTimeChanged;
   final Function(String) onEndTimeChanged;
 
-  const EditEventDateTime({
+  const DateTimeSection({
     super.key,
     required this.startDate,
     required this.endDate,
@@ -60,6 +60,12 @@ class EditEventDateTime extends StatelessWidget {
                 hint: 'e.g., 10:00 AM',
                 readOnly: true,
                 onTap: () => _selectTime(context, true),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please select start time';
+                  }
+                  return null;
+                },
               ),
             ),
             const SizedBox(width: 16),
@@ -70,6 +76,12 @@ class EditEventDateTime extends StatelessWidget {
                 hint: 'e.g., 08:00 PM',
                 readOnly: true,
                 onTap: () => _selectTime(context, false),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please select end time';
+                  }
+                  return null;
+                },
               ),
             ),
           ],

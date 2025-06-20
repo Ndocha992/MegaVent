@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:megavent/widgets/organizer/edit_event/custom_text_field.dart';
-import 'package:megavent/widgets/organizer/edit_event/section_container.dart';
+import 'package:megavent/widgets/organizer/events/create_event/custom_text_field.dart';
+import 'package:megavent/widgets/organizer/events/create_event/section_container.dart';
 
-class EditEventCapacity extends StatelessWidget {
+class CapacitySection extends StatelessWidget {
   final TextEditingController capacityController;
 
-  const EditEventCapacity({
+  const CapacitySection({
     super.key,
     required this.capacityController,
   });
@@ -28,6 +28,9 @@ class EditEventCapacity extends StatelessWidget {
             }
             if (int.tryParse(value) == null) {
               return 'Please enter a valid number';
+            }
+            if (int.parse(value) <= 0) {
+              return 'Capacity must be greater than 0';
             }
             return null;
           },

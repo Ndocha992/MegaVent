@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/data/fake_data.dart';
-import 'package:megavent/widgets/organizer/event_details/event_actions/action_card.dart';
-import 'package:megavent/widgets/organizer/event_details/event_actions/attendees_bottom_sheet.dart';
-import 'package:megavent/widgets/organizer/event_details/event_actions/danger_zone.dart';
-import 'package:megavent/widgets/organizer/event_details/event_actions/share_event_bottom_sheet.dart';
+import 'package:megavent/widgets/organizer/events/event_details/event_actions/action_card.dart';
+import 'package:megavent/widgets/organizer/events/event_details/event_actions/attendees_bottom_sheet.dart';
+import 'package:megavent/widgets/organizer/events/event_details/event_actions/danger_zone.dart';
+import 'package:megavent/widgets/organizer/events/event_details/event_actions/share_event_bottom_sheet.dart';
 
 class EventActionsSection extends StatelessWidget {
   final Event event;
