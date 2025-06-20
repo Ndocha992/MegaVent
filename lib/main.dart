@@ -94,7 +94,7 @@ class _MyAppState extends State<MyApp> {
         // Organizer routes
         '/organizer-dashboard': (context) => const OrganizerDashboard(),
         '/organizer-events': (context) => const Events(),
-        '/organizer-staff': (context) => const Staff(),
+        '/organizer-staff': (context) => const StaffScreen(),
         '/organizer-attendees': (context) => const Attendees(),
         '/organizer-profile': (context) => const Profile(),
         '/organizer-event-details': (context) => const EventsDetails(),

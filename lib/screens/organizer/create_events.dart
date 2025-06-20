@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:megavent/utils/constants.dart';
-import 'package:megavent/widgets/organizer/create_event/action_buttons.dart';
-import 'package:megavent/widgets/organizer/create_event/basic_info_section.dart';
-import 'package:megavent/widgets/organizer/create_event/capacity_section.dart';
-import 'package:megavent/widgets/organizer/create_event/category_section.dart';
-import 'package:megavent/widgets/organizer/create_event/date_time_section.dart';
-import 'package:megavent/widgets/organizer/create_event/header_widget.dart';
-import 'package:megavent/widgets/organizer/create_event/location_section.dart';
-import 'package:megavent/widgets/organizer/create_event/poster_section.dart';
+import 'package:megavent/widgets/organizer/events/create_event/action_buttons.dart';
+import 'package:megavent/widgets/organizer/events/create_event/basic_info_section.dart';
+import 'package:megavent/widgets/organizer/events/create_event/capacity_section.dart';
+import 'package:megavent/widgets/organizer/events/create_event/category_section.dart';
+import 'package:megavent/widgets/organizer/events/create_event/date_time_section.dart';
+import 'package:megavent/widgets/organizer/events/create_event/header_widget.dart';
+import 'package:megavent/widgets/organizer/events/create_event/location_section.dart';
+import 'package:megavent/widgets/organizer/events/create_event/poster_section.dart';
 import 'package:megavent/widgets/organizer/nested_app_bar.dart';
 import 'package:megavent/widgets/organizer/sidebar.dart';
 
