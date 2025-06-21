@@ -5,14 +5,12 @@ import 'package:megavent/data/fake_data.dart';
 class AttendeesList extends StatelessWidget {
   final List<Attendee> attendeesList;
   final Function(Attendee) onAttendeeTap;
-  final Function(Attendee) onShowQR;
   final String searchQuery;
 
   const AttendeesList({
     super.key,
     required this.attendeesList,
     required this.onAttendeeTap,
-    required this.onShowQR,
     required this.searchQuery,
   });
 
@@ -33,10 +31,7 @@ class AttendeesList extends StatelessWidget {
               searchQuery.isNotEmpty
                   ? 'No attendees found matching "$searchQuery"'
                   : 'No attendees found',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[600],
-              ),
+              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
               textAlign: TextAlign.center,
             ),
           ],
@@ -52,7 +47,6 @@ class AttendeesList extends StatelessWidget {
         return AttendeeCard(
           attendee: attendee,
           onTap: () => onAttendeeTap(attendee),
-          onShowQR: () => onShowQR(attendee),
         );
       },
     );
@@ -62,14 +56,8 @@ class AttendeesList extends StatelessWidget {
 class AttendeeCard extends StatelessWidget {
   final Attendee attendee;
   final VoidCallback onTap;
-  final VoidCallback onShowQR;
 
-  const AttendeeCard({
-    super.key,
-    required this.attendee,
-    required this.onTap,
-    required this.onShowQR,
-  });
+  const AttendeeCard({super.key, required this.attendee, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -97,9 +85,10 @@ class AttendeeCard extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 24,
-                  backgroundColor: attendee.hasAttended
-                      ? AppConstants.successColor
-                      : AppConstants.primaryColor,
+                  backgroundColor:
+                      attendee.hasAttended
+                          ? AppConstants.successColor
+                          : AppConstants.primaryColor,
                   child: Text(
                     attendee.name.split(' ').map((n) => n[0]).take(2).join(),
                     style: const TextStyle(
@@ -131,7 +120,9 @@ class AttendeeCard extends StatelessWidget {
                                 vertical: 4,
                               ),
                               decoration: BoxDecoration(
-                                color: AppConstants.primaryColor.withOpacity(0.1),
+                                color: AppConstants.primaryColor.withOpacity(
+                                  0.1,
+                                ),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
@@ -163,9 +154,10 @@ class AttendeeCard extends StatelessWidget {
                                 ? Icons.check_circle
                                 : Icons.access_time,
                             size: 16,
-                            color: attendee.hasAttended
-                                ? AppConstants.successColor
-                                : Colors.orange,
+                            color:
+                                attendee.hasAttended
+                                    ? AppConstants.successColor
+                                    : Colors.orange,
                           ),
                           const SizedBox(width: 4),
                           Text(
@@ -173,15 +165,19 @@ class AttendeeCard extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
-                              color: attendee.hasAttended
-                                  ? AppConstants.successColor
-                                  : Colors.orange,
+                              color:
+                                  attendee.hasAttended
+                                      ? AppConstants.successColor
+                                      : Colors.orange,
                             ),
                           ),
                           const Spacer(),
                           Text(
                             'Registered ${_formatDate(attendee.registeredAt)}',
-                            style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[500],
+                            ),
                           ),
                         ],
                       ),
@@ -189,10 +185,10 @@ class AttendeeCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 16),
-                IconButton(
-                  onPressed: onShowQR,
-                  icon: const Icon(Icons.qr_code),
-                  color: AppConstants.primaryColor,
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: AppConstants.textSecondaryColor,
                 ),
               ],
             ),

@@ -46,33 +46,6 @@ class QuickActionsGrid extends StatelessWidget {
                 // Open QR scanner
               },
             ),
-            _buildActionCard(
-              title: 'Generate Report',
-              description: 'Export event analytics',
-              icon: Icons.analytics_outlined,
-              color: AppConstants.warningColor,
-              onTap: () {
-                // Generate and download report
-              },
-            ),
-            _buildActionCard(
-              title: 'Send Notifications',
-              description: 'Alert attendees & staff',
-              icon: Icons.notifications_outlined,
-              color: AppConstants.successColor,
-              onTap: () {
-                // Open notification center
-              },
-            ),
-            _buildActionCard(
-              title: 'Manage Settings',
-              description: 'Configure app preferences',
-              icon: Icons.settings_outlined,
-              color: Colors.grey.shade600,
-              onTap: () {
-                // Open settings page
-              },
-            ),
           ],
         ),
       ],

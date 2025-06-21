@@ -45,35 +45,17 @@ class AttendeesUtils {
     }).toList();
   }
 
-  /// Filter attendees by event
+  /// Filter attendees by event - FIXED: Now properly filters by event name
   static List<Attendee> filterAttendeesByEvent(
     List<Attendee> attendees,
     String eventName,
   ) {
     if (eventName == 'All') return attendees;
 
-    // In a real app, you'd filter by attendee.eventId or similar
-    // For now, we'll return all attendees since we don't have event association in the Attendee model
-    return attendees;
-  }
-
-  /// Filter attendees by status
-  static List<Attendee> filterAttendeesByStatus(
-    List<Attendee> attendees,
-    String status,
-  ) {
-    switch (status) {
-      case 'All':
-        return attendees;
-      case 'Registered':
-        return attendees;
-      case 'Attended':
-        return attendees.where((a) => a.hasAttended).toList();
-      case 'No Show':
-        return attendees.where((a) => !a.hasAttended).toList();
-      default:
-        return attendees;
-    }
+    // Filter by the attendee's event name property
+    return attendees
+        .where((attendee) => attendee.eventName == eventName)
+        .toList();
   }
 
   /// Filter attendees by tab selection
@@ -84,11 +66,9 @@ class AttendeesUtils {
     switch (tabIndex) {
       case 0: // All Attendees
         return attendees;
-      case 1: // Registered
-        return attendees;
-      case 2: // Attended
+      case 1: // Attended
         return attendees.where((a) => a.hasAttended).toList();
-      case 3: // No Show
+      case 2: // No Show (Not Attended)
         return attendees.where((a) => !a.hasAttended).toList();
       default:
         return attendees;
@@ -141,6 +121,9 @@ class AttendeesUtils {
           return 0;
         });
         break;
+      case 'event':
+        sortedList.sort((a, b) => a.eventName.compareTo(b.eventName));
+        break;
       default:
         // Default sort by registration date (newest first)
         sortedList.sort((a, b) => b.registeredAt.compareTo(a.registeredAt));
@@ -182,5 +165,24 @@ class AttendeesUtils {
         .take(2)
         .join()
         .toUpperCase();
+  }
+
+  /// Get unique events from attendees list
+  static List<String> getUniqueEvents(List<Attendee> attendees) {
+    final events = attendees.map((a) => a.eventName).toSet().toList();
+    events.sort();
+    return ['All', ...events];
+  }
+
+  /// Get attendees count by event
+  static Map<String, int> getAttendeesCountByEvent(List<Attendee> attendees) {
+    final Map<String, int> eventCounts = {};
+
+    for (final attendee in attendees) {
+      eventCounts[attendee.eventName] =
+          (eventCounts[attendee.eventName] ?? 0) + 1;
+    }
+
+    return eventCounts;
   }
 }
