@@ -115,7 +115,8 @@ class FakeData {
       name: 'Tech Conference 2025',
       description: 'Annual technology conference featuring latest innovations',
       category: 'Technology',
-      posterUrl: 'https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fwww.evenement.com%2Fwp-content%2Fuploads%2F2019%2F09%2Fsamuel-pereira-uf2nnANWa8Q-unsplash-2.jpg&f=1&nofb=1&ipt=8d0212d6ad19ae76b1c896fb1fe4306336f9d76748893ecfb78585bd19a07047',
+      posterUrl:
+          'https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fwww.evenement.com%2Fwp-content%2Fuploads%2F2019%2F09%2Fsamuel-pereira-uf2nnANWa8Q-unsplash-2.jpg&f=1&nofb=1&ipt=8d0212d6ad19ae76b1c896fb1fe4306336f9d76748893ecfb78585bd19a07047',
       startDate: DateTime.now().add(const Duration(days: 15)),
       endDate: DateTime.now().add(const Duration(days: 16)),
       startTime: '09:00 AM',
@@ -132,7 +133,8 @@ class FakeData {
       name: 'Music Festival',
       description: 'Amazing music festival with top artists',
       category: 'Entertainment',
-      posterUrl: 'https://via.placeholder.com/300x200/06D6A0/FFFFFF?text=Music+Fest',
+      posterUrl:
+          'https://res.cloudinary.com/drmcceprh/image/upload/v1750511826/megavent/event_banners/1750511823753_event_banner_banner_1750511823760_330.jpg',
       startDate: DateTime.now().add(const Duration(days: 30)),
       endDate: DateTime.now().add(const Duration(days: 32)),
       startTime: '02:00 PM',
@@ -149,7 +151,8 @@ class FakeData {
       name: 'Business Summit',
       description: 'Leadership and business development summit',
       category: 'Business',
-      posterUrl: 'https://via.placeholder.com/300x200/8B5CF6/FFFFFF?text=Biz+Summit',
+      posterUrl:
+          'https://via.placeholder.com/300x200/8B5CF6/FFFFFF?text=Biz+Summit',
       startDate: DateTime.now().add(const Duration(days: 45)),
       endDate: DateTime.now().add(const Duration(days: 45)),
       startTime: '08:00 AM',
@@ -166,7 +169,8 @@ class FakeData {
       name: 'Art Exhibition',
       description: 'Contemporary art exhibition by local artists',
       category: 'Art & Culture',
-      posterUrl: 'https://via.placeholder.com/300x200/10B981/FFFFFF?text=Art+Expo',
+      posterUrl:
+          'https://via.placeholder.com/300x200/10B981/FFFFFF?text=Art+Expo',
       startDate: DateTime.now().add(const Duration(days: 60)),
       endDate: DateTime.now().add(const Duration(days: 67)),
       startTime: '10:00 AM',
@@ -282,10 +286,20 @@ class FakeData {
     totalEvents: events.length,
     totalAttendees: attendees.length,
     totalStaff: staff.length,
-    activeEvents: events.where((e) => e.startDate.isAfter(DateTime.now())).length,
-    upcomingEvents: events.where((e) => e.startDate.isAfter(DateTime.now()) && 
-        e.startDate.isBefore(DateTime.now().add(const Duration(days: 30)))).length,
-    completedEvents: events.where((e) => e.endDate.isBefore(DateTime.now())).length,
+    activeEvents:
+        events.where((e) => e.startDate.isAfter(DateTime.now())).length,
+    upcomingEvents:
+        events
+            .where(
+              (e) =>
+                  e.startDate.isAfter(DateTime.now()) &&
+                  e.startDate.isBefore(
+                    DateTime.now().add(const Duration(days: 30)),
+                  ),
+            )
+            .length,
+    completedEvents:
+        events.where((e) => e.endDate.isBefore(DateTime.now())).length,
   );
 
   // Helper methods

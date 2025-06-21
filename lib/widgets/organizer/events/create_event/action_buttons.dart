@@ -7,9 +7,9 @@ class ActionButtons extends StatelessWidget {
   final TextEditingController descriptionController;
   final TextEditingController locationController;
   final TextEditingController capacityController;
-  final TextEditingController posterUrlController;
   final TextEditingController startTimeController;
   final TextEditingController endTimeController;
+  final String? posterUrl; // Make this a required parameter
   final VoidCallback onClearForm;
   final VoidCallback onCreateEvent;
 
@@ -20,9 +20,9 @@ class ActionButtons extends StatelessWidget {
     required this.descriptionController,
     required this.locationController,
     required this.capacityController,
-    required this.posterUrlController,
     required this.startTimeController,
     required this.endTimeController,
+    required this.posterUrl, // Add this as required
     required this.onClearForm,
     required this.onCreateEvent,
   });
