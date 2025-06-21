@@ -4,6 +4,7 @@ import 'package:megavent/utils/constants.dart';
 class EditEventActions extends StatelessWidget {
   final GlobalKey<FormState> formKey;
   final TextEditingController nameController;
+  final String? posterUrl; // Add poster URL parameter
   final VoidCallback onCancel;
   final VoidCallback onSave;
 
@@ -11,6 +12,7 @@ class EditEventActions extends StatelessWidget {
     super.key,
     required this.formKey,
     required this.nameController,
+    this.posterUrl, // Optional poster URL
     required this.onCancel,
     required this.onSave,
   });

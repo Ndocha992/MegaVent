@@ -10,6 +10,7 @@ import 'package:megavent/widgets/organizer/events/create_event/location_section.
 import 'package:megavent/widgets/organizer/events/create_event/poster_section.dart';
 import 'package:megavent/widgets/organizer/nested_app_bar.dart';
 import 'package:megavent/widgets/organizer/sidebar.dart';
+import 'package:megavent/data/fake_data.dart';
 
 class CreateEvents extends StatefulWidget {
   const CreateEvents({super.key});
@@ -35,6 +36,16 @@ class _CreateEventsState extends State<CreateEvents> {
   DateTime _startDate = DateTime.now();
   DateTime _endDate = DateTime.now().add(const Duration(days: 1));
   String? _posterUrl; // Changed from TextEditingController to String
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize with first category from fake data
+    final categories = FakeData.getCategories();
+    if (categories.isNotEmpty) {
+      _selectedCategory = categories.first;
+    }
+  }
 
   @override
   void dispose() {
@@ -153,6 +164,7 @@ class _CreateEventsState extends State<CreateEvents> {
             ),
             TextButton(
               onPressed: () {
+                final categories = FakeData.getCategories();
                 setState(() {
                   _nameController.clear();
                   _descriptionController.clear();
@@ -160,7 +172,8 @@ class _CreateEventsState extends State<CreateEvents> {
                   _capacityController.clear();
                   _startTimeController.clear();
                   _endTimeController.clear();
-                  _selectedCategory = 'Technology';
+                  _selectedCategory =
+                      categories.isNotEmpty ? categories.first : 'Technology';
                   _startDate = DateTime.now();
                   _endDate = DateTime.now().add(const Duration(days: 1));
                   _posterUrl = null; // Clear the poster URL

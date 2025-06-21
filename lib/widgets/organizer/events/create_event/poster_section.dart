@@ -22,7 +22,6 @@ class PosterSection extends StatefulWidget {
 class _PosterSectionState extends State<PosterSection> {
   final ImagePicker _picker = ImagePicker();
   bool _isUploading = false;
-  File? _selectedImage;
 
   Future<void> _pickAndUploadImage() async {
     try {
@@ -36,7 +35,6 @@ class _PosterSectionState extends State<PosterSection> {
       if (image != null) {
         setState(() {
           _isUploading = true;
-          _selectedImage = File(image.path);
         });
 
         // Generate a unique event ID for the upload
@@ -105,9 +103,6 @@ class _PosterSectionState extends State<PosterSection> {
   }
 
   void _removePoster() {
-    setState(() {
-      _selectedImage = null;
-    });
     widget.onPosterUrlChanged(null);
   }
 

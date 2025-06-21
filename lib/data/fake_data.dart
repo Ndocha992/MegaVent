@@ -109,6 +109,20 @@ class FakeData {
   static final DateTime oneDayAgo = now.subtract(const Duration(days: 1));
   static final DateTime oneWeekAgo = now.subtract(const Duration(days: 7));
 
+  // Available categories
+  static List<String> categories = [
+    'Technology',
+    'Art & Culture',
+    'Music',
+    'Sports',
+    'Business',
+    'Education',
+    'Entertainment',
+    'Health & Wellness',
+    'Food & Drink',
+    'Networking',
+  ];
+
   static List<Event> events = [
     Event(
       id: '1',
@@ -319,5 +333,10 @@ class FakeData {
     var sortedStaff = List<Staff>.from(staff);
     sortedStaff.sort((a, b) => b.hiredAt.compareTo(a.hiredAt));
     return sortedStaff.take(limit).toList();
+  }
+
+  // Get categories method
+  static List<String> getCategories() {
+    return List<String>.from(categories);
   }
 }
