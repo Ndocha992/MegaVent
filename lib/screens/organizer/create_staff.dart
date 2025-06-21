@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:megavent/data/fake_data.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/widgets/organizer/nested_app_bar.dart';
@@ -25,7 +27,9 @@ class _CreateStaffState extends State<CreateStaff> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
-  final TextEditingController _profileUrlController = TextEditingController();
+
+  // Profile image
+  String? _profileImageBase64;
 
   // Dropdown values
   String? _selectedRole;
@@ -88,8 +92,25 @@ class _CreateStaffState extends State<CreateStaff> {
     _nameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
-    _profileUrlController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickImageFromCamera() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.camera);
+    if (pickedFile != null) {
+      final bytes = await pickedFile.readAsBytes();
+      setState(() => _profileImageBase64 = base64Encode(bytes));
+    }
+  }
+
+  Future<void> _pickImageFromGallery() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      final bytes = await pickedFile.readAsBytes();
+      setState(() => _profileImageBase64 = base64Encode(bytes));
+    }
   }
 
   @override
@@ -112,6 +133,8 @@ class _CreateStaffState extends State<CreateStaff> {
 
               // Profile Section
               CreateStaffProfileSection(
+                profileImageBase64: _profileImageBase64,
+                staffName: _nameController.text.trim(),
                 onImagePickerTap: _showImagePickerOptions,
               ),
               const SizedBox(height: 24),
@@ -124,7 +147,7 @@ class _CreateStaffState extends State<CreateStaff> {
               const SizedBox(height: 16),
               CreateStaffPersonalInfoForm(
                 nameController: _nameController,
-                profileUrlController: _profileUrlController,
+                onNameChanged: () => setState(() {}), // Refresh initials
               ),
               const SizedBox(height: 24),
 
@@ -176,65 +199,65 @@ class _CreateStaffState extends State<CreateStaff> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder:
-          (context) => Container(
-            padding: const EdgeInsets.all(20),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(20),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppConstants.borderColor,
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
+            const SizedBox(height: 20),
+            Text(
+              'Add Profile Photo',
+              style: AppConstants.bodyMedium.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppConstants.borderColor,
-                    borderRadius: BorderRadius.circular(2),
+                _buildImageOption(
+                  icon: Icons.photo_camera_outlined,
+                  label: 'Camera',
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickImageFromCamera();
+                  },
+                ),
+                _buildImageOption(
+                  icon: Icons.photo_library_outlined,
+                  label: 'Gallery',
+                  onTap: () {
+                    Navigator.pop(context);
+                    _pickImageFromGallery();
+                  },
+                ),
+                if (_profileImageBase64 != null)
+                  _buildImageOption(
+                    icon: Icons.delete_outline,
+                    label: 'Remove',
+                    onTap: () {
+                      Navigator.pop(context);
+                      setState(() => _profileImageBase64 = null);
+                    },
                   ),
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  'Add Profile Photo',
-                  style: AppConstants.bodyMedium.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _buildImageOption(
-                      icon: Icons.photo_camera_outlined,
-                      label: 'Camera',
-                      onTap: () {
-                        Navigator.pop(context);
-                        _showSnackBar('Camera feature coming soon');
-                      },
-                    ),
-                    _buildImageOption(
-                      icon: Icons.photo_library_outlined,
-                      label: 'Gallery',
-                      onTap: () {
-                        Navigator.pop(context);
-                        _showSnackBar('Gallery feature coming soon');
-                      },
-                    ),
-                    _buildImageOption(
-                      icon: Icons.link_outlined,
-                      label: 'URL',
-                      onTap: () {
-                        Navigator.pop(context);
-                        _showSnackBar('Use the Profile Image URL field above');
-                      },
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
               ],
             ),
-          ),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
     );
   }
 
@@ -268,12 +291,6 @@ class _CreateStaffState extends State<CreateStaff> {
       final now = DateTime.now();
       final staffId = now.millisecondsSinceEpoch.toString();
 
-      // Generate initials for placeholder profile image
-      final nameParts = _nameController.text.trim().split(' ');
-      final initials = nameParts
-          .map((name) => name.isNotEmpty ? name[0].toUpperCase() : '')
-          .join('');
-
       // Create staff object with form data
       final staffData = {
         'id': staffId,
@@ -282,10 +299,7 @@ class _CreateStaffState extends State<CreateStaff> {
         'phone': _phoneController.text.trim(),
         'role': _selectedRole,
         'department': _selectedDepartment,
-        'profileUrl':
-            _profileUrlController.text.trim().isEmpty
-                ? 'https://via.placeholder.com/150/6B46C1/FFFFFF?text=$initials'
-                : _profileUrlController.text.trim(),
+        'profileImage': _profileImageBase64, // Pass base64 image instead of URL
         'hiredAt': now,
         'isNew': _isNew,
       };

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/utils/organizer/staff/staff_utils.dart';
@@ -81,6 +82,15 @@ class StaffAvatar extends StatelessWidget {
 
   const StaffAvatar({super.key, required this.staff});
 
+  bool _isBase64(String value) {
+    try {
+      base64Decode(value);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -97,18 +107,7 @@ class StaffAvatar extends StatelessWidget {
               ],
             ),
           ),
-          child:
-              staff.profileUrl.isNotEmpty
-                  ? ClipOval(
-                    child: Image.network(
-                      staff.profileUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder:
-                          (context, error, stackTrace) =>
-                              _buildInitialsAvatar(),
-                    ),
-                  )
-                  : _buildInitialsAvatar(),
+          child: _buildAvatarContent(),
         ),
         if (staff.isNew)
           Positioned(
@@ -127,6 +126,40 @@ class StaffAvatar extends StatelessWidget {
           ),
       ],
     );
+  }
+
+  Widget _buildAvatarContent() {
+    // Handle different image sources
+    if (staff.profileUrl.isNotEmpty) {
+      // Check if it's base64 data
+      if (_isBase64(staff.profileUrl)) {
+        return ClipOval(
+          child: Image.memory(
+            base64Decode(staff.profileUrl),
+            fit: BoxFit.cover,
+            width: 60,
+            height: 60,
+            errorBuilder:
+                (context, error, stackTrace) => _buildInitialsAvatar(),
+          ),
+        );
+      } else {
+        // It's a regular URL
+        return ClipOval(
+          child: Image.network(
+            staff.profileUrl,
+            fit: BoxFit.cover,
+            width: 60,
+            height: 60,
+            errorBuilder:
+                (context, error, stackTrace) => _buildInitialsAvatar(),
+          ),
+        );
+      }
+    } else {
+      // No image, show initials
+      return _buildInitialsAvatar();
+    }
   }
 
   Widget _buildInitialsAvatar() {
