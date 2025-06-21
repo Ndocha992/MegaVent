@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/data/fake_data.dart';
+import 'package:megavent/widgets/organizer/attendees/attendee_qr_dialog.dart';
 import 'package:megavent/widgets/organizer/events/event_details/event_actions/search_bar.dart';
 import 'package:megavent/widgets/organizer/events/event_details/event_actions/stat_card.dart';
 import 'bottom_sheet_header.dart';
@@ -336,52 +337,7 @@ class AttendeeCard extends StatelessWidget {
   void _showAttendeeDetails(BuildContext context, Attendee attendee) {
     showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: Text(attendee.name),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildDetailRow('Email', attendee.email),
-                _buildDetailRow('Phone', attendee.phone),
-                _buildDetailRow('QR Code', attendee.qrCode),
-                _buildDetailRow(
-                  'Status',
-                  attendee.hasAttended ? 'Attended' : 'Not Attended',
-                ),
-                _buildDetailRow(
-                  'Registered',
-                  _formatDate(attendee.registeredAt),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Close'),
-              ),
-            ],
-          ),
-    );
-  }
-
-  Widget _buildDetailRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 80,
-            child: Text(
-              '$label:',
-              style: const TextStyle(fontWeight: FontWeight.w500),
-            ),
-          ),
-          Expanded(child: Text(value)),
-        ],
-      ),
+      builder: (context) => AttendeeQRDialog(attendee: attendee),
     );
   }
 }

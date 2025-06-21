@@ -25,7 +25,6 @@ class AttendeesTabBar extends StatelessWidget {
         isScrollable: true,
         tabs: const [
           Tab(text: 'All Attendees'),
-          Tab(text: 'Registered'),
           Tab(text: 'Attended'),
           Tab(text: 'No Show'),
         ],

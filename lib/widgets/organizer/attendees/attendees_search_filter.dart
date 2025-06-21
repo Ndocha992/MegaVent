@@ -1,30 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:megavent/utils/constants.dart';
 
-class AttendeesSearchFilters extends StatelessWidget {
+class AttendeesSearchFilter extends StatelessWidget {
   final TextEditingController searchController;
   final String searchQuery;
-  final String selectedEvent;
-  final String selectedStatus;
-  final int filteredAttendeesCount;
   final Function(String) onSearchChanged;
   final VoidCallback onClearSearch;
+  final String selectedEvent;
+  final int filteredAttendeesCount;
   final VoidCallback onFilterPressed;
   final VoidCallback onEventCleared;
-  final VoidCallback onStatusCleared;
 
-  const AttendeesSearchFilters({
+  const AttendeesSearchFilter({
     super.key,
     required this.searchController,
     required this.searchQuery,
-    required this.selectedEvent,
-    required this.selectedStatus,
-    required this.filteredAttendeesCount,
     required this.onSearchChanged,
     required this.onClearSearch,
+    required this.selectedEvent,
+    required this.filteredAttendeesCount,
     required this.onFilterPressed,
     required this.onEventCleared,
-    required this.onStatusCleared,
   });
 
   @override
@@ -48,7 +44,7 @@ class AttendeesSearchFilters extends StatelessWidget {
               AttendeesFilterButton(onPressed: onFilterPressed),
             ],
           ),
-          if (selectedEvent != 'All' || selectedStatus != 'All') ...[
+          if (selectedEvent != 'All') ...[
             const SizedBox(height: 12),
             Row(
               children: [
@@ -56,13 +52,6 @@ class AttendeesSearchFilters extends StatelessWidget {
                   AttendeesFilterChip(
                     label: 'Event: $selectedEvent',
                     onClear: onEventCleared,
-                  ),
-                if (selectedEvent != 'All' && selectedStatus != 'All')
-                  const SizedBox(width: 8),
-                if (selectedStatus != 'All')
-                  AttendeesFilterChip(
-                    label: 'Status: $selectedStatus',
-                    onClear: onStatusCleared,
                   ),
                 const Spacer(),
                 Text(
@@ -110,12 +99,13 @@ class AttendeesSearchField extends StatelessWidget {
             Icons.search,
             color: AppConstants.textSecondaryColor,
           ),
-          suffixIcon: searchQuery.isNotEmpty
-              ? IconButton(
-                  icon: const Icon(Icons.clear),
-                  onPressed: onClear,
-                )
-              : null,
+          suffixIcon:
+              searchQuery.isNotEmpty
+                  ? IconButton(
+                    icon: const Icon(Icons.clear),
+                    onPressed: onClear,
+                  )
+                  : null,
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 16,

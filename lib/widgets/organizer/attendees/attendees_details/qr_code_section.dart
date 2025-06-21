@@ -63,7 +63,10 @@ class QRCodeSectionWidget extends StatelessWidget {
                 child: InfoRowWidget(label: 'QR Code', value: attendee.qrCode),
               ),
               IconButton(
-                onPressed: onShowQRCode(attendee),
+                onPressed:
+                    () => onShowQRCode(
+                      attendee,
+                    ), // This creates a callback function
                 icon: Icon(
                   Icons.qr_code_scanner,
                   color: AppConstants.primaryColor,

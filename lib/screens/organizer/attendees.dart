@@ -3,13 +3,12 @@ import 'package:megavent/screens/organizer/attendees_details.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/data/fake_data.dart';
 import 'package:megavent/widgets/organizer/app_bar.dart';
+import 'package:megavent/widgets/organizer/attendees/attendees_filters_dialog.dart';
 import 'package:megavent/widgets/organizer/sidebar.dart';
 import 'package:megavent/widgets/organizer/attendees/attendees_header.dart';
 import 'package:megavent/widgets/organizer/attendees/attendees_tab_bar.dart';
-import 'package:megavent/widgets/organizer/attendees/attendees_search_filters.dart';
+import 'package:megavent/widgets/organizer/attendees/attendees_search_filter.dart';
 import 'package:megavent/widgets/organizer/attendees/attendees_list.dart';
-import 'package:megavent/widgets/organizer/attendees/attendees_filters_dialog.dart';
-import 'package:megavent/widgets/organizer/attendees/attendee_qr_dialog.dart';
 import 'package:megavent/utils/organizer/attendees/attendees_utils.dart';
 
 class Attendees extends StatefulWidget {
@@ -25,14 +24,14 @@ class _AttendeesState extends State<Attendees> with TickerProviderStateMixin {
 
   late TabController _tabController;
   String _selectedEvent = 'All';
-  String _selectedStatus = 'All';
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    // Fixed: Changed from 4 to 3 tabs to match your tab bar
+    _tabController = TabController(length: 3, vsync: this);
   }
 
   @override
@@ -45,19 +44,16 @@ class _AttendeesState extends State<Attendees> with TickerProviderStateMixin {
   List<Attendee> get _filteredAttendees {
     List<Attendee> attendeesList = FakeData.attendees;
 
-    // Apply filters using utility functions
+    // Apply search filter
     attendeesList = AttendeesUtils.filterAttendeesBySearch(
       attendeesList,
       _searchQuery,
     );
-    attendeesList = AttendeesUtils.filterAttendeesByEvent(
-      attendeesList,
-      _selectedEvent,
-    );
-    attendeesList = AttendeesUtils.filterAttendeesByStatus(
-      attendeesList,
-      _selectedStatus,
-    );
+
+    // Apply event filter - FIXED: Now properly filters by event
+    attendeesList = _filterAttendeesByEvent(attendeesList, _selectedEvent);
+
+    // Apply tab filter
     attendeesList = AttendeesUtils.filterAttendeesByTab(
       attendeesList,
       _tabController.index,
@@ -66,20 +62,29 @@ class _AttendeesState extends State<Attendees> with TickerProviderStateMixin {
     return attendeesList;
   }
 
+  // FIXED: Proper event filtering implementation
+  List<Attendee> _filterAttendeesByEvent(
+    List<Attendee> attendees,
+    String eventName,
+  ) {
+    if (eventName == 'All') return attendees;
+
+    // Filter attendees by event name
+    return attendees
+        .where((attendee) => attendee.eventName == eventName)
+        .toList();
+  }
+
   void _showFilterDialog() {
     showDialog(
       context: context,
       builder:
           (context) => AttendeesFiltersDialog(
             selectedEvent: _selectedEvent,
-            selectedStatus: _selectedStatus,
             onEventChanged: (event) {
-              setState(() => _selectedEvent = event);
-              Navigator.pop(context);
-            },
-            onStatusChanged: (status) {
-              setState(() => _selectedStatus = status);
-              Navigator.pop(context);
+              setState(() {
+                _selectedEvent = event;
+              });
             },
           ),
     );
@@ -91,13 +96,6 @@ class _AttendeesState extends State<Attendees> with TickerProviderStateMixin {
       MaterialPageRoute(
         builder: (context) => AttendeesDetails(attendee: attendee),
       ),
-    );
-  }
-
-  void _showAttendeeQR(Attendee attendee) {
-    showDialog(
-      context: context,
-      builder: (context) => AttendeeQRDialog(attendee: attendee),
     );
   }
 
@@ -118,11 +116,10 @@ class _AttendeesState extends State<Attendees> with TickerProviderStateMixin {
             tabController: _tabController,
             onTabChanged: (index) => setState(() {}),
           ),
-          AttendeesSearchFilters(
+          AttendeesSearchFilter(
             searchController: _searchController,
             searchQuery: _searchQuery,
             selectedEvent: _selectedEvent,
-            selectedStatus: _selectedStatus,
             filteredAttendeesCount: _filteredAttendees.length,
             onSearchChanged: (value) => setState(() => _searchQuery = value),
             onClearSearch: () {
@@ -131,13 +128,11 @@ class _AttendeesState extends State<Attendees> with TickerProviderStateMixin {
             },
             onFilterPressed: _showFilterDialog,
             onEventCleared: () => setState(() => _selectedEvent = 'All'),
-            onStatusCleared: () => setState(() => _selectedStatus = 'All'),
           ),
           Expanded(
             child: AttendeesList(
               attendeesList: _filteredAttendees,
               onAttendeeTap: _onAttendeeTap,
-              onShowQR: _showAttendeeQR,
               searchQuery: _searchQuery,
             ),
           ),
