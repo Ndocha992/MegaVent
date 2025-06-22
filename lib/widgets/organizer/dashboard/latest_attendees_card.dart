@@ -1,10 +1,11 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/data/fake_data.dart';
 import 'package:megavent/screens/organizer/attendees_details.dart';
 
 class LatestAttendeesCard extends StatelessWidget {
-  final List<Attendee> attendees;
+  final List attendees;
 
   const LatestAttendeesCard({super.key, required this.attendees});
 
@@ -28,7 +29,9 @@ class LatestAttendeesCard extends StatelessWidget {
             Text('Latest Attendees', style: AppConstants.headlineSmall),
             TextButton(
               onPressed: () {
-                Navigator.of(context).pushReplacementNamed('/organizer-attendees');
+                Navigator.of(
+                  context,
+                ).pushReplacementNamed('/organizer-attendees');
               },
               child: const Text('View All'),
             ),
@@ -36,10 +39,14 @@ class LatestAttendeesCard extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         // Use individual cards instead of a single container with ListView
-        ...attendees.map((attendee) => LatestAttendeeCard(
-          attendee: attendee,
-          onTap: () => _onAttendeeTap(context, attendee),
-        )).toList(),
+        ...attendees
+            .map(
+              (attendee) => LatestAttendeeCard(
+                attendee: attendee,
+                onTap: () => _onAttendeeTap(context, attendee),
+              ),
+            )
+            .toList(),
       ],
     );
   }
@@ -50,10 +57,19 @@ class LatestAttendeeCard extends StatelessWidget {
   final VoidCallback onTap;
 
   const LatestAttendeeCard({
-    super.key, 
-    required this.attendee, 
-    required this.onTap
+    super.key,
+    required this.attendee,
+    required this.onTap,
   });
+
+  bool _isBase64(String value) {
+    try {
+      base64Decode(value);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
 
   String _formatDate(DateTime date) {
     final now = DateTime.now();
@@ -68,6 +84,62 @@ class LatestAttendeeCard extends StatelessWidget {
     } else {
       return 'Just now';
     }
+  }
+
+  String _getInitials(String name) {
+    List<String> names = name.split(' ');
+    if (names.length >= 2) {
+      return '${names[0][0]}${names[1][0]}'.toUpperCase();
+    } else {
+      return name[0].toUpperCase();
+    }
+  }
+
+  Widget _buildAvatarContent() {
+    // Handle different image sources
+    if (attendee.profileImage.isNotEmpty) {
+      // Check if it's base64 data
+      if (_isBase64(attendee.profileImage)) {
+        return ClipOval(
+          child: Image.memory(
+            base64Decode(attendee.profileImage),
+            fit: BoxFit.cover,
+            width: 48,
+            height: 48,
+            errorBuilder:
+                (context, error, stackTrace) => _buildInitialsAvatar(),
+          ),
+        );
+      } else {
+        // It's a regular URL
+        return ClipOval(
+          child: Image.network(
+            attendee.profileImage,
+            fit: BoxFit.cover,
+            width: 48,
+            height: 48,
+            errorBuilder:
+                (context, error, stackTrace) => _buildInitialsAvatar(),
+          ),
+        );
+      }
+    } else {
+      // No image, show initials
+      return _buildInitialsAvatar();
+    }
+  }
+
+  Widget _buildInitialsAvatar() {
+    return Center(
+      child: Text(
+        _getInitials(attendee.name),
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+          fontSize: 16,
+        ),
+      ),
+    );
   }
 
   @override
@@ -96,19 +168,17 @@ class LatestAttendeeCard extends StatelessWidget {
               children: [
                 Stack(
                   children: [
-                    CircleAvatar(
-                      radius: 24,
-                      backgroundColor:
-                          attendee.hasAttended
-                              ? AppConstants.successColor
-                              : AppConstants.primaryColor,
-                      child: Text(
-                        attendee.name.split(' ').map((n) => n[0]).take(2).join(),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color:
+                            attendee.hasAttended
+                                ? AppConstants.successColor
+                                : AppConstants.primaryColor,
                       ),
+                      child: _buildAvatarContent(),
                     ),
                     if (attendee.isNew)
                       Positioned(
@@ -120,6 +190,9 @@ class LatestAttendeeCard extends StatelessWidget {
                           decoration: const BoxDecoration(
                             color: AppConstants.successColor,
                             shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(color: Colors.white, spreadRadius: 1),
+                            ],
                           ),
                         ),
                       ),
@@ -148,7 +221,9 @@ class LatestAttendeeCard extends StatelessWidget {
                                 vertical: 4,
                               ),
                               decoration: BoxDecoration(
-                                color: AppConstants.primaryColor.withOpacity(0.1),
+                                color: AppConstants.primaryColor.withOpacity(
+                                  0.1,
+                                ),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(

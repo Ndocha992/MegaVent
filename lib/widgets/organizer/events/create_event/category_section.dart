@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/widgets/organizer/events/create_event/section_container.dart';
+import 'package:megavent/data/fake_data.dart';
 
 class CategorySection extends StatelessWidget {
   final String selectedCategory;
@@ -14,14 +15,7 @@ class CategorySection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final categories = [
-      'Technology',
-      'Art & Culture',
-      'Music',
-      'Sports',
-      'Business',
-      'Education',
-    ];
+    final categories = FakeData.getCategories();
 
     return SectionContainer(
       title: 'Category',
@@ -39,12 +33,13 @@ class CategorySection extends StatelessWidget {
               border: InputBorder.none,
               labelText: 'Select Category',
             ),
-            items: categories.map((category) {
-              return DropdownMenuItem(
-                value: category,
-                child: Text(category),
-              );
-            }).toList(),
+            items:
+                categories.map((category) {
+                  return DropdownMenuItem(
+                    value: category,
+                    child: Text(category),
+                  );
+                }).toList(),
             onChanged: (value) {
               if (value != null) {
                 onCategoryChanged(value);

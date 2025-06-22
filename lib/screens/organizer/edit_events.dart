@@ -38,6 +38,7 @@ class _EditEventsState extends State<EditEvents> {
   late String _selectedCategory;
   late DateTime _startDate;
   late DateTime _endDate;
+  String? _currentPosterUrl; // Track the current poster URL
 
   @override
   void initState() {
@@ -61,6 +62,7 @@ class _EditEventsState extends State<EditEvents> {
     _selectedCategory = widget.event.category;
     _startDate = widget.event.startDate;
     _endDate = widget.event.endDate;
+    _currentPosterUrl = widget.event.posterUrl; // Initialize current poster URL
   }
 
   @override
@@ -73,6 +75,18 @@ class _EditEventsState extends State<EditEvents> {
     _startTimeController.dispose();
     _endTimeController.dispose();
     super.dispose();
+  }
+
+  void _onPosterUrlChanged(String? newUrl) {
+    setState(() {
+      _currentPosterUrl = newUrl;
+    });
+    // Also update the controller for consistency
+    if (newUrl != null) {
+      _posterUrlController.text = newUrl;
+    } else {
+      _posterUrlController.clear();
+    }
   }
 
   @override
@@ -136,7 +150,15 @@ class _EditEventsState extends State<EditEvents> {
               const SizedBox(height: 25),
               EditEventCapacity(capacityController: _capacityController),
               const SizedBox(height: 25),
-              EditEventPoster(posterUrlController: _posterUrlController),
+              EditEventPoster(
+                initialPosterUrl: _currentPosterUrl,
+                eventId:
+                    widget
+                        .event
+                        .id, // You'll need to add an id field to your Event model
+                eventName: _nameController.text,
+                onPosterUrlChanged: _onPosterUrlChanged,
+              ),
               const SizedBox(height: 30),
               EditEventActions(
                 formKey: _formKey,
@@ -153,6 +175,24 @@ class _EditEventsState extends State<EditEvents> {
 
   void _saveEvent() {
     if (_formKey.currentState!.validate()) {
+      // Create updated event data including the new poster URL
+      final updatedEventData = {
+        'id': widget.event.id, // Assuming your Event model has an id field
+        'name': _nameController.text,
+        'description': _descriptionController.text,
+        'category': _selectedCategory,
+        'startDate': _startDate.toIso8601String(),
+        'endDate': _endDate.toIso8601String(),
+        'startTime': _startTimeController.text,
+        'endTime': _endTimeController.text,
+        'location': _locationController.text,
+        'capacity': int.tryParse(_capacityController.text) ?? 0,
+        'posterUrl': _currentPosterUrl, // Use the updated poster URL
+      };
+
+      // Here you would typically send this data to your backend
+      print('Updated Event Data: $updatedEventData');
+
       // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

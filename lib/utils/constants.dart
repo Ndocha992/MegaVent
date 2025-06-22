@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 // Create a constants class to encapsulate constants
 class Constants {
   // Cloudinary configuration
-  static const String cloudinaryCloudName = 'dvhdyruva';
-  static const String cloudinaryApiKey = '426277598191425';
-  static const String cloudinaryApiSecret = 'wgqlR3bEORv2_aZailcWS1KW5xY';
+  static const String cloudinaryCloudName = 'drmcceprh';
+  static const String cloudinaryApiKey = '673465831383746';
+  static const String cloudinaryApiSecret = 'XvacjzjU6JZe8RE1xCkj8a9Q_YI';
 }
 
 class AppConstants {

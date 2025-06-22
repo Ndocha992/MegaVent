@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/data/fake_data.dart';
@@ -171,11 +172,80 @@ class _AttendeesBottomSheetState extends State<AttendeesBottomSheet> {
   }
 }
 
-// Updated AttendeeCard to work with Attendee objects
+// Updated AttendeeCard to work with Attendee objects and profile images
 class AttendeeCard extends StatelessWidget {
   final Attendee attendee;
 
   const AttendeeCard({super.key, required this.attendee});
+
+  bool _isBase64(String value) {
+    try {
+      base64Decode(value);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Widget _buildAttendeeAvatar() {
+    // Handle different image sources
+    if (attendee.profileImage.isNotEmpty) {
+      // Check if it's base64 data
+      if (_isBase64(attendee.profileImage)) {
+        return ClipOval(
+          child: Image.memory(
+            base64Decode(attendee.profileImage),
+            fit: BoxFit.cover,
+            width: 48,
+            height: 48,
+            errorBuilder:
+                (context, error, stackTrace) => _buildInitialsAvatar(),
+          ),
+        );
+      } else {
+        // It's a regular URL
+        return ClipOval(
+          child: Image.network(
+            attendee.profileImage,
+            fit: BoxFit.cover,
+            width: 48,
+            height: 48,
+            errorBuilder:
+                (context, error, stackTrace) => _buildInitialsAvatar(),
+          ),
+        );
+      }
+    } else {
+      // No image, show initials
+      return _buildInitialsAvatar();
+    }
+  }
+
+  Widget _buildInitialsAvatar() {
+    return CircleAvatar(
+      radius: 24,
+      backgroundColor:
+          attendee.hasAttended
+              ? AppConstants.successColor
+              : AppConstants.primaryColor,
+      child: Text(
+        _getInitials(attendee.name),
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  String _getInitials(String name) {
+    List<String> names = name.split(' ');
+    if (names.length >= 2) {
+      return '${names[0][0]}${names[1][0]}'.toUpperCase();
+    } else {
+      return name[0].toUpperCase();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -196,21 +266,8 @@ class AttendeeCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Profile Avatar
-          CircleAvatar(
-            radius: 24,
-            backgroundColor:
-                attendee.hasAttended
-                    ? AppConstants.successColor
-                    : AppConstants.primaryColor,
-            child: Text(
-              attendee.name.split(' ').map((n) => n[0]).take(2).join(),
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
+          // Profile Avatar with image or initials
+          _buildAttendeeAvatar(),
 
           const SizedBox(width: 16),
 

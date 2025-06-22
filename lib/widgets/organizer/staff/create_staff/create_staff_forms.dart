@@ -3,12 +3,12 @@ import 'package:megavent/utils/constants.dart';
 
 class CreateStaffPersonalInfoForm extends StatelessWidget {
   final TextEditingController nameController;
-  final TextEditingController profileUrlController;
+  final VoidCallback onNameChanged;
 
   const CreateStaffPersonalInfoForm({
     super.key,
     required this.nameController,
-    required this.profileUrlController,
+    required this.onNameChanged,
   });
 
   @override
@@ -17,6 +17,7 @@ class CreateStaffPersonalInfoForm extends StatelessWidget {
       children: [
         CreateStaffTextFormField(
           controller: nameController,
+          onChanged: (value) => onNameChanged(),
           label: 'Full Name',
           icon: Icons.person_outline,
           validator: (value) {
@@ -25,24 +26,6 @@ class CreateStaffPersonalInfoForm extends StatelessWidget {
             }
             if (value.trim().split(' ').length < 2) {
               return 'Please enter both first and last name';
-            }
-            return null;
-          },
-        ),
-        const SizedBox(height: 16),
-        CreateStaffTextFormField(
-          controller: profileUrlController,
-          label: 'Profile Image URL (Optional)',
-          icon: Icons.image_outlined,
-          maxLines: 2,
-          validator: (value) {
-            if (value != null && value.isNotEmpty) {
-              final urlRegex = RegExp(
-                r'^https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$',
-              );
-              if (!urlRegex.hasMatch(value)) {
-                return 'Please enter a valid URL';
-              }
             }
             return null;
           },
@@ -80,6 +63,7 @@ class CreateStaffContactInfoForm extends StatelessWidget {
             }
             return null;
           },
+          onChanged: (value) {},
         ),
         const SizedBox(height: 16),
         CreateStaffTextFormField(
@@ -99,6 +83,7 @@ class CreateStaffContactInfoForm extends StatelessWidget {
             }
             return null;
           },
+          onChanged: (value) {},
         ),
       ],
     );
@@ -159,10 +144,7 @@ class CreateStaffWorkInfoForm extends StatelessWidget {
           },
         ),
         const SizedBox(height: 16),
-        CreateStaffSwitchTile(
-          isNew: isNew,
-          onChanged: onNewStatusChanged,
-        ),
+        CreateStaffSwitchTile(isNew: isNew, onChanged: onNewStatusChanged),
       ],
     );
   }
@@ -175,6 +157,7 @@ class CreateStaffTextFormField extends StatelessWidget {
   final TextInputType? keyboardType;
   final String? Function(String?)? validator;
   final int maxLines;
+  final void Function(String) onChanged;
 
   const CreateStaffTextFormField({
     super.key,
@@ -184,6 +167,7 @@ class CreateStaffTextFormField extends StatelessWidget {
     this.keyboardType,
     this.validator,
     this.maxLines = 1,
+    required this.onChanged,
   });
 
   @override
@@ -193,6 +177,7 @@ class CreateStaffTextFormField extends StatelessWidget {
       keyboardType: keyboardType,
       maxLines: maxLines,
       validator: validator,
+      onChanged: onChanged,
       style: AppConstants.bodyMedium,
       decoration: InputDecoration(
         labelText: label,
@@ -270,14 +255,13 @@ class CreateStaffDropdownField extends StatelessWidget {
           vertical: 16,
         ),
       ),
-      items: items
-          .map((String item) {
+      items:
+          items.map((String item) {
             return DropdownMenuItem<String>(
               value: item,
               child: Text(item, style: AppConstants.bodyMedium),
             );
-          })
-          .toList(),
+          }).toList(),
     );
   }
 }

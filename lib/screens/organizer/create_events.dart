@@ -10,6 +10,7 @@ import 'package:megavent/widgets/organizer/events/create_event/location_section.
 import 'package:megavent/widgets/organizer/events/create_event/poster_section.dart';
 import 'package:megavent/widgets/organizer/nested_app_bar.dart';
 import 'package:megavent/widgets/organizer/sidebar.dart';
+import 'package:megavent/data/fake_data.dart';
 
 class CreateEvents extends StatefulWidget {
   const CreateEvents({super.key});
@@ -28,13 +29,23 @@ class _CreateEventsState extends State<CreateEvents> {
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _locationController = TextEditingController();
   final TextEditingController _capacityController = TextEditingController();
-  final TextEditingController _posterUrlController = TextEditingController();
   final TextEditingController _startTimeController = TextEditingController();
   final TextEditingController _endTimeController = TextEditingController();
 
   String _selectedCategory = 'Technology';
   DateTime _startDate = DateTime.now();
   DateTime _endDate = DateTime.now().add(const Duration(days: 1));
+  String? _posterUrl; // Changed from TextEditingController to String
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize with first category from fake data
+    final categories = FakeData.getCategories();
+    if (categories.isNotEmpty) {
+      _selectedCategory = categories.first;
+    }
+  }
 
   @override
   void dispose() {
@@ -42,7 +53,6 @@ class _CreateEventsState extends State<CreateEvents> {
     _descriptionController.dispose();
     _locationController.dispose();
     _capacityController.dispose();
-    _posterUrlController.dispose();
     _startTimeController.dispose();
     _endTimeController.dispose();
     super.dispose();
@@ -113,9 +123,11 @@ class _CreateEventsState extends State<CreateEvents> {
               CapacitySection(capacityController: _capacityController),
               const SizedBox(height: 25),
               PosterSection(
-                posterUrlController: _posterUrlController,
-                onPosterUrlChanged: () {
-                  setState(() {});
+                posterUrl: _posterUrl,
+                onPosterUrlChanged: (url) {
+                  setState(() {
+                    _posterUrl = url;
+                  });
                 },
               ),
               const SizedBox(height: 30),
@@ -125,7 +137,7 @@ class _CreateEventsState extends State<CreateEvents> {
                 descriptionController: _descriptionController,
                 locationController: _locationController,
                 capacityController: _capacityController,
-                posterUrlController: _posterUrlController,
+                posterUrl: _posterUrl, // Pass the posterUrl here
                 startTimeController: _startTimeController,
                 endTimeController: _endTimeController,
                 onClearForm: _clearForm,
@@ -152,17 +164,19 @@ class _CreateEventsState extends State<CreateEvents> {
             ),
             TextButton(
               onPressed: () {
+                final categories = FakeData.getCategories();
                 setState(() {
                   _nameController.clear();
                   _descriptionController.clear();
                   _locationController.clear();
                   _capacityController.clear();
-                  _posterUrlController.clear();
                   _startTimeController.clear();
                   _endTimeController.clear();
-                  _selectedCategory = 'Technology';
+                  _selectedCategory =
+                      categories.isNotEmpty ? categories.first : 'Technology';
                   _startDate = DateTime.now();
                   _endDate = DateTime.now().add(const Duration(days: 1));
+                  _posterUrl = null; // Clear the poster URL
                 });
                 Navigator.of(context).pop();
               },
@@ -179,6 +193,23 @@ class _CreateEventsState extends State<CreateEvents> {
 
   void _createEvent() {
     if (_formKey.currentState!.validate()) {
+      // Create event object with all the data including poster URL
+      final eventData = {
+        'name': _nameController.text,
+        'description': _descriptionController.text,
+        'category': _selectedCategory,
+        'startDate': _startDate.toIso8601String(),
+        'endDate': _endDate.toIso8601String(),
+        'startTime': _startTimeController.text,
+        'endTime': _endTimeController.text,
+        'location': _locationController.text,
+        'capacity': int.tryParse(_capacityController.text) ?? 0,
+        'posterUrl': _posterUrl, // This will be the Cloudinary URL
+      };
+
+      // Here you would typically send this data to your backend
+      print('Event Data: $eventData');
+
       // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
