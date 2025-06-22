@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/data/fake_data.dart';
@@ -7,6 +8,67 @@ class AttendeeQRDialog extends StatelessWidget {
   final Attendee attendee;
 
   const AttendeeQRDialog({super.key, required this.attendee});
+
+  bool _isBase64(String value) {
+    try {
+      base64Decode(value);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Widget _buildAttendeeAvatar() {
+    // Handle different image sources
+    if (attendee.profileImage.isNotEmpty) {
+      // Check if it's base64 data
+      if (_isBase64(attendee.profileImage)) {
+        return ClipOval(
+          child: Image.memory(
+            base64Decode(attendee.profileImage),
+            fit: BoxFit.cover,
+            width: 40,
+            height: 40,
+            errorBuilder:
+                (context, error, stackTrace) => _buildInitialsAvatar(),
+          ),
+        );
+      } else {
+        // It's a regular URL
+        return ClipOval(
+          child: Image.network(
+            attendee.profileImage,
+            fit: BoxFit.cover,
+            width: 40,
+            height: 40,
+            errorBuilder:
+                (context, error, stackTrace) => _buildInitialsAvatar(),
+          ),
+        );
+      }
+    } else {
+      // No image, show initials
+      return _buildInitialsAvatar();
+    }
+  }
+
+  Widget _buildInitialsAvatar() {
+    return CircleAvatar(
+      radius: 20,
+      backgroundColor:
+          attendee.hasAttended
+              ? AppConstants.successColor
+              : AppConstants.primaryColor,
+      child: Text(
+        AttendeesUtils.getAttendeeInitials(attendee.name),
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+          fontSize: 14,
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,21 +84,8 @@ class AttendeeQRDialog extends StatelessWidget {
             // Header
             Row(
               children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundColor:
-                      attendee.hasAttended
-                          ? AppConstants.successColor
-                          : AppConstants.primaryColor,
-                  child: Text(
-                    AttendeesUtils.getAttendeeInitials(attendee.name),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
+                // Profile Avatar with image or initials
+                _buildAttendeeAvatar(),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(

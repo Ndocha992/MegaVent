@@ -3,12 +3,12 @@ import 'package:megavent/utils/organizer/staff/etit_staff/staff_utils.dart';
 
 class StaffPersonalInfoForm extends StatelessWidget {
   final TextEditingController nameController;
-  final TextEditingController profileUrlController;
+  final VoidCallback? onNameChanged;
 
   const StaffPersonalInfoForm({
     super.key,
     required this.nameController,
-    required this.profileUrlController,
+    this.onNameChanged,
   });
 
   @override
@@ -19,19 +19,16 @@ class StaffPersonalInfoForm extends StatelessWidget {
           controller: nameController,
           label: 'Full Name',
           icon: Icons.person_outline,
+          onChanged: (value) {
+            // Call the callback when name changes to update initials
+            onNameChanged?.call();
+          },
           validator: (value) {
             if (value == null || value.isEmpty) {
               return 'Please enter full name';
             }
             return null;
           },
-        ),
-        const SizedBox(height: 16),
-        StaffFormField(
-          controller: profileUrlController,
-          label: 'Profile Image URL (Optional)',
-          icon: Icons.image_outlined,
-          maxLines: 2,
         ),
       ],
     );

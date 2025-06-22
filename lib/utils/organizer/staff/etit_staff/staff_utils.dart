@@ -7,6 +7,7 @@ class StaffFormField extends StatelessWidget {
   final IconData icon;
   final TextInputType? keyboardType;
   final String? Function(String?)? validator;
+  final void Function(String)? onChanged;
   final int maxLines;
 
   const StaffFormField({
@@ -16,6 +17,7 @@ class StaffFormField extends StatelessWidget {
     required this.icon,
     this.keyboardType,
     this.validator,
+    this.onChanged,
     this.maxLines = 1,
   });
 
@@ -26,6 +28,7 @@ class StaffFormField extends StatelessWidget {
       keyboardType: keyboardType,
       maxLines: maxLines,
       validator: validator,
+      onChanged: onChanged,
       style: AppConstants.bodyMedium,
       decoration: InputDecoration(
         labelText: label,

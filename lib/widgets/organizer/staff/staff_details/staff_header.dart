@@ -5,10 +5,7 @@ import 'package:megavent/data/fake_data.dart';
 class StaffHeaderWidget extends StatelessWidget {
   final Staff staff;
 
-  const StaffHeaderWidget({
-    super.key,
-    required this.staff,
-  });
+  const StaffHeaderWidget({super.key, required this.staff});
 
   @override
   Widget build(BuildContext context) {
@@ -44,20 +41,22 @@ class StaffHeaderWidget extends StatelessWidget {
             ),
             child: CircleAvatar(
               radius: 58,
-              backgroundImage: staff.profileUrl.isNotEmpty
-                  ? NetworkImage(staff.profileUrl)
-                  : null,
+              backgroundImage:
+                  staff.profileImage.isNotEmpty
+                      ? NetworkImage(staff.profileImage)
+                      : null,
               backgroundColor: Colors.white,
-              child: staff.profileUrl.isEmpty
-                  ? Text(
-                      _getInitials(staff.name),
-                      style: const TextStyle(
-                        fontSize: 40,
-                        fontWeight: FontWeight.bold,
-                        color: AppConstants.primaryColor,
-                      ),
-                    )
-                  : null,
+              child:
+                  staff.profileImage.isEmpty
+                      ? Text(
+                        _getInitials(staff.name),
+                        style: const TextStyle(
+                          fontSize: 40,
+                          fontWeight: FontWeight.bold,
+                          color: AppConstants.primaryColor,
+                        ),
+                      )
+                      : null,
             ),
           ),
           const SizedBox(height: 16),

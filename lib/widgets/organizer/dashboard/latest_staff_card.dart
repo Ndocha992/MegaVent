@@ -130,10 +130,10 @@ class LatestStaffCard extends StatelessWidget {
               ],
             ),
           ),
-          child: staffMember.profileUrl.isNotEmpty
+          child: staffMember.profileImage.isNotEmpty
               ? ClipOval(
                   child: Image.network(
-                    staffMember.profileUrl,
+                    staffMember.profileImage,
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) =>
                         _buildInitialsAvatar(staffMember),

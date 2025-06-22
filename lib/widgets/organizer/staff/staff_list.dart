@@ -130,12 +130,12 @@ class StaffAvatar extends StatelessWidget {
 
   Widget _buildAvatarContent() {
     // Handle different image sources
-    if (staff.profileUrl.isNotEmpty) {
+    if (staff.profileImage.isNotEmpty) {
       // Check if it's base64 data
-      if (_isBase64(staff.profileUrl)) {
+      if (_isBase64(staff.profileImage)) {
         return ClipOval(
           child: Image.memory(
-            base64Decode(staff.profileUrl),
+            base64Decode(staff.profileImage),
             fit: BoxFit.cover,
             width: 60,
             height: 60,
@@ -147,7 +147,7 @@ class StaffAvatar extends StatelessWidget {
         // It's a regular URL
         return ClipOval(
           child: Image.network(
-            staff.profileUrl,
+            staff.profileImage,
             fit: BoxFit.cover,
             width: 60,
             height: 60,

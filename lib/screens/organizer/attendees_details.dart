@@ -97,6 +97,7 @@ class _AttendeesDetailsState extends State<AttendeesDetails> {
         hasAttended: !currentAttendee.hasAttended,
         registeredAt: currentAttendee.registeredAt,
         isNew: currentAttendee.isNew,
+        profileImage: currentAttendee.profileImage,
       );
     });
 
