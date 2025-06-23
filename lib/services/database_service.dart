@@ -98,28 +98,6 @@ class DatabaseService extends ChangeNotifier {
     }
   }
 
-  // Get all Admins
-  Future<Map<String, dynamic>> getAllAdmins() async {
-    _setLoading(true);
-    try {
-      final adminDocs = await _firestore.collection('admins').get();
-
-      List<Admin> admins = [];
-      for (var doc in adminDocs.docs) {
-        admins.add(Admin.fromFirestore(doc));
-      }
-
-      return {'success': true, 'data': admins};
-    } catch (e) {
-      if (e is FirebaseException && e.code == 'unavailable') {
-        return {'success': false, 'message': 'No internet connection'};
-      }
-      return {'success': false, 'message': 'Failed to retrieve Admins data'};
-    } finally {
-      _setLoading(false);
-    }
-  }
-
   // Get pending organizers (for admin approval)
   Future<Map<String, dynamic>> getPendingOrganizers() async {
     _setLoading(true);
@@ -209,121 +187,6 @@ class DatabaseService extends ChangeNotifier {
         return {'success': false, 'message': 'No internet connection'};
       }
       return {'success': false, 'message': 'Failed to approve organizer'};
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  // Reject/Suspend organizer
-  Future<Map<String, dynamic>> rejectOrganizer(
-    String organizerId,
-    String reason,
-  ) async {
-    _setLoading(true);
-    try {
-      // Update organizer document
-      await _firestore.collection('organizers').doc(organizerId).update({
-        'isApproved': false,
-        'isActive': false,
-        'rejectionReason': reason,
-        'rejectedAt': DateTime.now(),
-        'rejectedBy': currentUser?.uid,
-        'updatedAt': DateTime.now(),
-      });
-
-      // Update user document
-      await _firestore.collection('users').doc(organizerId).update({
-        'isApproved': false,
-        'isActive': false,
-        'rejectionReason': reason,
-        'rejectedAt': DateTime.now(),
-        'rejectedBy': currentUser?.uid,
-        'updatedAt': DateTime.now(),
-      });
-
-      return {'success': true, 'message': 'Organizer rejected successfully'};
-    } catch (e) {
-      if (e is FirebaseException && e.code == 'unavailable') {
-        return {'success': false, 'message': 'No internet connection'};
-      }
-      return {'success': false, 'message': 'Failed to reject organizer'};
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  // Suspend/Deactivate user
-  Future<Map<String, dynamic>> suspendUser(
-    String userId,
-    String userType,
-    String reason,
-  ) async {
-    _setLoading(true);
-    try {
-      // Update in specific collection
-      await _firestore.collection(userType).doc(userId).update({
-        'isActive': false,
-        'suspensionReason': reason,
-        'suspendedAt': DateTime.now(),
-        'suspendedBy': currentUser?.uid,
-        'updatedAt': DateTime.now(),
-      });
-
-      // Update in users collection
-      await _firestore.collection('users').doc(userId).update({
-        'isActive': false,
-        'suspensionReason': reason,
-        'suspendedAt': DateTime.now(),
-        'suspendedBy': currentUser?.uid,
-        'updatedAt': DateTime.now(),
-      });
-
-      return {'success': true, 'message': 'User suspended successfully'};
-    } catch (e) {
-      if (e is FirebaseException && e.code == 'unavailable') {
-        return {'success': false, 'message': 'No internet connection'};
-      }
-      return {'success': false, 'message': 'Failed to suspend user'};
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  // Reactivate user
-  Future<Map<String, dynamic>> reactivateUser(
-    String userId,
-    String userType,
-  ) async {
-    _setLoading(true);
-    try {
-      // Update in specific collection
-      await _firestore.collection(userType).doc(userId).update({
-        'isActive': true,
-        'suspensionReason': FieldValue.delete(),
-        'suspendedAt': FieldValue.delete(),
-        'suspendedBy': FieldValue.delete(),
-        'reactivatedAt': DateTime.now(),
-        'reactivatedBy': currentUser?.uid,
-        'updatedAt': DateTime.now(),
-      });
-
-      // Update in users collection
-      await _firestore.collection('users').doc(userId).update({
-        'isActive': true,
-        'suspensionReason': FieldValue.delete(),
-        'suspendedAt': FieldValue.delete(),
-        'suspendedBy': FieldValue.delete(),
-        'reactivatedAt': DateTime.now(),
-        'reactivatedBy': currentUser?.uid,
-        'updatedAt': DateTime.now(),
-      });
-
-      return {'success': true, 'message': 'User reactivated successfully'};
-    } catch (e) {
-      if (e is FirebaseException && e.code == 'unavailable') {
-        return {'success': false, 'message': 'No internet connection'};
-      }
-      return {'success': false, 'message': 'Failed to reactivate user'};
     } finally {
       _setLoading(false);
     }
@@ -913,6 +776,35 @@ class DatabaseService extends ChangeNotifier {
       return {'success': false, 'message': 'Failed to cancel registration'};
     } finally {
       _setLoading(false);
+    }
+  }
+
+  // Stream current organizer data for real-time updates
+  Stream<Organizer?> streamCurrentOrganizerData() {
+    final user = _auth.currentUser;
+    if (user == null) {
+      return Stream.value(null);
+    }
+
+    return _firestore.collection('organizers').doc(user.uid).snapshots().map((
+      doc,
+    ) {
+      if (doc.exists) {
+        return Organizer.fromFirestore(doc);
+      }
+      return null;
+    });
+  }
+
+  // Update organizer profile data
+  Future<void> updateOrganizerProfile(Organizer organizer) async {
+    try {
+      await _firestore
+          .collection('organizers')
+          .doc(organizer.id)
+          .update(organizer.toMap());
+    } catch (e) {
+      throw Exception('Failed to update organizer profile: $e');
     }
   }
 }
