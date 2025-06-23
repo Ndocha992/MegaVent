@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/data/fake_data.dart';
@@ -39,25 +40,7 @@ class StaffHeaderWidget extends StatelessWidget {
                 ),
               ],
             ),
-            child: CircleAvatar(
-              radius: 58,
-              backgroundImage:
-                  staff.profileImage.isNotEmpty
-                      ? NetworkImage(staff.profileImage)
-                      : null,
-              backgroundColor: Colors.white,
-              child:
-                  staff.profileImage.isEmpty
-                      ? Text(
-                        _getInitials(staff.name),
-                        style: const TextStyle(
-                          fontSize: 40,
-                          fontWeight: FontWeight.bold,
-                          color: AppConstants.primaryColor,
-                        ),
-                      )
-                      : null,
-            ),
+            child: _buildProfileImage(),
           ),
           const SizedBox(height: 16),
 
@@ -102,11 +85,56 @@ class StaffHeaderWidget extends StatelessWidget {
     );
   }
 
-  String _getInitials(String name) {
-    List<String> names = name.split(' ');
-    if (names.length >= 2) {
-      return '${names[0][0]}${names[1][0]}'.toUpperCase();
+  Widget _buildProfileImage() {
+    // Check if profileImage exists and is not empty
+    if (staff.profileImage != null && staff.profileImage!.isNotEmpty) {
+      try {
+        // Try to decode base64 image
+        final imageBytes = base64Decode(staff.profileImage!);
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(58),
+          child: Image.memory(
+            imageBytes,
+            width: 116,
+            height: 116,
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              // If base64 decoding fails, show initials
+              return _buildInitialsAvatar();
+            },
+          ),
+        );
+      } catch (e) {
+        // If base64 decoding fails, show initials
+        return _buildInitialsAvatar();
+      }
+    } else {
+      // If no profile image, show initials
+      return _buildInitialsAvatar();
     }
-    return name.isNotEmpty ? name[0].toUpperCase() : '';
+  }
+
+  Widget _buildInitialsAvatar() {
+    return CircleAvatar(
+      radius: 58,
+      backgroundColor: Colors.white,
+      child: Text(
+        _getInitials(staff.name),
+        style: const TextStyle(
+          fontSize: 40,
+          fontWeight: FontWeight.bold,
+          color: AppConstants.primaryColor,
+        ),
+      ),
+    );
+  }
+
+  String _getInitials(String name) {
+    if (name.trim().isEmpty) return '';
+    final nameParts = name.trim().split(' ');
+    final initials = nameParts
+        .map((part) => part.isNotEmpty ? part[0].toUpperCase() : '')
+        .join('');
+    return initials.length > 2 ? initials.substring(0, 2) : initials;
   }
 }
