@@ -4,7 +4,7 @@ import 'package:megavent/utils/constants.dart';
 class EditEventActions extends StatelessWidget {
   final GlobalKey<FormState> formKey;
   final TextEditingController nameController;
-  final String? posterUrl; // Add poster URL parameter
+  final bool isLoading; // Add this required parameter
   final VoidCallback onCancel;
   final VoidCallback onSave;
 
@@ -12,7 +12,7 @@ class EditEventActions extends StatelessWidget {
     super.key,
     required this.formKey,
     required this.nameController,
-    this.posterUrl, // Optional poster URL
+    required this.isLoading, // Add this to constructor
     required this.onCancel,
     required this.onSave,
   });
@@ -23,7 +23,7 @@ class EditEventActions extends StatelessWidget {
       children: [
         Expanded(
           child: OutlinedButton(
-            onPressed: onCancel,
+            onPressed: isLoading ? null : onCancel, // Disable when loading
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 16),
               side: BorderSide(color: AppConstants.borderColor),
@@ -42,7 +42,7 @@ class EditEventActions extends StatelessWidget {
         const SizedBox(width: 16),
         Expanded(
           child: ElevatedButton(
-            onPressed: onSave,
+            onPressed: isLoading ? null : onSave, // Disable when loading
             style: ElevatedButton.styleFrom(
               backgroundColor: AppConstants.primaryColor,
               foregroundColor: Colors.white,
@@ -51,13 +51,22 @@ class EditEventActions extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            child: Text(
-              'Save Changes',
-              style: AppConstants.bodyLarge.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+            child: isLoading
+                ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                : Text(
+                    'Save Changes',
+                    style: AppConstants.bodyLarge.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
           ),
         ),
       ],

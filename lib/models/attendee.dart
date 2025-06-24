@@ -6,9 +6,14 @@ class Attendee {
   final String email;
   final String phone;
   final String? profileImage;
+  final String eventId;
+  final String eventName;
+  final String qrCode;
+  final bool hasAttended;
   final bool isApproved;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final DateTime registeredAt;
 
   Attendee({
     required this.id,
@@ -16,9 +21,14 @@ class Attendee {
     required this.email,
     required this.phone,
     this.profileImage,
+    required this.eventId,
+    required this.eventName,
+    required this.qrCode,
+    required this.hasAttended,
     required this.isApproved,
     required this.createdAt,
     required this.updatedAt,
+    required this.registeredAt,
   });
 
   // Convert to Map for Firestore
@@ -29,9 +39,14 @@ class Attendee {
       'email': email,
       'phone': phone,
       'profileImage': profileImage,
+      'eventId': eventId,
+      'eventName': eventName,
+      'qrCode': qrCode,
+      'hasAttended': hasAttended,
       'isApproved': isApproved,
-      'createdAt': createdAt,
-      'updatedAt': updatedAt,
+      'createdAt': Timestamp.fromDate(createdAt),
+      'updatedAt': Timestamp.fromDate(updatedAt),
+      'registeredAt': Timestamp.fromDate(registeredAt),
     };
   }
 
@@ -45,9 +60,15 @@ class Attendee {
       email: data['email'] ?? '',
       phone: data['phone'] ?? '',
       profileImage: data['profileImage'],
+      eventId: data['eventId'] ?? '',
+      eventName: data['eventName'] ?? '',
+      qrCode: data['qrCode'] ?? '',
+      hasAttended: data['hasAttended'] ?? false,
       isApproved: data['isApproved'] ?? true,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      registeredAt:
+          (data['registeredAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }
 
@@ -59,15 +80,29 @@ class Attendee {
       email: map['email'] ?? '',
       phone: map['phone'] ?? '',
       profileImage: map['profileImage'],
+      eventId: map['eventId'] ?? '',
+      eventName: map['eventName'] ?? '',
+      qrCode: map['qrCode'] ?? '',
+      hasAttended: map['hasAttended'] ?? false,
       isApproved: map['isApproved'] ?? true,
       createdAt:
           map['createdAt'] is Timestamp
               ? (map['createdAt'] as Timestamp).toDate()
-              : map['createdAt'] ?? DateTime.now(),
+              : map['createdAt'] is DateTime
+              ? map['createdAt']
+              : DateTime.now(),
       updatedAt:
           map['updatedAt'] is Timestamp
               ? (map['updatedAt'] as Timestamp).toDate()
-              : map['updatedAt'] ?? DateTime.now(),
+              : map['updatedAt'] is DateTime
+              ? map['updatedAt']
+              : DateTime.now(),
+      registeredAt:
+          map['registeredAt'] is Timestamp
+              ? (map['registeredAt'] as Timestamp).toDate()
+              : map['registeredAt'] is DateTime
+              ? map['registeredAt']
+              : DateTime.now(),
     );
   }
 
@@ -78,9 +113,14 @@ class Attendee {
     String? email,
     String? phone,
     String? profileImage,
+    String? eventId,
+    String? eventName,
+    String? qrCode,
+    bool? hasAttended,
     bool? isApproved,
     DateTime? createdAt,
     DateTime? updatedAt,
+    DateTime? registeredAt,
   }) {
     return Attendee(
       id: id ?? this.id,
@@ -88,15 +128,35 @@ class Attendee {
       email: email ?? this.email,
       phone: phone ?? this.phone,
       profileImage: profileImage ?? this.profileImage,
+      eventId: eventId ?? this.eventId,
+      eventName: eventName ?? this.eventName,
+      qrCode: qrCode ?? this.qrCode,
+      hasAttended: hasAttended ?? this.hasAttended,
       isApproved: isApproved ?? this.isApproved,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      registeredAt: registeredAt ?? this.registeredAt,
     );
+  }
+
+  // Get display name (for compatibility with fake data)
+  String get name => fullName;
+
+  // Get attendance status display
+  String get attendanceStatus {
+    return hasAttended ? 'Attended' : 'Registered';
+  }
+
+  // Calculate if attendee registration is "new" (registered within the last 30 minutes)
+  bool get isNew {
+    final now = DateTime.now();
+    final thirtyMinutesAgo = now.subtract(const Duration(minutes: 30));
+    return registeredAt.isAfter(thirtyMinutesAgo);
   }
 
   @override
   String toString() {
-    return 'Attendee(id: $id, fullName: $fullName, email: $email, phone: $phone, isApproved: $isApproved)';
+    return 'Attendee(id: $id, fullName: $fullName, email: $email, phone: $phone, eventId: $eventId, hasAttended: $hasAttended, isApproved: $isApproved)';
   }
 
   @override

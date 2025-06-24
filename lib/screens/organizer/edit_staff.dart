@@ -1,15 +1,17 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:megavent/models/staff.dart';
+import 'package:megavent/services/database_service.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/widgets/organizer/nested_app_bar.dart';
 import 'package:megavent/widgets/organizer/sidebar.dart';
-import 'package:megavent/data/fake_data.dart';
 import 'package:megavent/widgets/organizer/staff/edit_staff/staff_action_buttons.dart';
 import 'package:megavent/widgets/organizer/staff/edit_staff/staff_contact_info_form.dart';
 import 'package:megavent/widgets/organizer/staff/edit_staff/staff_personal_info_form.dart';
 import 'package:megavent/widgets/organizer/staff/edit_staff/staff_section_header.dart';
 import 'package:megavent/widgets/organizer/staff/edit_staff/staff_work_info_form.dart';
+import 'package:provider/provider.dart';
 
 class EditStaff extends StatefulWidget {
   final Staff? staff;
@@ -39,34 +41,58 @@ class _EditStaffState extends State<EditStaff> {
   bool _isNew = false;
 
   // Available options
-  late List<String> _roles;
-  late List<String> _departments;
+  List<String> _roles = [];
+  List<String> _departments = [];
+
+  // Loading states
+  bool _isLoading = false;
+  bool _isSaving = false;
 
   @override
   void initState() {
     super.initState();
-    _initializeRolesAndDepartments();
     _initializeForm();
+    _loadStaffData();
   }
 
   void _initializeForm() {
-    final staff = widget.staff ?? FakeData.staff.first;
+    final staff = widget.staff;
 
-    _nameController = TextEditingController(text: staff.name);
-    _emailController = TextEditingController(text: staff.email);
-    _phoneController = TextEditingController(text: staff.phone);
+    _nameController = TextEditingController(text: staff?.fullName ?? '');
+    _emailController = TextEditingController(text: staff?.email ?? '');
+    _phoneController = TextEditingController(text: staff?.phone ?? '');
 
-    _selectedRole = staff.role;
-    _selectedDepartment = staff.department;
-    _isNew = staff.isNew;
-    
-    _profileImageBase64 = staff.profileImage;
+    _selectedRole = staff?.role;
+    _selectedDepartment = staff?.department;
+    _isNew = staff?.isNew ?? true;
+
+    _profileImageBase64 = staff?.profileImage;
   }
 
-  void _initializeRolesAndDepartments() {
+  Future<void> _loadStaffData() async {
+    if (mounted) {
+      setState(() => _isLoading = true);
+    }
+
+    try {
+      final databaseService = context.read<DatabaseService>();
+      final allStaff = await databaseService.getAllStaff();
+
+      _initializeRolesAndDepartments(allStaff);
+    } catch (e) {
+      // If we can't load existing staff data, use default values
+      _initializeDefaultRolesAndDepartments();
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  void _initializeRolesAndDepartments(List<Staff> staffList) {
     // Extract unique roles from existing staff data
-    Set<String> rolesSet = FakeData.staff.map((staff) => staff.role).toSet();
-    
+    Set<String> rolesSet = staffList.map((staff) => staff.role).toSet();
+
     // Add additional roles that might not exist in current data
     rolesSet.addAll([
       'Event Manager',
@@ -80,11 +106,16 @@ class _EditStaffState extends State<EditStaff> {
       'HR Specialist',
       'Security Officer',
       'Graphics Designer',
+      'Project Manager',
+      'Social Media Manager',
+      'Content Creator',
+      'Business Analyst',
     ]);
 
     // Extract unique departments from existing staff data
-    Set<String> departmentsSet = FakeData.staff.map((staff) => staff.department).toSet();
-    
+    Set<String> departmentsSet =
+        staffList.map((staff) => staff.department).toSet();
+
     // Add additional departments that might not exist in current data
     departmentsSet.addAll([
       'Operations',
@@ -99,8 +130,45 @@ class _EditStaffState extends State<EditStaff> {
       'IT',
     ]);
 
-    _roles = rolesSet.toList()..sort();
-    _departments = departmentsSet.toList()..sort();
+    setState(() {
+      _roles = rolesSet.toList()..sort();
+      _departments = departmentsSet.toList()..sort();
+    });
+  }
+
+  void _initializeDefaultRolesAndDepartments() {
+    setState(() {
+      _roles = [
+        'Event Manager',
+        'Event Coordinator',
+        'Marketing Specialist',
+        'Technical Support',
+        'Operations Manager',
+        'Sales Representative',
+        'Customer Service',
+        'Finance Manager',
+        'HR Specialist',
+        'Security Officer',
+        'Graphics Designer',
+        'Project Manager',
+        'Social Media Manager',
+        'Content Creator',
+        'Business Analyst',
+      ]..sort();
+
+      _departments = [
+        'Operations',
+        'Marketing',
+        'Technical',
+        'Sales',
+        'Finance',
+        'Human Resources',
+        'Security',
+        'Customer Service',
+        'Creative',
+        'IT',
+      ]..sort();
+    });
   }
 
   Future<void> _pickImageFromCamera() async {
@@ -162,16 +230,17 @@ class _EditStaffState extends State<EditStaff> {
         ],
       ),
       child: Center(
-        child: initials.isNotEmpty
-            ? Text(
-                initials,
-                style: const TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                ),
-              )
-            : const Icon(Icons.person, size: 50, color: Colors.white),
+        child:
+            initials.isNotEmpty
+                ? Text(
+                  initials,
+                  style: const TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                )
+                : const Icon(Icons.person, size: 50, color: Colors.white),
       ),
     );
   }
@@ -200,7 +269,8 @@ class _EditStaffState extends State<EditStaff> {
                 child: Image.memory(
                   imageBytes,
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => _buildInitialsAvatar(),
+                  errorBuilder:
+                      (context, error, stackTrace) => _buildInitialsAvatar(),
                 ),
               ),
               Positioned.fill(
@@ -293,11 +363,23 @@ class _EditStaffState extends State<EditStaff> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        key: _scaffoldKey,
+        backgroundColor: AppConstants.backgroundColor,
+        appBar: NestedScreenAppBar(
+          screenTitle: widget.staff?.fullName ?? 'Add New Staff',
+        ),
+        drawer: OrganizerSidebar(currentRoute: currentRoute),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: AppConstants.backgroundColor,
       appBar: NestedScreenAppBar(
-        screenTitle: widget.staff?.name ?? 'Add New Staff',
+        screenTitle: widget.staff?.fullName ?? 'Add New Staff',
       ),
       drawer: OrganizerSidebar(currentRoute: currentRoute),
       body: Form(
@@ -359,6 +441,7 @@ class _EditStaffState extends State<EditStaff> {
                 isEditing: widget.staff != null,
                 onCancel: () => Navigator.of(context).pop(),
                 onSave: _handleSaveStaff,
+                isLoading: _isSaving,
               ),
               const SizedBox(height: 20),
             ],
@@ -372,65 +455,66 @@ class _EditStaffState extends State<EditStaff> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(20),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppConstants.borderColor,
-                borderRadius: BorderRadius.circular(2),
-              ),
+      builder:
+          (context) => Container(
+            padding: const EdgeInsets.all(20),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
             ),
-            const SizedBox(height: 20),
-            Text(
-              'Update Profile Photo',
-              style: AppConstants.bodyMedium.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                _buildImageOption(
-                  icon: Icons.photo_camera_outlined,
-                  label: 'Camera',
-                  onTap: () {
-                    Navigator.pop(context);
-                    _pickImageFromCamera();
-                  },
-                ),
-                _buildImageOption(
-                  icon: Icons.photo_library_outlined,
-                  label: 'Gallery',
-                  onTap: () {
-                    Navigator.pop(context);
-                    _pickImageFromGallery();
-                  },
-                ),
-                if (_profileImageBase64 != null)
-                  _buildImageOption(
-                    icon: Icons.delete_outline,
-                    label: 'Remove',
-                    onTap: () {
-                      Navigator.pop(context);
-                      setState(() => _profileImageBase64 = null);
-                    },
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppConstants.borderColor,
+                    borderRadius: BorderRadius.circular(2),
                   ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'Update Profile Photo',
+                  style: AppConstants.bodyMedium.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _buildImageOption(
+                      icon: Icons.photo_camera_outlined,
+                      label: 'Camera',
+                      onTap: () {
+                        Navigator.pop(context);
+                        _pickImageFromCamera();
+                      },
+                    ),
+                    _buildImageOption(
+                      icon: Icons.photo_library_outlined,
+                      label: 'Gallery',
+                      onTap: () {
+                        Navigator.pop(context);
+                        _pickImageFromGallery();
+                      },
+                    ),
+                    if (_profileImageBase64 != null)
+                      _buildImageOption(
+                        icon: Icons.delete_outline,
+                        label: 'Remove',
+                        onTap: () {
+                          Navigator.pop(context);
+                          setState(() => _profileImageBase64 = null);
+                        },
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 20),
               ],
             ),
-            const SizedBox(height: 20),
-          ],
-        ),
-      ),
+          ),
     );
   }
 
@@ -458,39 +542,88 @@ class _EditStaffState extends State<EditStaff> {
     );
   }
 
-  void _handleSaveStaff() {
-    if (_formKey.currentState!.validate()) {
-      // Create staff object with form data
-      final staffData = {
-        'name': _nameController.text.trim(),
-        'email': _emailController.text.trim(),
-        'phone': _phoneController.text.trim(),
-        'role': _selectedRole,
-        'department': _selectedDepartment,
-        'profileImage': _profileImageBase64,
-        'isNew': _isNew,
-      };
+  Future<void> _handleSaveStaff() async {
+    if (!_formKey.currentState!.validate()) return;
 
-      // Show success message
+    if (_selectedRole == null || _selectedDepartment == null) {
+      _showSnackBar('Please select both role and department', isSuccess: false);
+      return;
+    }
+
+    setState(() => _isSaving = true);
+
+    try {
+      final databaseService = context.read<DatabaseService>();
+
+      if (widget.staff != null) {
+        // Update existing staff
+        final updatedStaff = widget.staff!.copyWith(
+          fullName: _nameController.text.trim(),
+          email: _emailController.text.trim(),
+          phone: _phoneController.text.trim(),
+          role: _selectedRole!,
+          department: _selectedDepartment!,
+          profileImage: _profileImageBase64,
+          updatedAt: DateTime.now(),
+        );
+
+        await databaseService.updateStaff(updatedStaff);
+
+        _showSnackBar(
+          '${_nameController.text} has been updated successfully',
+          isSuccess: true,
+        );
+      } else {
+        // Create new staff
+        final newStaff = Staff(
+          id: '', // Will be set by the database service
+          fullName: _nameController.text.trim(),
+          email: _emailController.text.trim(),
+          phone: _phoneController.text.trim(),
+          profileImage: _profileImageBase64,
+          organizerId: '', // Will be set by the database service
+          role: _selectedRole!,
+          department: _selectedDepartment!,
+          isApproved: true,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+          hiredAt: DateTime.now(),
+        );
+
+        await databaseService.addStaff(newStaff);
+
+        _showSnackBar(
+          '${_nameController.text} has been added to the team',
+          isSuccess: true,
+        );
+      }
+
+      // Navigate back after a short delay to show the success message
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+    } catch (e) {
       _showSnackBar(
-        widget.staff != null
-            ? '${_nameController.text} has been updated successfully'
-            : '${_nameController.text} has been added to the team',
-        isSuccess: true,
+        'Failed to save staff member: ${e.toString()}',
+        isSuccess: false,
       );
-
-      // Navigate back
-      Navigator.of(context).pop();
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
     }
   }
 
   void _showSnackBar(String message, {bool isSuccess = false}) {
+    if (!mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
           children: [
             Icon(
-              isSuccess ? Icons.check_circle_outline : Icons.info_outline,
+              isSuccess ? Icons.check_circle_outline : Icons.error_outline,
               color: Colors.white,
               size: 20,
             ),
@@ -499,7 +632,7 @@ class _EditStaffState extends State<EditStaff> {
           ],
         ),
         backgroundColor:
-            isSuccess ? AppConstants.successColor : AppConstants.primaryColor,
+            isSuccess ? AppConstants.successColor : AppConstants.errorColor,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         action: SnackBarAction(

@@ -163,33 +163,25 @@ class DeepLinkService {
       _showLoadingDialog('Checking event availability...');
 
       // Check if event exists and is available for registration
-      final eventResult = await databaseService.getEventById(eventId);
+      final event = await databaseService.getEventById(eventId);
 
-      if (!eventResult['success'] || eventResult['event'] == null) {
+      if (event == null) {
         Navigator.of(_context!).pop(); // Close loading dialog
         _showMessage('Event not found or no longer available', isError: true);
         return;
       }
-
-      final event = eventResult['event'];
 
       // Update loading message
       Navigator.of(_context!).pop();
       _showLoadingDialog('Checking your registration status...');
 
       // Check if user is already registered
-      final registrationResult = await databaseService.isUserRegisteredForEvent(
+      final isRegistered = await databaseService.isUserRegisteredForEvent(
         authService.currentUser!.uid,
         eventId,
       );
 
-      if (!registrationResult['success']) {
-        Navigator.of(_context!).pop(); // Close loading dialog
-        _showMessage('Error checking registration status', isError: true);
-        return;
-      }
-
-      if (registrationResult['isRegistered']) {
+      if (isRegistered) {
         Navigator.of(_context!).pop(); // Close loading dialog
         _showMessage('You are already registered for this event! 🎉');
         _navigateToMyEvents();
@@ -197,12 +189,12 @@ class DeepLinkService {
       }
 
       // Check if event is full
-      final capacityResult = await databaseService.getEventCapacityInfo(
-        eventId,
-      );
-      if (capacityResult['success'] && capacityResult['isFull']) {
+      final capacityInfo = await databaseService.getEventCapacityInfo(eventId);
+      final available = capacityInfo['available'] ?? 0;
+
+      if (available <= 0) {
         Navigator.of(_context!).pop(); // Close loading dialog
-        _showEventFullDialog(event['name'] ?? 'Event', eventId);
+        _showEventFullDialog(event.name, eventId);
         return;
       }
 
@@ -211,30 +203,36 @@ class DeepLinkService {
       _showLoadingDialog('Registering you for the event...');
 
       // Register user for the event
-      final registrationResponse = await databaseService.registerUserForEvent(
+      await databaseService.registerUserForEvent(
         authService.currentUser!.uid,
         eventId,
       );
 
       Navigator.of(_context!).pop(); // Close loading dialog
+      _showSuccessDialog(event.name);
+    } catch (e) {
+      Navigator.of(_context!).pop(); // Close loading dialog
+      print('Auto registration error: $e');
 
-      if (registrationResponse['success']) {
-        _showSuccessDialog(event['name'] ?? 'Event');
+      // Handle specific error cases
+      if (e.toString().contains('already registered')) {
+        _showMessage('You are already registered for this event! 🎉');
+        _navigateToMyEvents();
+      } else if (e.toString().contains('Event is full')) {
+        // Get event name for the dialog
+        try {
+          final event = await databaseService.getEventById(eventId);
+          _showEventFullDialog(event?.name ?? 'Event', eventId);
+        } catch (_) {
+          _showMessage('Event is full', isError: true);
+        }
       } else {
         _showMessage(
-          'Failed to register for event. Please try again.',
+          'An error occurred during registration. Please try manual registration.',
           isError: true,
         );
         _navigateToEventRegistration(eventId);
       }
-    } catch (e) {
-      Navigator.of(_context!).pop(); // Close loading dialog
-      print('Auto registration error: $e');
-      _showMessage(
-        'An error occurred during registration. Please try manual registration.',
-        isError: true,
-      );
-      _navigateToEventRegistration(eventId);
     }
   }
 

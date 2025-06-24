@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:megavent/models/staff.dart';
 import 'package:megavent/utils/constants.dart';
-import 'package:megavent/data/fake_data.dart';
 
 class StaffHeaderWidget extends StatelessWidget {
   final Staff staff;

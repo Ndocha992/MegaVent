@@ -19,7 +19,7 @@ class AuthService extends ChangeNotifier {
   bool get isLoggedIn => _auth.currentUser != null;
 
   // Alternative getter that also checks email verification
-  bool get isLoggedInAndVerified => 
+  bool get isLoggedInAndVerified =>
       _auth.currentUser != null && (_auth.currentUser?.emailVerified ?? false);
 
   // Set loading state
@@ -85,6 +85,11 @@ class AuthService extends ChangeNotifier {
         isApproved: true,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
+        eventId: '',
+        eventName: '',
+        qrCode: '',
+        hasAttended: false,
+        registeredAt: DateTime.now(),
       );
 
       // Create in attendees collection
@@ -430,6 +435,9 @@ class AuthService extends ChangeNotifier {
         isApproved: true,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
+        role: '',
+        department: '',
+        hiredAt: DateTime.now(),
       );
 
       // Send email verification

@@ -5,12 +5,14 @@ class StaffActionButtons extends StatelessWidget {
   final bool isEditing;
   final VoidCallback onCancel;
   final VoidCallback onSave;
+  final bool isLoading; // Add this parameter
 
   const StaffActionButtons({
     super.key,
     required this.isEditing,
     required this.onCancel,
     required this.onSave,
+    this.isLoading = false, // Add this with default value
   });
 
   @override
@@ -19,7 +21,7 @@ class StaffActionButtons extends StatelessWidget {
       children: [
         Expanded(
           child: OutlinedButton(
-            onPressed: onCancel,
+            onPressed: isLoading ? null : onCancel, // Disable when loading
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 16),
               side: BorderSide(color: AppConstants.borderColor),
@@ -40,7 +42,7 @@ class StaffActionButtons extends StatelessWidget {
         Expanded(
           flex: 2,
           child: ElevatedButton(
-            onPressed: onSave,
+            onPressed: isLoading ? null : onSave, // Disable when loading
             style: ElevatedButton.styleFrom(
               backgroundColor: AppConstants.primaryColor,
               foregroundColor: Colors.white,
@@ -50,13 +52,35 @@ class StaffActionButtons extends StatelessWidget {
               ),
               elevation: 2,
             ),
-            child: Text(
-              isEditing ? 'Update Staff' : 'Add Staff',
-              style: AppConstants.bodyMedium.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+            child: isLoading
+                ? Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        isEditing ? 'Updating...' : 'Adding...',
+                        style: AppConstants.bodyMedium.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  )
+                : Text(
+                    isEditing ? 'Update Staff' : 'Add Staff',
+                    style: AppConstants.bodyMedium.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
           ),
         ),
       ],

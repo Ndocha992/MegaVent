@@ -1,13 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/utils/organizer/staff/staff_utils.dart';
-import 'package:megavent/data/fake_data.dart';
+import 'package:megavent/services/database_service.dart';
+import 'package:megavent/models/staff.dart';
+import 'package:provider/provider.dart';
 
 class StaffHeader extends StatelessWidget {
   const StaffHeader({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final databaseService = Provider.of<DatabaseService>(
+      context,
+      listen: false,
+    );
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -39,11 +46,23 @@ class StaffHeader extends StatelessWidget {
                   ),
                 ],
               ),
-              StaffCountBadge(count: FakeData.staff.length),
+              StreamBuilder<List<Staff>>(
+                stream: databaseService.streamStaff(),
+                builder: (context, snapshot) {
+                  final staffCount = snapshot.data?.length ?? 0;
+                  return StaffCountBadge(count: staffCount);
+                },
+              ),
             ],
           ),
           const SizedBox(height: 16),
-          const StaffStatsRow(),
+          StreamBuilder<List<Staff>>(
+            stream: databaseService.streamStaff(),
+            builder: (context, snapshot) {
+              final staffList = snapshot.data ?? [];
+              return StaffStatsRow(staffList: staffList);
+            },
+          ),
         ],
       ),
     );
@@ -82,11 +101,13 @@ class StaffCountBadge extends StatelessWidget {
 }
 
 class StaffStatsRow extends StatelessWidget {
-  const StaffStatsRow({super.key});
+  final List<Staff> staffList;
+
+  const StaffStatsRow({super.key, required this.staffList});
 
   @override
   Widget build(BuildContext context) {
-    final stats = StaffUtils.getStaffStats(FakeData.staff);
+    final stats = StaffUtils.getStaffStats(staffList);
 
     return Row(
       children: [

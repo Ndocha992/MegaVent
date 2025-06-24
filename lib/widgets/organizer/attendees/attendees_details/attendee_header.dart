@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:megavent/data/fake_data.dart';
+import 'package:megavent/models/attendee.dart';
 import 'package:megavent/utils/constants.dart';
 
 class AttendeeHeaderWidget extends StatelessWidget {
@@ -13,7 +13,8 @@ class AttendeeHeaderWidget extends StatelessWidget {
     this.onToggleAttendance,
   });
 
-  bool _isBase64(String value) {
+  bool _isBase64(String? value) {
+    if (value == null || value.isEmpty) return false;
     try {
       base64Decode(value);
       return true;
@@ -23,10 +24,12 @@ class AttendeeHeaderWidget extends StatelessWidget {
   }
 
   Widget _buildAttendeeAvatar() {
-    // Handle different image sources
-    if (attendee.profileImage.isNotEmpty) {
+    // Handle different image sources with null safety
+    final profileImage = attendee.profileImage;
+
+    if (profileImage != null && profileImage.isNotEmpty) {
       // Check if it's base64 data
-      if (_isBase64(attendee.profileImage)) {
+      if (_isBase64(profileImage)) {
         return Container(
           width: 100,
           height: 100,
@@ -43,7 +46,7 @@ class AttendeeHeaderWidget extends StatelessWidget {
           ),
           child: ClipOval(
             child: Image.memory(
-              base64Decode(attendee.profileImage),
+              base64Decode(profileImage),
               fit: BoxFit.cover,
               width: 100,
               height: 100,
@@ -70,7 +73,7 @@ class AttendeeHeaderWidget extends StatelessWidget {
           ),
           child: ClipOval(
             child: Image.network(
-              attendee.profileImage,
+              profileImage,
               fit: BoxFit.cover,
               width: 100,
               height: 100,
@@ -165,7 +168,7 @@ class AttendeeHeaderWidget extends StatelessWidget {
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
-                attendee.hasAttended ? 'ATTENDED' : 'REGISTERED',
+                (attendee.hasAttended) ? 'ATTENDED' : 'REGISTERED',
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 12,
@@ -179,7 +182,9 @@ class AttendeeHeaderWidget extends StatelessWidget {
     );
   }
 
-  String _getInitials(String name) {
+  String _getInitials(String? name) {
+    if (name == null || name.isEmpty) return '?';
+
     List<String> names = name.split(' ');
     if (names.length >= 2) {
       return '${names[0][0]}${names[1][0]}'.toUpperCase();

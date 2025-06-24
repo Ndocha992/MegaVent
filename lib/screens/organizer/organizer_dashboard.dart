@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:megavent/models/dashboard_stats.dart';
+import 'package:megavent/models/staff.dart';
+import 'package:megavent/models/attendee.dart'; // Add this import
+import 'package:provider/provider.dart';
 import 'package:megavent/screens/organizer/events_details.dart';
 import 'package:megavent/utils/constants.dart';
-import 'package:megavent/data/fake_data.dart';
+import 'package:megavent/models/event.dart';
+import 'package:megavent/services/database_service.dart';
 import 'package:megavent/widgets/organizer/app_bar.dart';
 import 'package:megavent/widgets/organizer/dashboard/latest_attendees_card.dart';
 import 'package:megavent/widgets/organizer/dashboard/latest_events_card.dart';
@@ -21,6 +26,75 @@ class OrganizerDashboard extends StatefulWidget {
 class _OrganizerDashboardState extends State<OrganizerDashboard> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
+  late DatabaseService _databaseService;
+  List<Event> _events = [];
+  List<Attendee> _attendees =
+      []; // Changed from List<Map<String, dynamic>> to List<Attendee>
+  List<Staff> _staff = [];
+  DashboardStats _dashboardStats = DashboardStats(
+    totalEvents: 0,
+    totalAttendees: 0,
+    totalStaff: 0,
+    activeEvents: 0,
+    upcomingEvents: 0,
+    completedEvents: 0,
+  );
+  bool _isLoading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _databaseService = Provider.of<DatabaseService>(context, listen: false);
+    _loadDashboardData();
+  }
+
+  Future<void> _loadDashboardData() async {
+    try {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+
+      // Load all required data in parallel
+      final results = await Future.wait([
+        _databaseService.getEvents(),
+        _databaseService.getLatestAttendees(), // Now returns List<Attendee>
+        _databaseService.getLatestStaff(),
+        _databaseService.getOrganizerDashboardStats(),
+      ]);
+
+      setState(() {
+        _events = results[0] as List<Event>;
+        _attendees =
+            results[1]
+                as List<Attendee>; // Now correctly typed as List<Attendee>
+
+        // Convert Map data to Staff objects
+        final staffData = results[2] as List<Map<String, dynamic>>;
+        _staff = staffData.map((data) => Staff.fromMap(data)).toList();
+
+        // Convert Map data to DashboardStats object
+        final statsData = results[3] as Map<String, dynamic>;
+        _dashboardStats = DashboardStats(
+          totalEvents: statsData['totalEvents'] ?? 0,
+          totalAttendees: statsData['totalAttendees'] ?? 0,
+          totalStaff: statsData['totalStaff'] ?? 0,
+          activeEvents: statsData['activeEvents'] ?? 0,
+          upcomingEvents: statsData['upcomingEvents'] ?? 0,
+          completedEvents: statsData['completedEvents'] ?? 0,
+        );
+
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = 'Failed to load dashboard data: ${e.toString()}';
+        _isLoading = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -31,20 +105,89 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
         onMenuPressed: () => _scaffoldKey.currentState?.openDrawer(),
       ),
       drawer: OrganizerSidebar(currentRoute: '/organizer-dashboard'),
-      body: SingleChildScrollView(
+      body:
+          _isLoading
+              ? _buildLoadingState()
+              : _error != null
+              ? _buildErrorState()
+              : _buildDashboardContent(),
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircularProgressIndicator(),
+          SizedBox(height: 16),
+          Text('Loading dashboard...'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline, size: 64, color: AppConstants.errorColor),
+          const SizedBox(height: 16),
+          Text(
+            'Error Loading Dashboard',
+            style: AppConstants.titleLarge.copyWith(
+              color: AppConstants.errorColor,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Text(
+              _error ?? 'An unexpected error occurred',
+              textAlign: TextAlign.center,
+              style: AppConstants.bodyMedium.copyWith(
+                color: AppConstants.textSecondaryColor,
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: _loadDashboardData,
+            icon: const Icon(Icons.refresh),
+            label: const Text('Retry'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppConstants.primaryColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDashboardContent() {
+    return RefreshIndicator(
+      onRefresh: _loadDashboardData,
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const WelcomeCard(),
             const SizedBox(height: 24),
-            StatsOverview(stats: FakeData.dashboardStats),
+            StatsOverview(
+              stats: _dashboardStats,
+            ), // Now passing DashboardStats object
             const SizedBox(height: 24),
-            LatestEventsCard(events: FakeData.getLatestEvents()),
+            LatestEventsCard(
+              limit: 5,
+            ), // Removed events parameter, using limit instead
             const SizedBox(height: 24),
-            LatestAttendeesCard(attendees: FakeData.getLatestAttendees()),
+            LatestAttendeesCard(attendees: _attendees), // Now correctly typed
             const SizedBox(height: 24),
-            LatestStaffCard(staff: FakeData.getLatestStaff()),
+            LatestStaffCard(staff: _staff), // Now passing List<Staff>
             const SizedBox(height: 24),
             QuickActionsGrid(
               onNavigate: (route) {
@@ -69,48 +212,90 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
         const SizedBox(height: 16),
         Container(
           decoration: AppConstants.cardDecoration,
-          child: ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: 5,
-            separatorBuilder: (context, index) => const Divider(height: 1),
-            itemBuilder: (context, index) {
-              final activities = _getRecentActivities();
-              final activity = activities[index];
+          child:
+              _events.isEmpty
+                  ? _buildEmptyActivityState()
+                  : ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: _getRecentActivities().length,
+                    separatorBuilder:
+                        (context, index) => const Divider(height: 1),
+                    itemBuilder: (context, index) {
+                      final activities = _getRecentActivities();
+                      final activity = activities[index];
 
-              return ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: activity['color'].withOpacity(0.1),
-                  child: Icon(
-                    activity['icon'],
-                    color: activity['color'],
-                    size: 20,
-                  ),
-                ),
-                title: Text(activity['title'], style: AppConstants.titleMedium),
-                subtitle: Text(activity['time'], style: AppConstants.bodySmall),
-                trailing:
-                    activity['isNew']
-                        ? Container(
-                          width: 8,
-                          height: 8,
-                          decoration: const BoxDecoration(
-                            color: AppConstants.successColor,
-                            shape: BoxShape.circle,
+                      return ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: activity['color'].withOpacity(0.1),
+                          child: Icon(
+                            activity['icon'],
+                            color: activity['color'],
+                            size: 20,
                           ),
-                        )
-                        : null,
-              );
-            },
-          ),
+                        ),
+                        title: Text(
+                          activity['title'],
+                          style: AppConstants.titleMedium,
+                        ),
+                        subtitle: Text(
+                          activity['time'],
+                          style: AppConstants.bodySmall,
+                        ),
+                        trailing:
+                            activity['isNew']
+                                ? Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: const BoxDecoration(
+                                    color: AppConstants.successColor,
+                                    shape: BoxShape.circle,
+                                  ),
+                                )
+                                : null,
+                      );
+                    },
+                  ),
         ),
       ],
     );
   }
 
+  Widget _buildEmptyActivityState() {
+    return Padding(
+      padding: const EdgeInsets.all(32.0),
+      child: Center(
+        child: Column(
+          children: [
+            Icon(
+              Icons.history,
+              size: 48,
+              color: AppConstants.textSecondaryColor,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No Recent Activity',
+              style: AppConstants.titleMedium.copyWith(
+                color: AppConstants.textSecondaryColor,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Activity will appear here as you manage your events',
+              textAlign: TextAlign.center,
+              style: AppConstants.bodySmall.copyWith(
+                color: AppConstants.textSecondaryColor,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildUpcomingEvents() {
     final upcomingEvents =
-        FakeData.events
+        _events
             .where((event) => event.startDate.isAfter(DateTime.now()))
             .take(3)
             .toList();
@@ -131,161 +316,247 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
           ],
         ),
         const SizedBox(height: 16),
-        ListView.separated(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: upcomingEvents.length,
-          separatorBuilder: (context, index) => const SizedBox(height: 12),
-          itemBuilder: (context, index) {
-            final event = upcomingEvents[index];
-            return GestureDetector(
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => EventsDetails(event: event),
-                  ),
-                );
-              },
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: AppConstants.cardDecoration,
-                child: Row(
-                  children: [
-                    Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: AppConstants.primaryGradient,
-                        ),
-                        borderRadius: BorderRadius.circular(12),
+        upcomingEvents.isEmpty
+            ? _buildEmptyUpcomingEventsState()
+            : ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: upcomingEvents.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                final event = upcomingEvents[index];
+                return GestureDetector(
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => EventsDetails(event: event),
                       ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            event.startDate.day.toString(),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: AppConstants.cardDecoration,
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 60,
+                          height: 60,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: AppConstants.primaryGradient,
                             ),
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                          Text(
-                            _getMonthName(event.startDate.month),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            event.name,
-                            style: AppConstants.titleMedium,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${event.startTime} - ${event.endTime}',
-                            style: AppConstants.bodySmall.copyWith(
-                              color: AppConstants.primaryColor,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Row(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(
-                                Icons.location_on,
-                                size: 14,
-                                color: AppConstants.textSecondaryColor,
+                              Text(
+                                event.startDate.day.toString(),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                              const SizedBox(width: 4),
-                              Expanded(
-                                child: Text(
-                                  event.location,
-                                  style: AppConstants.bodySmall,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                              Text(
+                                _getMonthName(event.startDate.month),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
                                 ),
                               ),
                             ],
                           ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppConstants.secondaryColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Text(
-                        '${event.registeredCount}/${event.capacity}',
-                        style: AppConstants.bodySmall.copyWith(
-                          color: AppConstants.secondaryColor,
-                          fontWeight: FontWeight.w600,
                         ),
-                      ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                event.name,
+                                style: AppConstants.titleMedium,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${event.startTime} - ${event.endTime}',
+                                style: AppConstants.bodySmall.copyWith(
+                                  color: AppConstants.primaryColor,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.location_on,
+                                    size: 14,
+                                    color: AppConstants.textSecondaryColor,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      event.location,
+                                      style: AppConstants.bodySmall,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppConstants.secondaryColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Text(
+                            '${event.registeredCount}/${event.capacity}',
+                            style: AppConstants.bodySmall.copyWith(
+                              color: AppConstants.secondaryColor,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
-            );
-          },
-        ),
+                  ),
+                );
+              },
+            ),
       ],
     );
   }
 
+  Widget _buildEmptyUpcomingEventsState() {
+    return Container(
+      padding: const EdgeInsets.all(32),
+      decoration: AppConstants.cardDecoration,
+      child: Center(
+        child: Column(
+          children: [
+            Icon(
+              Icons.event_available,
+              size: 48,
+              color: AppConstants.textSecondaryColor,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No Upcoming Events',
+              style: AppConstants.titleMedium.copyWith(
+                color: AppConstants.textSecondaryColor,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Create your first event to get started',
+              textAlign: TextAlign.center,
+              style: AppConstants.bodySmall.copyWith(
+                color: AppConstants.textSecondaryColor,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.of(
+                  context,
+                ).pushReplacementNamed('/organizer-create-event');
+              },
+              icon: const Icon(Icons.add),
+              label: const Text('Create Event'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppConstants.primaryColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 10,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   List<Map<String, dynamic>> _getRecentActivities() {
-    return [
-      {
-        'title': 'New attendee registered for Tech Conference',
-        'time': '2 minutes ago',
+    if (_events.isEmpty && _attendees.isEmpty && _staff.isEmpty) {
+      return [];
+    }
+
+    List<Map<String, dynamic>> activities = [];
+
+    // Add recent event-related activities
+    for (final event in _events.take(2)) {
+      activities.add({
+        'title': 'Event "${event.name}" created',
+        'time': _getTimeAgo(event.createdAt),
+        'icon': Icons.event,
+        'color': AppConstants.primaryColor,
+        'isNew': _isRecent(event.createdAt),
+      });
+    }
+
+    // Add recent attendee activities - Updated to use Attendee objects
+    for (final attendee in _attendees.take(2)) {
+      activities.add({
+        'title':
+            'New attendee ${attendee.fullName} registered', // Changed to attendee.fullName
+        'time': _getTimeAgo(
+          attendee.registeredAt,
+        ), // Changed to attendee.registeredAt
         'icon': Icons.person_add,
         'color': AppConstants.successColor,
-        'isNew': true,
-      },
-      {
-        'title': 'Staff member Alice joined Operations team',
-        'time': '1 hour ago',
+        'isNew': _isRecent(
+          attendee.registeredAt,
+        ), // Changed to attendee.registeredAt
+      });
+    }
+
+    // Add recent staff activities
+    for (final staff in _staff.take(1)) {
+      activities.add({
+        'title': 'Staff member ${staff.name} joined',
+        'time': _getTimeAgo(staff.hiredAt),
         'icon': Icons.badge,
-        'color': AppConstants.primaryColor,
-        'isNew': true,
-      },
-      {
-        'title': 'Event "Music Festival" capacity updated',
-        'time': '3 hours ago',
-        'icon': Icons.edit,
-        'color': AppConstants.warningColor,
-        'isNew': false,
-      },
-      {
-        'title': 'QR code scanned for Business Summit',
-        'time': '5 hours ago',
-        'icon': Icons.qr_code,
         'color': AppConstants.accentColor,
-        'isNew': false,
-      },
-      {
-        'title': 'New event "Art Exhibition" created',
-        'time': '1 day ago',
-        'icon': Icons.event,
-        'color': AppConstants.secondaryColor,
-        'isNew': false,
-      },
-    ];
+        'isNew': _isRecent(staff.hiredAt),
+      });
+    }
+
+    // Sort by most recent and take top 5
+    activities.sort((a, b) => b['time'].compareTo(a['time']));
+    return activities.take(5).toList();
+  }
+
+  String _getTimeAgo(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+
+    if (difference.inMinutes < 1) {
+      return 'Just now';
+    } else if (difference.inMinutes < 60) {
+      return '${difference.inMinutes} minutes ago';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours} hours ago';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays} days ago';
+    } else {
+      return '${(difference.inDays / 7).floor()} weeks ago';
+    }
+  }
+
+  bool _isRecent(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+    return difference.inHours < 24;
   }
 
   String _getMonthName(int month) {

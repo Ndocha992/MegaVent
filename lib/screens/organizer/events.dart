@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:megavent/screens/organizer/create_events.dart';
 import 'package:megavent/screens/organizer/events_details.dart';
 import 'package:megavent/utils/constants.dart';
-import 'package:megavent/data/fake_data.dart';
 import 'package:megavent/widgets/organizer/app_bar.dart';
 import 'package:megavent/widgets/organizer/sidebar.dart';
 import 'package:megavent/widgets/organizer/events/event_card.dart';
 import 'package:megavent/widgets/organizer/events/event_filters.dart';
+import 'package:megavent/services/database_service.dart';
+import 'package:megavent/models/event.dart';
 
 class Events extends StatefulWidget {
   const Events({super.key});
@@ -24,10 +26,18 @@ class _EventsState extends State<Events> with TickerProviderStateMixin {
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
 
+  late DatabaseService _databaseService;
+  List<Event> _events = [];
+  List<String> _categories = [];
+  bool _isLoading = true;
+  String? _error;
+
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
+    _databaseService = Provider.of<DatabaseService>(context, listen: false);
+    _initializeData();
   }
 
   @override
@@ -37,32 +47,80 @@ class _EventsState extends State<Events> with TickerProviderStateMixin {
     super.dispose();
   }
 
+  Future<void> _initializeData() async {
+    try {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+
+      // Load categories
+      _categories = ['All', ..._databaseService.getEventCategories()];
+
+      // Load events
+      await _loadEvents();
+    } catch (e) {
+      setState(() {
+        _error = 'Failed to load data: ${e.toString()}';
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _loadEvents() async {
+    try {
+      // Listen to organizer events stream
+      _databaseService.streamEventsByOrganizer().listen(
+        (events) {
+          if (mounted) {
+            setState(() {
+              _events = events;
+              _isLoading = false;
+              _error = null;
+            });
+          }
+        },
+        onError: (error) {
+          if (mounted) {
+            setState(() {
+              _error = 'Failed to load events: ${error.toString()}';
+              _isLoading = false;
+            });
+          }
+        },
+      );
+    } catch (e) {
+      setState(() {
+        _error = 'Failed to load events: ${e.toString()}';
+        _isLoading = false;
+      });
+    }
+  }
+
   List<Event> get _filteredEvents {
-    List<Event> events = FakeData.events;
+    List<Event> events = List.from(_events);
 
     // Filter by search query
     if (_searchQuery.isNotEmpty) {
-      events =
-          events
-              .where(
-                (event) =>
-                    event.name.toLowerCase().contains(
-                      _searchQuery.toLowerCase(),
-                    ) ||
-                    event.category.toLowerCase().contains(
-                      _searchQuery.toLowerCase(),
-                    ) ||
-                    event.location.toLowerCase().contains(
-                      _searchQuery.toLowerCase(),
-                    ),
-              )
-              .toList();
+      events = events
+          .where(
+            (event) =>
+                event.name.toLowerCase().contains(
+                  _searchQuery.toLowerCase(),
+                ) ||
+                event.category.toLowerCase().contains(
+                  _searchQuery.toLowerCase(),
+                ) ||
+                event.location.toLowerCase().contains(
+                  _searchQuery.toLowerCase(),
+                ),
+          )
+          .toList();
     }
 
     // Filter by category
     if (_selectedCategory != 'All') {
-      events =
-          events.where((event) => event.category == _selectedCategory).toList();
+      events = events.where((event) => event.category == _selectedCategory).toList();
     }
 
     // Filter by tab
@@ -74,12 +132,15 @@ class _EventsState extends State<Events> with TickerProviderStateMixin {
         events = events.where((event) => event.startDate.isAfter(now)).toList();
         break;
       case 2: // Past
-        events =
-            events.where((event) => event.startDate.isBefore(now)).toList();
+        events = events.where((event) => event.startDate.isBefore(now)).toList();
         break;
     }
 
     return events;
+  }
+
+  Future<void> _refreshEvents() async {
+    await _loadEvents();
   }
 
   @override
@@ -92,25 +153,100 @@ class _EventsState extends State<Events> with TickerProviderStateMixin {
         onMenuPressed: () => _scaffoldKey.currentState?.openDrawer(),
       ),
       drawer: OrganizerSidebar(currentRoute: currentRoute),
-      body: Column(
-        children: [
-          _buildHeader(),
-          _buildTabBar(),
-          _buildSearchAndFilters(),
-          Expanded(child: _buildEventsList()),
-        ],
-      ),
+      body: _isLoading
+          ? _buildLoadingState()
+          : _error != null
+              ? _buildErrorState()
+              : Column(
+                  children: [
+                    _buildHeader(),
+                    _buildTabBar(),
+                    _buildSearchAndFilters(),
+                    Expanded(child: _buildEventsList()),
+                  ],
+                ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.of(
-            context,
-          ).push(MaterialPageRoute(builder: (context) => const CreateEvents()));
+        onPressed: () async {
+          final result = await Navigator.of(context).push(
+            MaterialPageRoute(builder: (context) => const CreateEvents()),
+          );
+          
+          // Refresh events if a new event was created
+          if (result != null) {
+            _refreshEvents();
+          }
         },
         backgroundColor: AppConstants.primaryColor,
         icon: const Icon(Icons.add, color: Colors.white),
         label: const Text(
           'Create Event',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return Container(
+      color: AppConstants.backgroundColor,
+      child: const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Loading events...'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorState() {
+    return Container(
+      color: AppConstants.backgroundColor,
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 64,
+              color: AppConstants.errorColor,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Error Loading Events',
+              style: AppConstants.titleLarge.copyWith(
+                color: AppConstants.errorColor,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Text(
+                _error ?? 'An unexpected error occurred',
+                textAlign: TextAlign.center,
+                style: AppConstants.bodyMedium.copyWith(
+                  color: AppConstants.textSecondaryColor,
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: _initializeData,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppConstants.primaryColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -165,7 +301,7 @@ class _EventsState extends State<Events> with TickerProviderStateMixin {
                     const Icon(Icons.event, color: Colors.white, size: 16),
                     const SizedBox(width: 8),
                     Text(
-                      '${FakeData.events.length} Events',
+                      '${_events.length} Events',
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w600,
@@ -184,14 +320,12 @@ class _EventsState extends State<Events> with TickerProviderStateMixin {
   }
 
   Widget _buildStatsRow() {
-    final upcomingCount =
-        FakeData.events
-            .where((event) => event.startDate.isAfter(DateTime.now()))
-            .length;
-    final pastCount =
-        FakeData.events
-            .where((event) => event.startDate.isBefore(DateTime.now()))
-            .length;
+    final upcomingCount = _events
+        .where((event) => event.startDate.isAfter(DateTime.now()))
+        .length;
+    final pastCount = _events
+        .where((event) => event.startDate.isBefore(DateTime.now()))
+        .length;
 
     return Row(
       children: [
@@ -279,16 +413,15 @@ class _EventsState extends State<Events> with TickerProviderStateMixin {
                         Icons.search,
                         color: AppConstants.textSecondaryColor,
                       ),
-                      suffixIcon:
-                          _searchQuery.isNotEmpty
-                              ? IconButton(
-                                icon: const Icon(Icons.clear),
-                                onPressed: () {
-                                  _searchController.clear();
-                                  setState(() => _searchQuery = '');
-                                },
-                              )
-                              : null,
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() => _searchQuery = '');
+                              },
+                            )
+                          : null,
                       border: InputBorder.none,
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16,
@@ -374,26 +507,27 @@ class _EventsState extends State<Events> with TickerProviderStateMixin {
 
     return Container(
       color: AppConstants.backgroundColor,
-      child: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: filteredEvents.length,
-        itemBuilder: (context, index) {
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 16),
-            child: EventCard(
-              event: filteredEvents[index],
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder:
-                        (context) =>
-                            EventsDetails(event: filteredEvents[index]),
-                  ),
-                );
-              },
-            ),
-          );
-        },
+      child: RefreshIndicator(
+        onRefresh: _refreshEvents,
+        child: ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: filteredEvents.length,
+          itemBuilder: (context, index) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: EventCard(
+                event: filteredEvents[index],
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => EventsDetails(event: filteredEvents[index]),
+                    ),
+                  );
+                },
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -436,10 +570,15 @@ class _EventsState extends State<Events> with TickerProviderStateMixin {
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
-              onPressed: () {
-                Navigator.of(context).push(
+              onPressed: () async {
+                final result = await Navigator.of(context).push(
                   MaterialPageRoute(builder: (context) => const CreateEvents()),
                 );
+                
+                // Refresh events if a new event was created
+                if (result != null) {
+                  _refreshEvents();
+                }
               },
               icon: const Icon(Icons.add),
               label: const Text('Create Event'),
@@ -461,14 +600,14 @@ class _EventsState extends State<Events> with TickerProviderStateMixin {
   void _showFilterDialog() {
     showDialog(
       context: context,
-      builder:
-          (context) => EventFilters(
-            selectedCategory: _selectedCategory,
-            onCategoryChanged: (category) {
-              setState(() => _selectedCategory = category);
-              Navigator.pop(context);
-            },
-          ),
+      builder: (context) => EventFilters(
+        selectedCategory: _selectedCategory,
+        categories: _categories, // Pass categories list
+        onCategoryChanged: (category) {
+          setState(() => _selectedCategory = category);
+          Navigator.pop(context);
+        },
+      ),
     );
   }
 }

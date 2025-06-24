@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/widgets/organizer/events/edit_event/edit_event_actions.dart';
 import 'package:megavent/widgets/organizer/events/edit_event/edit_event_basic_info.dart';
@@ -10,7 +11,9 @@ import 'package:megavent/widgets/organizer/events/edit_event/edit_event_location
 import 'package:megavent/widgets/organizer/events/edit_event/edit_event_poster.dart';
 import 'package:megavent/widgets/organizer/nested_app_bar.dart';
 import 'package:megavent/widgets/organizer/sidebar.dart';
-import 'package:megavent/data/fake_data.dart';
+import 'package:megavent/services/database_service.dart';
+import 'package:megavent/models/event.dart';
+import 'package:megavent/models/organizer.dart';
 
 class EditEvents extends StatefulWidget {
   final Event event;
@@ -38,12 +41,20 @@ class _EditEventsState extends State<EditEvents> {
   late String _selectedCategory;
   late DateTime _startDate;
   late DateTime _endDate;
-  String? _currentPosterUrl; // Track the current poster URL
+  String? _currentPosterUrl;
+  bool _isLoading = false;
+
+  late DatabaseService _databaseService;
+  List<String> _categories = [];
+  Organizer? _currentOrganizer;
 
   @override
   void initState() {
     super.initState();
+    _databaseService = Provider.of<DatabaseService>(context, listen: false);
     _initializeControllers();
+    _initializeCategories();
+    _loadCurrentOrganizer();
   }
 
   void _initializeControllers() {
@@ -62,7 +73,25 @@ class _EditEventsState extends State<EditEvents> {
     _selectedCategory = widget.event.category;
     _startDate = widget.event.startDate;
     _endDate = widget.event.endDate;
-    _currentPosterUrl = widget.event.posterUrl; // Initialize current poster URL
+    _currentPosterUrl = widget.event.posterUrl;
+  }
+
+  void _initializeCategories() {
+    _categories = _databaseService.getEventCategories();
+    // Ensure current category exists in the list
+    if (!_categories.contains(_selectedCategory)) {
+      _categories.add(_selectedCategory);
+    }
+  }
+
+  void _loadCurrentOrganizer() {
+    _databaseService.streamCurrentOrganizerData().listen((organizer) {
+      if (mounted) {
+        setState(() {
+          _currentOrganizer = organizer;
+        });
+      }
+    });
   }
 
   @override
@@ -96,119 +125,246 @@ class _EditEventsState extends State<EditEvents> {
       backgroundColor: AppConstants.backgroundColor,
       appBar: NestedScreenAppBar(screenTitle: widget.event.name),
       drawer: OrganizerSidebar(currentRoute: currentRoute),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              EditEventHeader(),
-              const SizedBox(height: 30),
-              EditEventBasicInfo(
-                nameController: _nameController,
-                descriptionController: _descriptionController,
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  EditEventHeader(),
+                  const SizedBox(height: 30),
+                  EditEventBasicInfo(
+                    nameController: _nameController,
+                    descriptionController: _descriptionController,
+                  ),
+                  const SizedBox(height: 25),
+                  EditEventCategory(
+                    selectedCategory: _selectedCategory,
+                    categories: _categories,
+                    onCategoryChanged: (category) {
+                      setState(() {
+                        _selectedCategory = category;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 25),
+                  EditEventDateTime(
+                    startDate: _startDate,
+                    endDate: _endDate,
+                    startTimeController: _startTimeController,
+                    endTimeController: _endTimeController,
+                    onStartDateChanged: (date) {
+                      setState(() {
+                        _startDate = date;
+                        if (_startDate.isAfter(_endDate)) {
+                          _endDate = _startDate.add(const Duration(days: 1));
+                        }
+                      });
+                    },
+                    onEndDateChanged: (date) {
+                      setState(() {
+                        _endDate = date;
+                      });
+                    },
+                    onStartTimeChanged: (time) {
+                      setState(() {
+                        _startTimeController.text = time;
+                      });
+                    },
+                    onEndTimeChanged: (time) {
+                      setState(() {
+                        _endTimeController.text = time;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 25),
+                  EditEventLocation(locationController: _locationController),
+                  const SizedBox(height: 25),
+                  EditEventCapacity(capacityController: _capacityController),
+                  const SizedBox(height: 25),
+                  EditEventPoster(
+                    initialPosterUrl: _currentPosterUrl,
+                    eventId: widget.event.id,
+                    eventName: _nameController.text,
+                    onPosterUrlChanged: _onPosterUrlChanged,
+                  ),
+                  const SizedBox(height: 30),
+                  EditEventActions(
+                    formKey: _formKey,
+                    nameController: _nameController,
+                    isLoading: _isLoading,
+                    onCancel: () => Navigator.pop(context),
+                    onSave: _saveEvent,
+                  ),
+                ],
               ),
-              const SizedBox(height: 25),
-              EditEventCategory(
-                selectedCategory: _selectedCategory,
-                onCategoryChanged: (category) {
-                  setState(() {
-                    _selectedCategory = category;
-                  });
-                },
-              ),
-              const SizedBox(height: 25),
-              EditEventDateTime(
-                startDate: _startDate,
-                endDate: _endDate,
-                startTimeController: _startTimeController,
-                endTimeController: _endTimeController,
-                onStartDateChanged: (date) {
-                  setState(() {
-                    _startDate = date;
-                  });
-                },
-                onEndDateChanged: (date) {
-                  setState(() {
-                    _endDate = date;
-                  });
-                },
-                onStartTimeChanged: (time) {
-                  setState(() {
-                    _startTimeController.text = time;
-                  });
-                },
-                onEndTimeChanged: (time) {
-                  setState(() {
-                    _endTimeController.text = time;
-                  });
-                },
-              ),
-              const SizedBox(height: 25),
-              EditEventLocation(locationController: _locationController),
-              const SizedBox(height: 25),
-              EditEventCapacity(capacityController: _capacityController),
-              const SizedBox(height: 25),
-              EditEventPoster(
-                initialPosterUrl: _currentPosterUrl,
-                eventId:
-                    widget
-                        .event
-                        .id, // You'll need to add an id field to your Event model
-                eventName: _nameController.text,
-                onPosterUrlChanged: _onPosterUrlChanged,
-              ),
-              const SizedBox(height: 30),
-              EditEventActions(
-                formKey: _formKey,
-                nameController: _nameController,
-                onCancel: () => Navigator.pop(context),
-                onSave: _saveEvent,
-              ),
-            ],
+            ),
           ),
-        ),
+          // Loading overlay
+          if (_isLoading)
+            Container(
+              color: Colors.black54,
+              child: const Center(child: CircularProgressIndicator()),
+            ),
+        ],
       ),
     );
   }
 
-  void _saveEvent() {
-    if (_formKey.currentState!.validate()) {
-      // Create updated event data including the new poster URL
-      final updatedEventData = {
-        'id': widget.event.id, // Assuming your Event model has an id field
-        'name': _nameController.text,
-        'description': _descriptionController.text,
-        'category': _selectedCategory,
-        'startDate': _startDate.toIso8601String(),
-        'endDate': _endDate.toIso8601String(),
-        'startTime': _startTimeController.text,
-        'endTime': _endTimeController.text,
-        'location': _locationController.text,
-        'capacity': int.tryParse(_capacityController.text) ?? 0,
-        'posterUrl': _currentPosterUrl, // Use the updated poster URL
-      };
+  Future<void> _saveEvent() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
 
-      // Here you would typically send this data to your backend
-      print('Updated Event Data: $updatedEventData');
+    // Check if organizer data is available
+    if (_currentOrganizer == null) {
+      _showErrorSnackBar(
+        'Unable to load organizer information. Please try again.',
+      );
+      return;
+    }
 
-      // Show success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            '${_nameController.text} has been updated successfully',
-          ),
-          backgroundColor: AppConstants.successColor,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
+    // Validate required fields
+    if (_nameController.text.trim().isEmpty) {
+      _showErrorSnackBar('Event name is required');
+      return;
+    }
+
+    if (_descriptionController.text.trim().isEmpty) {
+      _showErrorSnackBar('Event description is required');
+      return;
+    }
+
+    if (_locationController.text.trim().isEmpty) {
+      _showErrorSnackBar('Event location is required');
+      return;
+    }
+
+    if (_capacityController.text.trim().isEmpty) {
+      _showErrorSnackBar('Event capacity is required');
+      return;
+    }
+
+    if (_startTimeController.text.trim().isEmpty) {
+      _showErrorSnackBar('Start time is required');
+      return;
+    }
+
+    if (_endTimeController.text.trim().isEmpty) {
+      _showErrorSnackBar('End time is required');
+      return;
+    }
+
+    // Validate capacity
+    final capacity = int.tryParse(_capacityController.text.trim());
+    if (capacity == null || capacity <= 0) {
+      _showErrorSnackBar('Please enter a valid capacity');
+      return;
+    }
+
+    // Validate that new capacity is not less than current registered count
+    if (capacity < widget.event.registeredCount) {
+      _showErrorSnackBar(
+        'Capacity cannot be less than current registered attendees (${widget.event.registeredCount})',
+      );
+      return;
+    }
+
+    // Validate dates
+    if (_startDate.isAfter(_endDate)) {
+      _showErrorSnackBar('Start date cannot be after end date');
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Create updated event object
+      final updatedEvent = widget.event.copyWith(
+        name: _nameController.text.trim(),
+        description: _descriptionController.text.trim(),
+        category: _selectedCategory,
+        posterUrl: _currentPosterUrl ?? '',
+        startDate: _startDate,
+        endDate: _endDate,
+        startTime: _startTimeController.text.trim(),
+        endTime: _endTimeController.text.trim(),
+        location: _locationController.text.trim(),
+        capacity: capacity,
+        organizerName: _getOrganizerDisplayName(),
+        updatedAt: DateTime.now(),
       );
 
-      // Navigate back
-      Navigator.pop(context);
+      // Update event in database
+      await _databaseService.updateEvent(updatedEvent);
+
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '${_nameController.text.trim()} has been updated successfully!',
+            ),
+            backgroundColor: AppConstants.successColor,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        );
+
+        // Navigate back
+        Navigator.pop(context, updatedEvent);
+      }
+    } catch (e) {
+      if (mounted) {
+        _showErrorSnackBar('Failed to update event: ${e.toString()}');
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
+  }
+
+  String? _getOrganizerDisplayName() {
+    if (_currentOrganizer == null) return widget.event.organizerName;
+
+    // Try to get full name first
+    final fullName = _currentOrganizer!.fullName.trim();
+
+    if (fullName.isNotEmpty) {
+      return fullName;
+    }
+
+    // Fallback to email or company name
+    final email = _currentOrganizer!.email.trim();
+    final companyName = _currentOrganizer!.organization?.trim() ?? '';
+
+    if (companyName.isNotEmpty) {
+      return companyName;
+    } else if (email.isNotEmpty) {
+      return email;
+    }
+
+    return widget.event.organizerName; // Keep original if nothing else is available
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppConstants.errorColor,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
   }
 }

@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:megavent/utils/constants.dart';
-import 'package:megavent/data/fake_data.dart';
 
 class AttendeesFiltersDialog extends StatefulWidget {
   final String selectedEvent;
+  final List<String> availableEvents;
   final Function(String) onEventChanged;
 
   const AttendeesFiltersDialog({
     super.key,
     required this.selectedEvent,
+    required this.availableEvents,
     required this.onEventChanged,
   });
 
@@ -17,154 +18,202 @@ class AttendeesFiltersDialog extends StatefulWidget {
 }
 
 class _AttendeesFiltersDialogState extends State<AttendeesFiltersDialog> {
-  late String _selectedEvent;
-
-  List<Map<String, dynamic>> get _events {
-    List<Map<String, dynamic>> eventsList = [
-      {
-        'name': 'All',
-        'icon': Icons.all_inclusive,
-        'color': AppConstants.textSecondaryColor,
-      },
-    ];
-
-    // Get unique events from fake data
-    final uniqueEvents =
-        FakeData.events
-            .map(
-              (event) => {
-                'name': event.name,
-                'icon': Icons.event,
-                'color': AppConstants.primaryColor,
-              },
-            )
-            .toList();
-
-    eventsList.addAll(uniqueEvents);
-    return eventsList;
-  }
+  late String _tempSelectedEvent;
 
   @override
   void initState() {
     super.initState();
-    _selectedEvent = widget.selectedEvent;
+    _tempSelectedEvent = widget.selectedEvent;
   }
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      title: Row(
-        children: [
-          Icon(Icons.filter_list, color: AppConstants.primaryColor),
-          const SizedBox(width: 8),
-          const Text('Filter Attendees'),
-        ],
-      ),
-      content: SizedBox(
-        width: double.maxFinite,
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
+        width: MediaQuery.of(context).size.width * 0.9,
+        constraints: const BoxConstraints(maxWidth: 400),
+        padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Event',
-              style: AppConstants.titleMedium.copyWith(
-                color: AppConstants.textSecondaryColor,
-              ),
+            // Header
+            Row(
+              children: [
+                const Icon(
+                  Icons.filter_list,
+                  color: AppConstants.primaryColor,
+                  size: 24,
+                ),
+                const SizedBox(width: 12),
+                const Text(
+                  'Filter Attendees',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const Spacer(),
+                IconButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.close),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            // Event Filter Section
+            const Text(
+              'Filter by Event',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children:
-                  _events.map((event) {
-                    final isSelected = _selectedEvent == event['name'];
-                    return GestureDetector(
-                      onTap: () {
+
+            // Event Selection
+            if (widget.availableEvents.isEmpty)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey[300]!),
+                ),
+                child: const Text(
+                  'No events available',
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              )
+            else
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.grey[300]!),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _tempSelectedEvent,
+                    isExpanded: true,
+                    items:
+                        widget.availableEvents.map((String event) {
+                          return DropdownMenuItem<String>(
+                            value: event,
+                            child: Text(
+                              event,
+                              style: const TextStyle(fontSize: 14),
+                            ),
+                          );
+                        }).toList(),
+                    onChanged: (String? newValue) {
+                      if (newValue != null) {
                         setState(() {
-                          _selectedEvent = event['name'];
+                          _tempSelectedEvent = newValue;
                         });
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color:
-                              isSelected
-                                  ? event['color'].withOpacity(0.15)
-                                  : Colors.grey[100],
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color:
-                                isSelected
-                                    ? event['color']
-                                    : Colors.transparent,
-                            width: 2,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              event['icon'],
-                              size: 16,
-                              color:
-                                  isSelected
-                                      ? event['color']
-                                      : AppConstants.textSecondaryColor,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              event['name'],
-                              style: TextStyle(
-                                color:
-                                    isSelected
-                                        ? event['color']
-                                        : AppConstants.textSecondaryColor,
-                                fontWeight:
-                                    isSelected
-                                        ? FontWeight.w600
-                                        : FontWeight.normal,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
+                      }
+                    },
+                  ),
+                ),
+              ),
+
+            const SizedBox(height: 24),
+
+            // Selected Filter Summary
+            if (_tempSelectedEvent != 'All') ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppConstants.primaryColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: AppConstants.primaryColor.withOpacity(0.3),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      color: AppConstants.primaryColor,
+                      size: 16,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Showing attendees for: $_tempSelectedEvent',
+                        style: TextStyle(
+                          color: AppConstants.primaryColor,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
-                    );
-                  }).toList(),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+
+            // Action Buttons
+            Row(
+              children: [
+                // Reset Button
+                Expanded(
+                  child: TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _tempSelectedEvent = 'All';
+                      });
+                    },
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        side: BorderSide(color: Colors.grey[300]!),
+                      ),
+                    ),
+                    child: const Text(
+                      'Reset',
+                      style: TextStyle(fontSize: 14, color: Colors.grey),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+
+                // Apply Button
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      widget.onEventChanged(_tempSelectedEvent);
+                      Navigator.of(context).pop();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppConstants.primaryColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: const Text(
+                      'Apply Filter',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () {
-            Navigator.pop(context);
-          },
-          child: Text(
-            'Cancel',
-            style: TextStyle(color: AppConstants.textSecondaryColor),
-          ),
-        ),
-        ElevatedButton(
-          onPressed: () {
-            widget.onEventChanged(_selectedEvent);
-            Navigator.pop(context);
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppConstants.primaryColor,
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          child: const Text('Apply Filters'),
-        ),
-      ],
     );
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:megavent/models/event.dart';
 import 'package:megavent/widgets/organizer/events/event_details/event_actions/qr_code.dart';
 import 'package:megavent/widgets/organizer/events/event_details/event_actions/share_button.dart';
 import 'package:share_plus/share_plus.dart';
@@ -8,7 +9,6 @@ import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/rendering.dart';
 import 'package:megavent/utils/constants.dart';
-import 'package:megavent/data/fake_data.dart';
 import 'bottom_sheet_header.dart';
 import 'package:intl/intl.dart';
 
