@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:megavent/models/attendee.dart';
 import 'package:megavent/utils/constants.dart';
-import 'package:megavent/data/fake_data.dart';
 
 class AttendeesList extends StatelessWidget {
   final List<Attendee> attendeesList;
@@ -71,12 +71,12 @@ class AttendeeCard extends StatelessWidget {
 
   Widget _buildAttendeeAvatar() {
     // Handle different image sources
-    if (attendee.profileImage.isNotEmpty) {
+    if (attendee.profileImage!.isNotEmpty) {
       // Check if it's base64 data
-      if (_isBase64(attendee.profileImage)) {
+      if (_isBase64(attendee.profileImage!)) {
         return ClipOval(
           child: Image.memory(
-            base64Decode(attendee.profileImage),
+            base64Decode(attendee.profileImage!),
             fit: BoxFit.cover,
             width: 48,
             height: 48,
@@ -88,7 +88,7 @@ class AttendeeCard extends StatelessWidget {
         // It's a regular URL
         return ClipOval(
           child: Image.network(
-            attendee.profileImage,
+            attendee.profileImage!,
             fit: BoxFit.cover,
             width: 48,
             height: 48,

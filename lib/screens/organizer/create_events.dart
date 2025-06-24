@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/widgets/organizer/events/create_event/action_buttons.dart';
 import 'package:megavent/widgets/organizer/events/create_event/basic_info_section.dart';
@@ -10,7 +11,9 @@ import 'package:megavent/widgets/organizer/events/create_event/location_section.
 import 'package:megavent/widgets/organizer/events/create_event/poster_section.dart';
 import 'package:megavent/widgets/organizer/nested_app_bar.dart';
 import 'package:megavent/widgets/organizer/sidebar.dart';
-import 'package:megavent/data/fake_data.dart';
+import 'package:megavent/services/database_service.dart';
+import 'package:megavent/models/event.dart';
+import 'package:megavent/models/organizer.dart';
 
 class CreateEvents extends StatefulWidget {
   const CreateEvents({super.key});
@@ -35,16 +38,37 @@ class _CreateEventsState extends State<CreateEvents> {
   String _selectedCategory = 'Technology';
   DateTime _startDate = DateTime.now();
   DateTime _endDate = DateTime.now().add(const Duration(days: 1));
-  String? _posterUrl; // Changed from TextEditingController to String
+  String? _posterUrl;
+  bool _isLoading = false;
+
+  late DatabaseService _databaseService;
+  List<String> _categories = [];
+  Organizer? _currentOrganizer; // Add this to store current organizer
 
   @override
   void initState() {
     super.initState();
-    // Initialize with first category from fake data
-    final categories = FakeData.getCategories();
-    if (categories.isNotEmpty) {
-      _selectedCategory = categories.first;
+    _databaseService = Provider.of<DatabaseService>(context, listen: false);
+    _initializeCategories();
+    _loadCurrentOrganizer(); // Add this to load organizer data
+  }
+
+  void _initializeCategories() {
+    _categories = _databaseService.getEventCategories();
+    if (_categories.isNotEmpty) {
+      _selectedCategory = _categories.first;
     }
+  }
+
+  // Add this method to load current organizer data
+  void _loadCurrentOrganizer() {
+    _databaseService.streamCurrentOrganizerData().listen((organizer) {
+      if (mounted) {
+        setState(() {
+          _currentOrganizer = organizer;
+        });
+      }
+    });
   }
 
   @override
@@ -65,87 +89,99 @@ class _CreateEventsState extends State<CreateEvents> {
       backgroundColor: AppConstants.backgroundColor,
       appBar: NestedScreenAppBar(screenTitle: 'Create Events'),
       drawer: OrganizerSidebar(currentRoute: currentRoute),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              HeaderWidget(),
-              const SizedBox(height: 30),
-              BasicInfoSection(
-                nameController: _nameController,
-                descriptionController: _descriptionController,
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  HeaderWidget(),
+                  const SizedBox(height: 30),
+                  BasicInfoSection(
+                    nameController: _nameController,
+                    descriptionController: _descriptionController,
+                  ),
+                  const SizedBox(height: 25),
+                  CategorySection(
+                    selectedCategory: _selectedCategory,
+                    categories: _categories,
+                    onCategoryChanged: (category) {
+                      setState(() {
+                        _selectedCategory = category;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 25),
+                  DateTimeSection(
+                    startDate: _startDate,
+                    endDate: _endDate,
+                    startTimeController: _startTimeController,
+                    endTimeController: _endTimeController,
+                    onStartDateChanged: (date) {
+                      setState(() {
+                        _startDate = date;
+                        if (_startDate.isAfter(_endDate)) {
+                          _endDate = _startDate.add(const Duration(days: 1));
+                        }
+                      });
+                    },
+                    onEndDateChanged: (date) {
+                      setState(() {
+                        _endDate = date;
+                      });
+                    },
+                    onStartTimeChanged: (time) {
+                      setState(() {
+                        _startTimeController.text = time;
+                      });
+                    },
+                    onEndTimeChanged: (time) {
+                      setState(() {
+                        _endTimeController.text = time;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 25),
+                  LocationSection(locationController: _locationController),
+                  const SizedBox(height: 25),
+                  CapacitySection(capacityController: _capacityController),
+                  const SizedBox(height: 25),
+                  PosterSection(
+                    posterUrl: _posterUrl,
+                    onPosterUrlChanged: (url) {
+                      setState(() {
+                        _posterUrl = url;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 30),
+                  ActionButtons(
+                    formKey: _formKey,
+                    nameController: _nameController,
+                    descriptionController: _descriptionController,
+                    locationController: _locationController,
+                    capacityController: _capacityController,
+                    posterUrl: _posterUrl,
+                    startTimeController: _startTimeController,
+                    endTimeController: _endTimeController,
+                    isLoading: _isLoading,
+                    onClearForm: _clearForm,
+                    onCreateEvent: _createEvent,
+                  ),
+                ],
               ),
-              const SizedBox(height: 25),
-              CategorySection(
-                selectedCategory: _selectedCategory,
-                onCategoryChanged: (category) {
-                  setState(() {
-                    _selectedCategory = category;
-                  });
-                },
-              ),
-              const SizedBox(height: 25),
-              DateTimeSection(
-                startDate: _startDate,
-                endDate: _endDate,
-                startTimeController: _startTimeController,
-                endTimeController: _endTimeController,
-                onStartDateChanged: (date) {
-                  setState(() {
-                    _startDate = date;
-                    if (_startDate.isAfter(_endDate)) {
-                      _endDate = _startDate.add(const Duration(days: 1));
-                    }
-                  });
-                },
-                onEndDateChanged: (date) {
-                  setState(() {
-                    _endDate = date;
-                  });
-                },
-                onStartTimeChanged: (time) {
-                  setState(() {
-                    _startTimeController.text = time;
-                  });
-                },
-                onEndTimeChanged: (time) {
-                  setState(() {
-                    _endTimeController.text = time;
-                  });
-                },
-              ),
-              const SizedBox(height: 25),
-              LocationSection(locationController: _locationController),
-              const SizedBox(height: 25),
-              CapacitySection(capacityController: _capacityController),
-              const SizedBox(height: 25),
-              PosterSection(
-                posterUrl: _posterUrl,
-                onPosterUrlChanged: (url) {
-                  setState(() {
-                    _posterUrl = url;
-                  });
-                },
-              ),
-              const SizedBox(height: 30),
-              ActionButtons(
-                formKey: _formKey,
-                nameController: _nameController,
-                descriptionController: _descriptionController,
-                locationController: _locationController,
-                capacityController: _capacityController,
-                posterUrl: _posterUrl, // Pass the posterUrl here
-                startTimeController: _startTimeController,
-                endTimeController: _endTimeController,
-                onClearForm: _clearForm,
-                onCreateEvent: _createEvent,
-              ),
-            ],
+            ),
           ),
-        ),
+          // Loading overlay
+          if (_isLoading)
+            Container(
+              color: Colors.black54,
+              child: const Center(child: CircularProgressIndicator()),
+            ),
+        ],
       ),
     );
   }
@@ -164,7 +200,6 @@ class _CreateEventsState extends State<CreateEvents> {
             ),
             TextButton(
               onPressed: () {
-                final categories = FakeData.getCategories();
                 setState(() {
                   _nameController.clear();
                   _descriptionController.clear();
@@ -173,10 +208,10 @@ class _CreateEventsState extends State<CreateEvents> {
                   _startTimeController.clear();
                   _endTimeController.clear();
                   _selectedCategory =
-                      categories.isNotEmpty ? categories.first : 'Technology';
+                      _categories.isNotEmpty ? _categories.first : 'Technology';
                   _startDate = DateTime.now();
                   _endDate = DateTime.now().add(const Duration(days: 1));
-                  _posterUrl = null; // Clear the poster URL
+                  _posterUrl = null;
                 });
                 Navigator.of(context).pop();
               },
@@ -191,41 +226,157 @@ class _CreateEventsState extends State<CreateEvents> {
     );
   }
 
-  void _createEvent() {
-    if (_formKey.currentState!.validate()) {
-      // Create event object with all the data including poster URL
-      final eventData = {
-        'name': _nameController.text,
-        'description': _descriptionController.text,
-        'category': _selectedCategory,
-        'startDate': _startDate.toIso8601String(),
-        'endDate': _endDate.toIso8601String(),
-        'startTime': _startTimeController.text,
-        'endTime': _endTimeController.text,
-        'location': _locationController.text,
-        'capacity': int.tryParse(_capacityController.text) ?? 0,
-        'posterUrl': _posterUrl, // This will be the Cloudinary URL
-      };
+  Future<void> _createEvent() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
 
-      // Here you would typically send this data to your backend
-      print('Event Data: $eventData');
+    // Check if organizer data is available
+    if (_currentOrganizer == null) {
+      _showErrorSnackBar(
+        'Unable to load organizer information. Please try again.',
+      );
+      return;
+    }
 
-      // Show success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            '${_nameController.text} has been created successfully',
-          ),
-          backgroundColor: AppConstants.successColor,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
+    // Validate required fields
+    if (_nameController.text.trim().isEmpty) {
+      _showErrorSnackBar('Event name is required');
+      return;
+    }
+
+    if (_descriptionController.text.trim().isEmpty) {
+      _showErrorSnackBar('Event description is required');
+      return;
+    }
+
+    if (_locationController.text.trim().isEmpty) {
+      _showErrorSnackBar('Event location is required');
+      return;
+    }
+
+    if (_capacityController.text.trim().isEmpty) {
+      _showErrorSnackBar('Event capacity is required');
+      return;
+    }
+
+    if (_startTimeController.text.trim().isEmpty) {
+      _showErrorSnackBar('Start time is required');
+      return;
+    }
+
+    if (_endTimeController.text.trim().isEmpty) {
+      _showErrorSnackBar('End time is required');
+      return;
+    }
+
+    // Validate capacity
+    final capacity = int.tryParse(_capacityController.text.trim());
+    if (capacity == null || capacity <= 0) {
+      _showErrorSnackBar('Please enter a valid capacity');
+      return;
+    }
+
+    // Validate dates
+    if (_startDate.isAfter(_endDate)) {
+      _showErrorSnackBar('Start date cannot be after end date');
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Create event object with organizer name
+      final event = Event(
+        id: '', // Will be set by the database service
+        name: _nameController.text.trim(),
+        description: _descriptionController.text.trim(),
+        category: _selectedCategory,
+        posterUrl: _posterUrl ?? '',
+        startDate: _startDate,
+        endDate: _endDate,
+        startTime: _startTimeController.text.trim(),
+        endTime: _endTimeController.text.trim(),
+        location: _locationController.text.trim(),
+        capacity: capacity,
+        registeredCount: 0,
+        attendedCount: 0,
+        organizerId: '', // Will be set by the database service
+        organizerName: _getOrganizerDisplayName(), // Use organizer's name
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
       );
 
-      // Navigate back or to events list
-      Navigator.pop(context);
+      // Create event in database
+      final eventId = await _databaseService.createEvent(event);
+
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '${_nameController.text.trim()} has been created successfully!',
+            ),
+            backgroundColor: AppConstants.successColor,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        );
+
+        // Navigate back to events list
+        Navigator.pop(context, eventId);
+      }
+    } catch (e) {
+      if (mounted) {
+        _showErrorSnackBar('Failed to create event: ${e.toString()}');
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
+  }
+
+  // Add this method to get organizer's display name
+  String _getOrganizerDisplayName() {
+    if (_currentOrganizer == null) return 'Unknown Organizer';
+
+    // Try to get full name first
+    final fullName = _currentOrganizer!.fullName.trim();
+
+    if (fullName.isNotEmpty) {
+      return fullName;
+    } else if (fullName.isNotEmpty) {
+      return fullName;
+    }
+
+    // Fallback to email or company name
+    final email = _currentOrganizer!.email.trim();
+    final companyName = _currentOrganizer!.organization?.trim() ?? '';
+
+    if (companyName.isNotEmpty) {
+      return companyName;
+    } else if (email.isNotEmpty) {
+      return email;
+    }
+
+    return 'Unknown Organizer';
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppConstants.errorColor,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
   }
 }

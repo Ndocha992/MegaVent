@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:megavent/utils/constants.dart';
-import 'package:megavent/data/fake_data.dart';
-import 'package:megavent/utils/organizer/attendees/attendees_utils.dart';
+import 'package:megavent/services/database_service.dart';
+import 'package:megavent/models/attendee_stats.dart';
+import 'package:provider/provider.dart';
 
 class AttendeesHeader extends StatelessWidget {
   const AttendeesHeader({super.key});
@@ -42,7 +43,7 @@ class AttendeesHeader extends StatelessWidget {
                   ),
                 ],
               ),
-              AttendeesCountBadge(count: FakeData.attendees.length),
+              const AttendeesCountBadge(),
             ],
           ),
           const SizedBox(height: 16),
@@ -54,32 +55,77 @@ class AttendeesHeader extends StatelessWidget {
 }
 
 class AttendeesCountBadge extends StatelessWidget {
-  final int count;
-
-  const AttendeesCountBadge({super.key, required this.count});
+  const AttendeesCountBadge({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: AppConstants.primaryGradient),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.group, color: Colors.white, size: 16),
-          const SizedBox(width: 8),
-          Text(
-            '$count Attendees',
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
+    final databaseService = Provider.of<DatabaseService>(
+      context,
+      listen: false,
+    );
+
+    return StreamBuilder<AttendeeStats>(
+      stream: databaseService.streamAttendeeStats(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: AppConstants.primaryGradient,
+              ),
+              borderRadius: BorderRadius.circular(20),
             ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                ),
+                SizedBox(width: 8),
+                Text(
+                  'Loading...',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final attendeeStats = snapshot.data ?? AttendeeStats.empty();
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: AppConstants.primaryGradient,
+            ),
+            borderRadius: BorderRadius.circular(20),
           ),
-        ],
-      ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.group, color: Colors.white, size: 16),
+              const SizedBox(width: 8),
+              Text(
+                '${attendeeStats.total} Attendees',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -89,28 +135,93 @@ class AttendeesStatsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final stats = AttendeesUtils.getAttendeesStats(FakeData.attendees);
+    final databaseService = Provider.of<DatabaseService>(
+      context,
+      listen: false,
+    );
 
-    return Row(
-      children: [
-        AttendeeStatCard(
-          label: 'Registered',
-          count: stats.registered,
-          color: AppConstants.primaryColor,
+    return StreamBuilder<AttendeeStats>(
+      stream: databaseService.streamAttendeeStats(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Row(
+            children: [
+              _buildLoadingStatCard('Registered'),
+              const SizedBox(width: 12),
+              _buildLoadingStatCard('Attended'),
+              const SizedBox(width: 12),
+              _buildLoadingStatCard('No Show'),
+            ],
+          );
+        }
+
+        if (snapshot.hasError) {
+          return Row(
+            children: [
+              AttendeeStatCard(
+                label: 'Error',
+                count: 0,
+                color: AppConstants.errorColor,
+              ),
+            ],
+          );
+        }
+
+        final attendeeStats = snapshot.data ?? AttendeeStats.empty();
+
+        return Row(
+          children: [
+            AttendeeStatCard(
+              label: 'Registered',
+              count: attendeeStats.registered,
+              color: AppConstants.primaryColor,
+            ),
+            const SizedBox(width: 12),
+            AttendeeStatCard(
+              label: 'Attended',
+              count: attendeeStats.attended,
+              color: AppConstants.successColor,
+            ),
+            const SizedBox(width: 12),
+            AttendeeStatCard(
+              label: 'No Show',
+              count: attendeeStats.noShow,
+              color: AppConstants.errorColor,
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildLoadingStatCard(String label) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.grey.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.withOpacity(0.2)),
         ),
-        const SizedBox(width: 12),
-        AttendeeStatCard(
-          label: 'Attended',
-          count: stats.attended,
-          color: AppConstants.successColor,
+        child: Column(
+          children: [
+            const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 12,
+                color: Colors.grey,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(width: 12),
-        AttendeeStatCard(
-          label: 'No Show',
-          count: stats.noShow,
-          color: AppConstants.errorColor,
-        ),
-      ],
+      ),
     );
   }
 }

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:megavent/data/fake_data.dart';
+import 'package:megavent/models/attendee.dart';
 import 'package:megavent/utils/constants.dart';
 
 class AttendanceStatusSectionWidget extends StatelessWidget {

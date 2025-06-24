@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:megavent/models/event.dart';
 import 'package:megavent/utils/constants.dart';
-import 'package:megavent/data/fake_data.dart';
 
 class EventStatsSection extends StatelessWidget {
   final Event event;

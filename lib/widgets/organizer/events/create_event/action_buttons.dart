@@ -9,7 +9,8 @@ class ActionButtons extends StatelessWidget {
   final TextEditingController capacityController;
   final TextEditingController startTimeController;
   final TextEditingController endTimeController;
-  final String? posterUrl; // Make this a required parameter
+  final String? posterUrl;
+  final bool isLoading; // Added this parameter
   final VoidCallback onClearForm;
   final VoidCallback onCreateEvent;
 
@@ -22,7 +23,8 @@ class ActionButtons extends StatelessWidget {
     required this.capacityController,
     required this.startTimeController,
     required this.endTimeController,
-    required this.posterUrl, // Add this as required
+    required this.posterUrl,
+    required this.isLoading, // Added this parameter
     required this.onClearForm,
     required this.onCreateEvent,
   });
@@ -33,7 +35,7 @@ class ActionButtons extends StatelessWidget {
       children: [
         Expanded(
           child: OutlinedButton(
-            onPressed: onClearForm,
+            onPressed: isLoading ? null : onClearForm, // Disable when loading
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 16),
               side: BorderSide(color: AppConstants.borderColor),
@@ -52,7 +54,7 @@ class ActionButtons extends StatelessWidget {
         const SizedBox(width: 16),
         Expanded(
           child: ElevatedButton(
-            onPressed: onCreateEvent,
+            onPressed: isLoading ? null : onCreateEvent, // Disable when loading
             style: ElevatedButton.styleFrom(
               backgroundColor: AppConstants.primaryColor,
               foregroundColor: Colors.white,
@@ -61,13 +63,23 @@ class ActionButtons extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            child: Text(
-              'Create Event',
-              style: AppConstants.bodyLarge.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+            child:
+                isLoading
+                    ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                    : Text(
+                      'Create Event',
+                      style: AppConstants.bodyLarge.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
           ),
         ),
       ],

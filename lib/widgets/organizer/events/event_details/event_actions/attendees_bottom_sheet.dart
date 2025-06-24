@@ -1,7 +1,10 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:megavent/models/attendee.dart';
+import 'package:megavent/models/event.dart';
+import 'package:megavent/services/database_service.dart';
 import 'package:megavent/utils/constants.dart';
-import 'package:megavent/data/fake_data.dart';
 import 'package:megavent/widgets/organizer/attendees/attendee_qr_dialog.dart';
 import 'package:megavent/widgets/organizer/events/event_details/event_actions/search_bar.dart';
 import 'package:megavent/widgets/organizer/events/event_details/event_actions/stat_card.dart';
@@ -20,17 +23,14 @@ class _AttendeesBottomSheetState extends State<AttendeesBottomSheet> {
   List<Attendee> _allAttendees = [];
   List<Attendee> _filteredAttendees = [];
   final TextEditingController _searchController = TextEditingController();
+  bool _isLoading = true;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    // Filter attendees for the current event
-    _allAttendees =
-        FakeData.attendees
-            .where((attendee) => attendee.eventId == widget.event.id)
-            .toList();
-    _filteredAttendees = _allAttendees;
     _searchController.addListener(_filterAttendees);
+    _loadAttendees();
   }
 
   @override
@@ -39,12 +39,40 @@ class _AttendeesBottomSheetState extends State<AttendeesBottomSheet> {
     super.dispose();
   }
 
+  Future<void> _loadAttendees() async {
+    try {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+
+      final databaseService = Provider.of<DatabaseService>(
+        context,
+        listen: false,
+      );
+      final attendees = await databaseService.getEventAttendees(
+        widget.event.id,
+      );
+
+      setState(() {
+        _allAttendees = attendees;
+        _filteredAttendees = attendees;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
   void _filterAttendees() {
     final query = _searchController.text.toLowerCase();
     setState(() {
       _filteredAttendees =
           _allAttendees.where((attendee) {
-            return attendee.name.toLowerCase().contains(query) ||
+            return attendee.fullName.toLowerCase().contains(query) ||
                 attendee.email.toLowerCase().contains(query) ||
                 attendee.phone.toLowerCase().contains(query);
           }).toList();
@@ -81,92 +109,136 @@ class _AttendeesBottomSheetState extends State<AttendeesBottomSheet> {
           ),
 
           // Stats Row
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Row(
-              children: [
-                Expanded(
-                  child: StatCardWidget(
-                    title: 'Registered',
-                    value: '${_allAttendees.length}',
-                    color: AppConstants.primaryColor,
-                    icon: Icons.person_add,
+          if (!_isLoading && _error == null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: StatCardWidget(
+                      title: 'Registered',
+                      value: '${_allAttendees.length}',
+                      color: AppConstants.primaryColor,
+                      icon: Icons.person_add,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: StatCardWidget(
-                    title: 'Attended',
-                    value: '$attendedCount',
-                    color: AppConstants.successColor,
-                    icon: Icons.check_circle,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: StatCardWidget(
+                      title: 'Attended',
+                      value: '$attendedCount',
+                      color: AppConstants.successColor,
+                      icon: Icons.check_circle,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: StatCardWidget(
-                    title: 'No Show',
-                    value: '$noShowCount',
-                    color: AppConstants.errorColor,
-                    icon: Icons.cancel,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: StatCardWidget(
+                      title: 'No Show',
+                      value: '$noShowCount',
+                      color: AppConstants.errorColor,
+                      icon: Icons.cancel,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
 
           const SizedBox(height: 20),
 
           // Search Bar
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: SearchBarWidget(
-              controller: _searchController,
-              hintText: 'Search attendees by name, email, or phone...',
+          if (!_isLoading && _error == null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: SearchBarWidget(
+                controller: _searchController,
+                hintText: 'Search attendees by name, email, or phone...',
+              ),
             ),
-          ),
 
           const SizedBox(height: 16),
 
-          // Attendees List
-          Expanded(
-            child:
-                _filteredAttendees.isEmpty
-                    ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            _searchController.text.isNotEmpty
-                                ? Icons.search_off
-                                : Icons.people_outline,
-                            size: 64,
-                            color: Colors.grey[400],
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            _searchController.text.isNotEmpty
-                                ? 'No attendees found matching "${_searchController.text}"'
-                                : 'No attendees registered for this event yet',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.grey[600],
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
-                    )
-                    : ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      itemCount: _filteredAttendees.length,
-                      itemBuilder: (context, index) {
-                        final attendee = _filteredAttendees[index];
-                        return AttendeeCard(attendee: attendee);
-                      },
-                    ),
-          ),
+          // Content
+          Expanded(child: _buildContent()),
         ],
+      ),
+    );
+  }
+
+  Widget _buildContent() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_error != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline, size: 64, color: Colors.grey[400]),
+            const SizedBox(height: 16),
+            Text(
+              'Error loading attendees',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _error!,
+              style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _loadAttendees,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppConstants.primaryColor,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_filteredAttendees.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              _searchController.text.isNotEmpty
+                  ? Icons.search_off
+                  : Icons.people_outline,
+              size: 64,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              _searchController.text.isNotEmpty
+                  ? 'No attendees found matching "${_searchController.text}"'
+                  : 'No attendees registered for this event yet',
+              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadAttendees,
+      child: ListView.builder(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        itemCount: _filteredAttendees.length,
+        itemBuilder: (context, index) {
+          final attendee = _filteredAttendees[index];
+          return AttendeeCard(attendee: attendee);
+        },
       ),
     );
   }
@@ -189,12 +261,12 @@ class AttendeeCard extends StatelessWidget {
 
   Widget _buildAttendeeAvatar() {
     // Handle different image sources
-    if (attendee.profileImage.isNotEmpty) {
+    if (attendee.profileImage != null && attendee.profileImage!.isNotEmpty) {
       // Check if it's base64 data
-      if (_isBase64(attendee.profileImage)) {
+      if (_isBase64(attendee.profileImage!)) {
         return ClipOval(
           child: Image.memory(
-            base64Decode(attendee.profileImage),
+            base64Decode(attendee.profileImage!),
             fit: BoxFit.cover,
             width: 48,
             height: 48,
@@ -206,7 +278,7 @@ class AttendeeCard extends StatelessWidget {
         // It's a regular URL
         return ClipOval(
           child: Image.network(
-            attendee.profileImage,
+            attendee.profileImage!,
             fit: BoxFit.cover,
             width: 48,
             height: 48,
@@ -229,7 +301,7 @@ class AttendeeCard extends StatelessWidget {
               ? AppConstants.successColor
               : AppConstants.primaryColor,
       child: Text(
-        _getInitials(attendee.name),
+        _getInitials(attendee.fullName),
         style: const TextStyle(
           color: Colors.white,
           fontWeight: FontWeight.bold,
@@ -242,8 +314,10 @@ class AttendeeCard extends StatelessWidget {
     List<String> names = name.split(' ');
     if (names.length >= 2) {
       return '${names[0][0]}${names[1][0]}'.toUpperCase();
-    } else {
+    } else if (name.isNotEmpty) {
       return name[0].toUpperCase();
+    } else {
+      return 'U';
     }
   }
 
@@ -280,7 +354,7 @@ class AttendeeCard extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        attendee.name,
+                        attendee.fullName,
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -339,7 +413,7 @@ class AttendeeCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      attendee.hasAttended ? 'Attended' : 'Not Attended',
+                      attendee.attendanceStatus,
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,

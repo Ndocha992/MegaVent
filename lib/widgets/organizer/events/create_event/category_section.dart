@@ -1,22 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/widgets/organizer/events/create_event/section_container.dart';
-import 'package:megavent/data/fake_data.dart';
 
 class CategorySection extends StatelessWidget {
   final String selectedCategory;
+  final List<String> categories; // Added this parameter
   final Function(String) onCategoryChanged;
 
   const CategorySection({
     super.key,
     required this.selectedCategory,
+    required this.categories, // Added this parameter
     required this.onCategoryChanged,
   });
 
   @override
   Widget build(BuildContext context) {
-    final categories = FakeData.getCategories();
-
     return SectionContainer(
       title: 'Category',
       icon: Icons.category_outlined,

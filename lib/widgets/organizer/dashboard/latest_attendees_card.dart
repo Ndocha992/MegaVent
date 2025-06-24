@@ -1,11 +1,11 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:megavent/models/attendee.dart';
 import 'package:megavent/utils/constants.dart';
-import 'package:megavent/data/fake_data.dart';
 import 'package:megavent/screens/organizer/attendees_details.dart';
 
 class LatestAttendeesCard extends StatelessWidget {
-  final List attendees;
+  final List<Attendee> attendees;
 
   const LatestAttendeesCard({super.key, required this.attendees});
 
@@ -62,13 +62,33 @@ class LatestAttendeeCard extends StatelessWidget {
     required this.onTap,
   });
 
-  bool _isBase64(String value) {
+  bool _isBase64(String? value) {
+    if (value == null || value.isEmpty) return false;
+    
     try {
-      base64Decode(value);
+      // Remove data URL prefix if present (e.g., "data:image/jpeg;base64,")
+      String base64String = value;
+      if (value.contains(',')) {
+        base64String = value.split(',').last;
+      }
+      
+      // Check if it's a valid base64 string
+      if (base64String.isEmpty) return false;
+      
+      // Try to decode
+      base64Decode(base64String);
       return true;
     } catch (e) {
       return false;
     }
+  }
+
+  String _getBase64Data(String value) {
+    // Remove data URL prefix if present
+    if (value.contains(',')) {
+      return value.split(',').last;
+    }
+    return value;
   }
 
   String _formatDate(DateTime date) {
@@ -86,8 +106,10 @@ class LatestAttendeeCard extends StatelessWidget {
     }
   }
 
-  String _getInitials(String name) {
-    List<String> names = name.split(' ');
+  String _getInitials(String? name) {
+    if (name == null || name.isEmpty) return '?';
+    
+    List<String> names = name.trim().split(' ');
     if (names.length >= 2) {
       return '${names[0][0]}${names[1][0]}'.toUpperCase();
     } else {
@@ -97,29 +119,32 @@ class LatestAttendeeCard extends StatelessWidget {
 
   Widget _buildAvatarContent() {
     // Handle different image sources
-    if (attendee.profileImage.isNotEmpty) {
+    if (attendee.profileImage != null && attendee.profileImage!.isNotEmpty) {
       // Check if it's base64 data
       if (_isBase64(attendee.profileImage)) {
-        return ClipOval(
-          child: Image.memory(
-            base64Decode(attendee.profileImage),
-            fit: BoxFit.cover,
-            width: 48,
-            height: 48,
-            errorBuilder:
-                (context, error, stackTrace) => _buildInitialsAvatar(),
-          ),
-        );
+        try {
+          return ClipOval(
+            child: Image.memory(
+              base64Decode(_getBase64Data(attendee.profileImage!)),
+              fit: BoxFit.cover,
+              width: 48,
+              height: 48,
+              errorBuilder: (context, error, stackTrace) => _buildInitialsAvatar(),
+            ),
+          );
+        } catch (e) {
+          // If base64 decoding fails, fall back to initials
+          return _buildInitialsAvatar();
+        }
       } else {
         // It's a regular URL
         return ClipOval(
           child: Image.network(
-            attendee.profileImage,
+            attendee.profileImage!,
             fit: BoxFit.cover,
             width: 48,
             height: 48,
-            errorBuilder:
-                (context, error, stackTrace) => _buildInitialsAvatar(),
+            errorBuilder: (context, error, stackTrace) => _buildInitialsAvatar(),
           ),
         );
       }
@@ -173,10 +198,9 @@ class LatestAttendeeCard extends StatelessWidget {
                       height: 48,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color:
-                            attendee.hasAttended
-                                ? AppConstants.successColor
-                                : AppConstants.primaryColor,
+                        color: attendee.hasAttended
+                            ? AppConstants.successColor
+                            : AppConstants.primaryColor,
                       ),
                       child: _buildAvatarContent(),
                     ),
@@ -221,9 +245,7 @@ class LatestAttendeeCard extends StatelessWidget {
                                 vertical: 4,
                               ),
                               decoration: BoxDecoration(
-                                color: AppConstants.primaryColor.withOpacity(
-                                  0.1,
-                                ),
+                                color: AppConstants.primaryColor.withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
@@ -255,10 +277,9 @@ class LatestAttendeeCard extends StatelessWidget {
                                 ? Icons.check_circle
                                 : Icons.access_time,
                             size: 16,
-                            color:
-                                attendee.hasAttended
-                                    ? AppConstants.successColor
-                                    : Colors.orange,
+                            color: attendee.hasAttended
+                                ? AppConstants.successColor
+                                : Colors.orange,
                           ),
                           const SizedBox(width: 4),
                           Text(
@@ -266,10 +287,9 @@ class LatestAttendeeCard extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
-                              color:
-                                  attendee.hasAttended
-                                      ? AppConstants.successColor
-                                      : Colors.orange,
+                              color: attendee.hasAttended
+                                  ? AppConstants.successColor
+                                  : Colors.orange,
                             ),
                           ),
                           const Spacer(),

@@ -3,11 +3,13 @@ import 'package:megavent/utils/constants.dart';
 
 class EventFilters extends StatefulWidget {
   final String selectedCategory;
+  final List<String> categories;
   final Function(String) onCategoryChanged;
 
   const EventFilters({
     super.key,
     required this.selectedCategory,
+    required this.categories,
     required this.onCategoryChanged,
   });
 
@@ -18,53 +20,58 @@ class EventFilters extends StatefulWidget {
 class _EventFiltersState extends State<EventFilters> {
   late String _selectedCategory;
 
-  final List<Map<String, dynamic>> _categories = [
-    {
-      'name': 'All',
-      'icon': Icons.all_inclusive,
-      'color': AppConstants.textSecondaryColor,
-    },
-    {
-      'name': 'Technology',
-      'icon': Icons.computer,
-      'color': AppConstants.primaryColor,
-    },
-    {
-      'name': 'Business',
-      'icon': Icons.business,
-      'color': AppConstants.secondaryColor,
-    },
-    {
-      'name': 'Entertainment',
-      'icon': Icons.celebration,
-      'color': AppConstants.accentColor,
-    },
-    {
-      'name': 'Sports',
-      'icon': Icons.sports,
-      'color': AppConstants.successColor,
-    },
-    {
-      'name': 'Education',
-      'icon': Icons.school,
-      'color': AppConstants.warningColor,
-    },
-    {
-      'name': 'Health',
-      'icon': Icons.health_and_safety,
-      'color': Colors.pink,
-    },
-    {
-      'name': 'Arts',
-      'icon': Icons.palette,
-      'color': Colors.purple,
-    },
-  ];
-
   @override
   void initState() {
     super.initState();
     _selectedCategory = widget.selectedCategory;
+  }
+
+  // Helper method to get category icon
+  IconData _getCategoryIcon(String category) {
+    switch (category.toLowerCase()) {
+      case 'all':
+        return Icons.all_inclusive;
+      case 'technology':
+        return Icons.computer;
+      case 'business':
+        return Icons.business;
+      case 'entertainment':
+        return Icons.celebration;
+      case 'sports':
+        return Icons.sports;
+      case 'education':
+        return Icons.school;
+      case 'health':
+        return Icons.health_and_safety;
+      case 'arts':
+        return Icons.palette;
+      default:
+        return Icons.category;
+    }
+  }
+
+  // Helper method to get category color
+  Color _getCategoryColor(String category) {
+    switch (category.toLowerCase()) {
+      case 'all':
+        return AppConstants.textSecondaryColor;
+      case 'technology':
+        return AppConstants.primaryColor;
+      case 'business':
+        return AppConstants.secondaryColor;
+      case 'entertainment':
+        return AppConstants.accentColor;
+      case 'sports':
+        return AppConstants.successColor;
+      case 'education':
+        return AppConstants.warningColor;
+      case 'health':
+        return Colors.pink;
+      case 'arts':
+        return Colors.purple;
+      default:
+        return AppConstants.primaryColor;
+    }
   }
 
   @override
@@ -99,12 +106,15 @@ class _EventFiltersState extends State<EventFilters> {
             Wrap(
               spacing: 12,
               runSpacing: 12,
-              children: _categories.map((category) {
-                final isSelected = _selectedCategory == category['name'];
+              children: widget.categories.map((category) {
+                final isSelected = _selectedCategory == category;
+                final categoryColor = _getCategoryColor(category);
+                final categoryIcon = _getCategoryIcon(category);
+                
                 return GestureDetector(
                   onTap: () {
                     setState(() {
-                      _selectedCategory = category['name'];
+                      _selectedCategory = category;
                     });
                   },
                   child: Container(
@@ -114,12 +124,12 @@ class _EventFiltersState extends State<EventFilters> {
                     ),
                     decoration: BoxDecoration(
                       color: isSelected
-                          ? category['color'].withOpacity(0.15)
+                          ? categoryColor.withOpacity(0.15)
                           : Colors.grey[100],
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
                         color: isSelected
-                            ? category['color']
+                            ? categoryColor
                             : Colors.transparent,
                         width: 2,
                       ),
@@ -128,18 +138,18 @@ class _EventFiltersState extends State<EventFilters> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          category['icon'],
+                          categoryIcon,
                           size: 18,
                           color: isSelected
-                              ? category['color']
+                              ? categoryColor
                               : AppConstants.textSecondaryColor,
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          category['name'],
+                          category,
                           style: TextStyle(
                             color: isSelected
-                                ? category['color']
+                                ? categoryColor
                                 : AppConstants.textSecondaryColor,
                             fontWeight: isSelected
                                 ? FontWeight.w600

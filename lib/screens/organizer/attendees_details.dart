@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:megavent/data/fake_data.dart';
+import 'package:megavent/models/attendee.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/widgets/organizer/attendees/attendee_qr_dialog.dart';
 import 'package:megavent/widgets/organizer/attendees/attendees_details/attendance_status_section.dart';
@@ -36,7 +36,7 @@ class _AttendeesDetailsState extends State<AttendeesDetails> {
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: AppConstants.backgroundColor,
-      appBar: NestedScreenAppBar(screenTitle: currentAttendee.name),
+      appBar: NestedScreenAppBar(screenTitle: currentAttendee.fullName), // Changed from .name to .fullName
       drawer: OrganizerSidebar(currentRoute: currentRoute),
       body: SingleChildScrollView(
         child: Column(
@@ -86,18 +86,10 @@ class _AttendeesDetailsState extends State<AttendeesDetails> {
 
   void _toggleAttendanceStatus() {
     setState(() {
-      currentAttendee = Attendee(
-        id: currentAttendee.id,
-        name: currentAttendee.name,
-        email: currentAttendee.email,
-        phone: currentAttendee.phone,
-        eventId: currentAttendee.eventId,
-        eventName: currentAttendee.eventName,
-        qrCode: currentAttendee.qrCode,
+      // Use the copyWith method from your Attendee model for cleaner updates
+      currentAttendee = currentAttendee.copyWith(
         hasAttended: !currentAttendee.hasAttended,
-        registeredAt: currentAttendee.registeredAt,
-        isNew: currentAttendee.isNew,
-        profileImage: currentAttendee.profileImage,
+        updatedAt: DateTime.now(), // Update the timestamp
       );
     });
 
@@ -105,8 +97,8 @@ class _AttendeesDetailsState extends State<AttendeesDetails> {
       SnackBar(
         content: Text(
           currentAttendee.hasAttended
-              ? '${currentAttendee.name} marked as attended'
-              : '${currentAttendee.name} marked as not attended',
+              ? '${currentAttendee.fullName} marked as attended' // Changed from .name to .fullName
+              : '${currentAttendee.fullName} marked as not attended', // Changed from .name to .fullName
         ),
         backgroundColor:
             currentAttendee.hasAttended

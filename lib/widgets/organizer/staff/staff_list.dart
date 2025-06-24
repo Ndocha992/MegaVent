@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:megavent/models/staff.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/utils/organizer/staff/staff_utils.dart';
-import 'package:megavent/data/fake_data.dart';
 
 class StaffList extends StatelessWidget {
   final List<Staff> staffList;
@@ -82,7 +82,8 @@ class StaffAvatar extends StatelessWidget {
 
   const StaffAvatar({super.key, required this.staff});
 
-  bool _isBase64(String value) {
+  bool _isBase64(String? value) {
+    if (value == null || value.isEmpty) return false;
     try {
       base64Decode(value);
       return true;
@@ -129,13 +130,15 @@ class StaffAvatar extends StatelessWidget {
   }
 
   Widget _buildAvatarContent() {
-    // Handle different image sources
-    if (staff.profileImage.isNotEmpty) {
+    // Handle different image sources with null safety
+    final profileImage = staff.profileImage;
+
+    if (profileImage != null && profileImage.isNotEmpty) {
       // Check if it's base64 data
-      if (_isBase64(staff.profileImage)) {
+      if (_isBase64(profileImage)) {
         return ClipOval(
           child: Image.memory(
-            base64Decode(staff.profileImage),
+            base64Decode(profileImage),
             fit: BoxFit.cover,
             width: 60,
             height: 60,
@@ -147,7 +150,7 @@ class StaffAvatar extends StatelessWidget {
         // It's a regular URL
         return ClipOval(
           child: Image.network(
-            staff.profileImage,
+            profileImage,
             fit: BoxFit.cover,
             width: 60,
             height: 60,

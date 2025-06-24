@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:megavent/utils/constants.dart';
-import 'package:megavent/data/fake_data.dart';
+import 'package:megavent/models/event.dart'; // Changed from fake_data import
 
 class EventCard extends StatelessWidget {
   final Event event;
@@ -81,7 +81,7 @@ class EventCard extends StatelessWidget {
                     top: Radius.circular(20),
                   ),
                   child:
-                      (event.posterUrl.isNotEmpty == true)
+                      (event.posterUrl.isNotEmpty)
                           ? Image.network(
                             event.posterUrl,
                             fit: BoxFit.cover,

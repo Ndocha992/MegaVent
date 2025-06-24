@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:megavent/models/event.dart';
 import 'package:megavent/utils/constants.dart';
-import 'package:megavent/data/fake_data.dart';
 import 'package:megavent/widgets/organizer/events/event_details/event_actions/action_card.dart';
 import 'package:megavent/widgets/organizer/events/event_details/event_actions/attendees_bottom_sheet.dart';
 import 'package:megavent/widgets/organizer/events/event_details/event_actions/danger_zone.dart';
@@ -15,7 +15,7 @@ class EventActionsSection extends StatelessWidget {
     super.key,
     required this.event,
     required this.onEdit,
-    required this.onDelete,
+    required this.onDelete, required bool isDeleting,
   });
 
   @override
