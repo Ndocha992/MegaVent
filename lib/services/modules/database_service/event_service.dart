@@ -191,23 +191,101 @@ class EventService {
         });
   }
 
-  // Get event categories (you can modify this to fetch from Firestore if needed)
+  // Get event categories
   List<String> getEventCategories() {
     return [
+      // Business & Professional
       'Technology',
       'Business',
-      'Health & Wellness',
-      'Education',
-      'Arts & Culture',
-      'Sports & Recreation',
-      'Food & Drink',
-      'Music',
-      'Fashion',
-      'Travel',
-      'Networking',
-      'Workshop',
       'Conference',
       'Seminar',
+      'Workshop',
+      'Networking',
+      'Trade Show',
+      'Expo',
+
+      // Entertainment & Arts
+      'Music',
+      'Arts & Culture',
+      'Theater & Performing Arts',
+      'Comedy Shows',
+      'Film & Cinema',
+      'Fashion',
+      'Entertainment',
+
+      // Community & Cultural
+      'Cultural Festival',
+      'Community Event',
+      'Religious Event',
+      'Traditional Ceremony',
+      'Charity & Fundraising',
+      'Cultural Exhibition',
+
+      // Sports & Recreation
+      'Sports & Recreation',
+      'Football (Soccer)',
+      'Rugby',
+      'Athletics',
+      'Marathon & Running',
+      'Outdoor Adventure',
+      'Safari Rally',
+      'Water Sports',
+
+      // Education & Development
+      'Education',
+      'Training & Development',
+      'Youth Programs',
+      'Academic Conference',
+      'Skill Development',
+
+      // Health & Wellness
+      'Health & Wellness',
+      'Medical Conference',
+      'Fitness & Yoga',
+      'Mental Health',
+
+      // Food & Agriculture
+      'Food & Drink',
+      'Agricultural Show',
+      'Food Festival',
+      'Cooking Workshop',
+      'Wine Tasting',
+
+      // Travel & Tourism
+      'Travel',
+      'Tourism Promotion',
+      'Adventure Tourism',
+      'Wildlife Conservation',
+
+      // Government & Politics
+      'Government Event',
+      'Political Rally',
+      'Public Forum',
+      'Civic Engagement',
+
+      // Special Occasions
+      'Wedding',
+      'Birthday Party',
+      'Anniversary',
+      'Graduation',
+      'Baby Shower',
+      'Corporate Party',
+
+      // Seasonal & Holiday
+      'Christmas Event',
+      'New Year Celebration',
+      'Independence Day',
+      'Eid Celebration',
+      'Diwali',
+      'Easter Event',
+
+      // Markets & Shopping
+      'Market Event',
+      'Craft Fair',
+      'Farmers Market',
+      'Pop-up Shop',
+
+      // Other
       'Other',
     ];
   }
