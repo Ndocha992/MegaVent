@@ -1,7 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:megavent/data/fake_data.dart';
+import 'package:megavent/models/staff.dart';
+import 'package:megavent/services/database_service.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/widgets/organizer/nested_app_bar.dart';
 import 'package:megavent/widgets/organizer/sidebar.dart';
@@ -10,6 +11,7 @@ import 'package:megavent/widgets/organizer/staff/create_staff/create_staff_forms
 import 'package:megavent/widgets/organizer/staff/create_staff/create_staff_header.dart';
 import 'package:megavent/widgets/organizer/staff/create_staff/create_staff_profile_section.dart';
 import 'package:megavent/widgets/organizer/staff/create_staff/create_staff_section_header.dart';
+import 'package:provider/provider.dart';
 
 class CreateStaff extends StatefulWidget {
   const CreateStaff({super.key});
@@ -37,18 +39,42 @@ class _CreateStaffState extends State<CreateStaff> {
   bool _isNew = true; // Default to true for new staff
 
   // Available options
-  late List<String> _roles;
-  late List<String> _departments;
+  List<String> _roles = [];
+  List<String> _departments = [];
+
+  // Loading states
+  bool _isLoading = false;
+  bool _isSaving = false;
 
   @override
   void initState() {
     super.initState();
-    _initializeRolesAndDepartments();
+    _loadStaffData();
   }
 
-  void _initializeRolesAndDepartments() {
+  Future<void> _loadStaffData() async {
+    if (mounted) {
+      setState(() => _isLoading = true);
+    }
+
+    try {
+      final databaseService = context.read<DatabaseService>();
+      final allStaff = await databaseService.getAllStaff();
+
+      _initializeRolesAndDepartments(allStaff);
+    } catch (e) {
+      // If we can't load existing staff data, use default values
+      _initializeDefaultRolesAndDepartments();
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  void _initializeRolesAndDepartments(List<Staff> staffList) {
     // Extract unique roles from existing staff data
-    Set<String> rolesSet = FakeData.staff.map((staff) => staff.role).toSet();
+    Set<String> rolesSet = staffList.map((staff) => staff.role).toSet();
 
     // Add additional roles that might not exist in current data
     rolesSet.addAll([
@@ -63,11 +89,15 @@ class _CreateStaffState extends State<CreateStaff> {
       'HR Specialist',
       'Security Officer',
       'Graphics Designer',
+      'Project Manager',
+      'Social Media Manager',
+      'Content Creator',
+      'Business Analyst',
     ]);
 
     // Extract unique departments from existing staff data
     Set<String> departmentsSet =
-        FakeData.staff.map((staff) => staff.department).toSet();
+        staffList.map((staff) => staff.department).toSet();
 
     // Add additional departments that might not exist in current data
     departmentsSet.addAll([
@@ -83,8 +113,45 @@ class _CreateStaffState extends State<CreateStaff> {
       'IT',
     ]);
 
-    _roles = rolesSet.toList()..sort();
-    _departments = departmentsSet.toList()..sort();
+    setState(() {
+      _roles = rolesSet.toList()..sort();
+      _departments = departmentsSet.toList()..sort();
+    });
+  }
+
+  void _initializeDefaultRolesAndDepartments() {
+    setState(() {
+      _roles = [
+        'Event Manager',
+        'Event Coordinator',
+        'Marketing Specialist',
+        'Technical Support',
+        'Operations Manager',
+        'Sales Representative',
+        'Customer Service',
+        'Finance Manager',
+        'HR Specialist',
+        'Security Officer',
+        'Graphics Designer',
+        'Project Manager',
+        'Social Media Manager',
+        'Content Creator',
+        'Business Analyst',
+      ]..sort();
+
+      _departments = [
+        'Operations',
+        'Marketing',
+        'Technical',
+        'Sales',
+        'Finance',
+        'Human Resources',
+        'Security',
+        'Customer Service',
+        'Creative',
+        'IT',
+      ]..sort();
+    });
   }
 
   @override
@@ -115,6 +182,16 @@ class _CreateStaffState extends State<CreateStaff> {
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        key: _scaffoldKey,
+        backgroundColor: AppConstants.backgroundColor,
+        appBar: NestedScreenAppBar(screenTitle: 'Create Staff'),
+        drawer: OrganizerSidebar(currentRoute: currentRoute),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: AppConstants.backgroundColor,
@@ -186,6 +263,7 @@ class _CreateStaffState extends State<CreateStaff> {
               CreateStaffActionButtons(
                 onCancel: () => Navigator.of(context).pop(),
                 onCreate: _handleCreateStaff,
+                isLoading: _isSaving,
               ),
               const SizedBox(height: 20),
             ],
@@ -285,43 +363,68 @@ class _CreateStaffState extends State<CreateStaff> {
     );
   }
 
-  void _handleCreateStaff() {
-    if (_formKey.currentState!.validate()) {
-      // Generate a unique ID (in real app, this would be handled by backend)
-      final now = DateTime.now();
-      final staffId = now.millisecondsSinceEpoch.toString();
+  Future<void> _handleCreateStaff() async {
+    if (!_formKey.currentState!.validate()) return;
 
-      // Create staff object with form data
-      final staffData = {
-        'id': staffId,
-        'name': _nameController.text.trim(),
-        'email': _emailController.text.trim(),
-        'phone': _phoneController.text.trim(),
-        'role': _selectedRole,
-        'department': _selectedDepartment,
-        'profileImage': _profileImageBase64, // Pass base64 image instead of URL
-        'hiredAt': now,
-        'isNew': _isNew,
-      };
+    if (_selectedRole == null || _selectedDepartment == null) {
+      _showSnackBar('Please select both role and department', isSuccess: false);
+      return;
+    }
 
-      // Show success message
+    setState(() => _isSaving = true);
+
+    try {
+      final databaseService = context.read<DatabaseService>();
+
+      // Create new staff
+      final newStaff = Staff(
+        id: '', // Will be set by the database service
+        fullName: _nameController.text.trim(),
+        email: _emailController.text.trim(),
+        phone: _phoneController.text.trim(),
+        profileImage: _profileImageBase64,
+        organizerId: '', // Will be set by the database service
+        role: _selectedRole!,
+        department: _selectedDepartment!,
+        isApproved: true,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        hiredAt: DateTime.now(),
+      );
+
+      await databaseService.addStaff(newStaff);
+
       _showSnackBar(
-        '${_nameController.text.trim()} has been added to the team successfully!',
+        '${_nameController.text} has been added to the team',
         isSuccess: true,
       );
 
-      // Navigate back to staff list
-      Navigator.of(context).pop();
+      // Navigate back after a short delay to show the success message
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+    } catch (e) {
+      _showSnackBar(
+        'Failed to create staff member: ${e.toString()}',
+        isSuccess: false,
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
     }
   }
 
   void _showSnackBar(String message, {bool isSuccess = false}) {
+    if (!mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
           children: [
             Icon(
-              isSuccess ? Icons.check_circle_outline : Icons.info_outline,
+              isSuccess ? Icons.check_circle_outline : Icons.error_outline,
               color: Colors.white,
               size: 20,
             ),
@@ -330,7 +433,7 @@ class _CreateStaffState extends State<CreateStaff> {
           ],
         ),
         backgroundColor:
-            isSuccess ? AppConstants.successColor : AppConstants.primaryColor,
+            isSuccess ? AppConstants.successColor : AppConstants.errorColor,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         action: SnackBarAction(
