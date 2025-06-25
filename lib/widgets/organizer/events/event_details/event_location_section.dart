@@ -1,100 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
 import 'package:megavent/models/event.dart';
-import 'package:megavent/services/location_service.dart';
 import 'package:megavent/utils/constants.dart';
-import 'package:megavent/widgets/organizer/events/event_details/location_actions.dart';
-import 'package:megavent/widgets/organizer/events/event_details/location_details.dart';
-import 'package:megavent/widgets/organizer/events/event_details/location_map.dart';
 
-class EventLocationSection extends StatefulWidget {
+class EventLocationSection extends StatelessWidget {
   final Event event;
 
   const EventLocationSection({super.key, required this.event});
-
-  @override
-  State<EventLocationSection> createState() => _EventLocationSectionState();
-}
-
-class _EventLocationSectionState extends State<EventLocationSection> {
-  late final LocationService _locationService;
-
-  LatLng? _eventCoordinates;
-  LatLng? _currentPosition;
-  bool _isLoading = true;
-  String _errorMessage = '';
-  final MapController _mapController = MapController();
-
-  @override
-  void initState() {
-    super.initState();
-    _locationService = LocationService();
-    _initLocationData();
-  }
-
-  Future<void> _initLocationData() async {
-    try {
-      setState(() {
-        _isLoading = true;
-        _errorMessage = '';
-      });
-
-      // Get event coordinates
-      final eventCoords = await _locationService.getEventCoordinates(
-        widget.event.location,
-      );
-      if (eventCoords != null) {
-        setState(() {
-          _eventCoordinates = eventCoords;
-        });
-      }
-
-      // Get current position
-      try {
-        final currentCoords = await _locationService.getCurrentPosition();
-        if (currentCoords != null) {
-          setState(() {
-            _currentPosition = currentCoords;
-          });
-        }
-      } catch (e) {
-        debugPrint('Could not get current position: $e');
-      }
-    } catch (e) {
-      setState(() {
-        _errorMessage = 'Could not load event location';
-      });
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
-  void _showSnackBar(String message) {
-    if (mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(message)));
-    }
-  }
-
-  void _zoomToFitMarkers() {
-    if (_eventCoordinates == null) return;
-
-    if (_currentPosition != null) {
-      final bounds = LatLngBounds.fromPoints([
-        _eventCoordinates!,
-        _currentPosition!,
-      ]);
-      _mapController.fitCamera(
-        CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(50)),
-      );
-    } else {
-      _mapController.move(_eventCoordinates!, 14.0);
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -105,53 +16,143 @@ class _EventLocationSectionState extends State<EventLocationSection> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildHeader(),
-          const SizedBox(height: 16),
-          LocationDetailsWidget(
-            event: widget.event,
-            currentPosition: _currentPosition,
-            eventCoordinates: _eventCoordinates,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Location', style: AppConstants.titleLarge),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppConstants.primaryColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.directions,
+                  color: AppConstants.primaryColor,
+                  size: 20,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
-          LocationMapWidget(
-            isLoading: _isLoading,
-            errorMessage: _errorMessage,
-            eventCoordinates: _eventCoordinates,
-            currentPosition: _currentPosition,
-            mapController: _mapController,
-            onRefresh: _initLocationData,
-            onZoomToFit: _zoomToFitMarkers,
-            event: widget.event,
-          ),
-          const SizedBox(height: 16),
-          LocationActionsWidget(
-            eventCoordinates: _eventCoordinates,
-            event: widget.event,
-            onShowSnackBar: _showSnackBar,
+
+          // Location Details
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppConstants.primaryColor.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: AppConstants.primaryColor.withOpacity(0.1),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.location_on,
+                      color: AppConstants.primaryColor,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        event.location,
+                        style: AppConstants.bodyMedium.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // Timezone info
+                _buildLocationDetail(
+                  icon: Icons.access_time,
+                  title: 'Timezone',
+                  value: _getTimezone(),
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildLocationDetail({
+    required IconData icon,
+    required String title,
+    required String value,
+  }) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text('Location', style: AppConstants.titleLarge),
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: AppConstants.primaryColor.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(
-            Icons.directions,
-            color: AppConstants.primaryColor,
-            size: 20,
-          ),
+        Icon(icon, color: AppConstants.textSecondaryColor, size: 16),
+        const SizedBox(width: 8),
+        Text('$title: ', style: AppConstants.bodySmallSecondary),
+        Text(
+          value,
+          style: AppConstants.bodySmall.copyWith(fontWeight: FontWeight.w500),
         ),
       ],
     );
+  }
+
+  String _getTimezone() {
+    // Enhanced timezone detection for more locations including Kenya
+    final location = event.location.toLowerCase();
+
+    // Kenya and East Africa
+    if (location.contains('nakuru') ||
+        location.contains('nairobi') ||
+        location.contains('kenya') ||
+        location.contains('kampala') ||
+        location.contains('dar es salaam')) {
+      return 'EAT (UTC+3)';
+    }
+    // US East Coast
+    else if (location.contains('new york') ||
+        location.contains('ny') ||
+        location.contains('miami') ||
+        location.contains('atlanta')) {
+      return 'EST (UTC-5)';
+    }
+    // US West Coast
+    else if (location.contains('los angeles') ||
+        location.contains('california') ||
+        location.contains('san francisco')) {
+      return 'PST (UTC-8)';
+    }
+    // UK
+    else if (location.contains('london') ||
+        location.contains('manchester') ||
+        location.contains('birmingham')) {
+      return 'GMT (UTC+0)';
+    }
+    // Japan
+    else if (location.contains('tokyo') ||
+        location.contains('osaka') ||
+        location.contains('kyoto')) {
+      return 'JST (UTC+9)';
+    }
+    // South Africa
+    else if (location.contains('cape town') ||
+        location.contains('johannesburg') ||
+        location.contains('durban')) {
+      return 'SAST (UTC+2)';
+    }
+    // Nigeria
+    else if (location.contains('lagos') ||
+        location.contains('abuja') ||
+        location.contains('nigeria')) {
+      return 'WAT (UTC+1)';
+    }
+    // Default fallback
+    else {
+      return 'Local Time';
+    }
   }
 }
