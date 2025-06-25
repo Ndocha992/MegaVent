@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/widgets/organizer/events/create_event/section_container.dart';
@@ -39,7 +40,7 @@ class _PosterSectionState extends State<PosterSection> {
 
         // Generate a unique event ID for the upload
         final eventId = DateTime.now().millisecondsSinceEpoch.toString();
-        
+
         // Upload to Cloudinary
         final String? cloudinaryUrl = await Cloudinary.uploadEventBanner(
           File(image.path),
@@ -49,7 +50,7 @@ class _PosterSectionState extends State<PosterSection> {
 
         if (cloudinaryUrl != null) {
           widget.onPosterUrlChanged(cloudinaryUrl);
-          
+
           // Show success message
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -68,7 +69,9 @@ class _PosterSectionState extends State<PosterSection> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: const Text('Failed to upload image. Please try again.'),
+                content: const Text(
+                  'Failed to upload image. Please try again.',
+                ),
                 backgroundColor: Colors.red,
                 behavior: SnackBarBehavior.floating,
                 shape: RoundedRectangleBorder(
@@ -134,48 +137,50 @@ class _PosterSectionState extends State<PosterSection> {
           ),
           color: AppConstants.primaryColor.withOpacity(0.05),
         ),
-        child: _isUploading
-            ? Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        AppConstants.primaryColor,
+        child:
+            _isUploading
+                ? Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      color: AppConstants.primaryColor.withOpacity(0.1),
+                      child: const Center(
+                        child: SpinKitThreeBounce(
+                          color: AppConstants.primaryColor,
+                          size: 20.0,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    'Uploading poster...',
-                    style: AppConstants.bodyMedium.copyWith(
-                      color: AppConstants.primaryColor,
-                      fontWeight: FontWeight.w500,
+                    const SizedBox(width: 12),
+                    Text(
+                      'Uploading poster...',
+                      style: AppConstants.bodyMedium.copyWith(
+                        color: AppConstants.primaryColor,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
-                  ),
-                ],
-              )
-            : Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.cloud_upload_outlined,
-                    color: AppConstants.primaryColor,
-                    size: 24,
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    widget.posterUrl != null ? 'Change Event Poster' : 'Upload Event Poster',
-                    style: AppConstants.bodyMedium.copyWith(
+                  ],
+                )
+                : Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.cloud_upload_outlined,
                       color: AppConstants.primaryColor,
-                      fontWeight: FontWeight.w500,
+                      size: 24,
                     ),
-                  ),
-                ],
-              ),
+                    const SizedBox(width: 12),
+                    Text(
+                      widget.posterUrl != null
+                          ? 'Change Event Poster'
+                          : 'Upload Event Poster',
+                      style: AppConstants.bodyMedium.copyWith(
+                        color: AppConstants.primaryColor,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
       ),
     );
   }
@@ -208,16 +213,11 @@ class _PosterSectionState extends State<PosterSection> {
                 loadingBuilder: (context, child, loadingProgress) {
                   if (loadingProgress == null) return child;
                   return Container(
-                    color: AppConstants.backgroundColor,
-                    child: Center(
-                      child: CircularProgressIndicator(
-                        value: loadingProgress.expectedTotalBytes != null
-                            ? loadingProgress.cumulativeBytesLoaded /
-                                loadingProgress.expectedTotalBytes!
-                            : null,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          AppConstants.primaryColor,
-                        ),
+                    color: AppConstants.primaryColor.withOpacity(0.1),
+                    child: const Center(
+                      child: SpinKitThreeBounce(
+                        color: AppConstants.primaryColor,
+                        size: 20.0,
                       ),
                     ),
                   );
@@ -257,11 +257,7 @@ class _PosterSectionState extends State<PosterSection> {
                       ),
                     ],
                   ),
-                  child: const Icon(
-                    Icons.close,
-                    color: Colors.white,
-                    size: 16,
-                  ),
+                  child: const Icon(Icons.close, color: Colors.white, size: 16),
                 ),
               ),
             ),

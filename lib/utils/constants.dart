@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 
 // Create a constants class to encapsulate constants
 class Constants {
@@ -358,12 +359,13 @@ class AppConstants {
         ),
         child:
             isLoading
-                ? const SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(
-                    color: Colors.white,
-                    strokeWidth: 2,
+                ? Container(
+                  color: AppConstants.primaryColor.withOpacity(0.1),
+                  child: const Center(
+                    child: SpinKitThreeBounce(
+                      color: AppConstants.primaryColor,
+                      size: 20.0,
+                    ),
                   ),
                 )
                 : Text(

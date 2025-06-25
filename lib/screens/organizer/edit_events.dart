@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:provider/provider.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/widgets/organizer/events/edit_event/edit_event_actions.dart';
@@ -73,7 +74,11 @@ class _EditEventsState extends State<EditEvents> {
     _selectedCategory = widget.event.category;
     _startDate = widget.event.startDate;
     _endDate = widget.event.endDate;
-    _currentPosterUrl = widget.event.posterUrl;
+    // Initialize with the current poster URL from the event
+    _currentPosterUrl =
+        widget.event.posterUrl.isNotEmpty ? widget.event.posterUrl : null;
+
+    print('Initialized with poster URL: $_currentPosterUrl');
   }
 
   void _initializeCategories() {
@@ -107,15 +112,19 @@ class _EditEventsState extends State<EditEvents> {
   }
 
   void _onPosterUrlChanged(String? newUrl) {
+    print('Poster URL callback received: $newUrl');
     setState(() {
       _currentPosterUrl = newUrl;
     });
+
     // Also update the controller for consistency
-    if (newUrl != null) {
+    if (newUrl != null && newUrl.isNotEmpty) {
       _posterUrlController.text = newUrl;
     } else {
       _posterUrlController.clear();
     }
+
+    print('State updated - Current poster URL: $_currentPosterUrl');
   }
 
   @override
@@ -185,6 +194,7 @@ class _EditEventsState extends State<EditEvents> {
                   const SizedBox(height: 25),
                   EditEventCapacity(capacityController: _capacityController),
                   const SizedBox(height: 25),
+                  // Remove the key since we're managing state properly now
                   EditEventPoster(
                     initialPosterUrl: _currentPosterUrl,
                     eventId: widget.event.id,
@@ -207,7 +217,15 @@ class _EditEventsState extends State<EditEvents> {
           if (_isLoading)
             Container(
               color: Colors.black54,
-              child: const Center(child: CircularProgressIndicator()),
+              child: Container(
+                color: AppConstants.primaryColor.withOpacity(0.1),
+                child: const Center(
+                  child: SpinKitThreeBounce(
+                    color: AppConstants.primaryColor,
+                    size: 20.0,
+                  ),
+                ),
+              ),
             ),
         ],
       ),
@@ -284,12 +302,17 @@ class _EditEventsState extends State<EditEvents> {
     });
 
     try {
+      // Use the current poster URL from state - this will be the updated URL if changed
+      final finalPosterUrl = _currentPosterUrl ?? '';
+
+      print('Saving event with poster URL: $finalPosterUrl');
+
       // Create updated event object
       final updatedEvent = widget.event.copyWith(
         name: _nameController.text.trim(),
         description: _descriptionController.text.trim(),
         category: _selectedCategory,
-        posterUrl: _currentPosterUrl ?? '',
+        posterUrl: finalPosterUrl,
         startDate: _startDate,
         endDate: _endDate,
         startTime: _startTimeController.text.trim(),
@@ -318,10 +341,11 @@ class _EditEventsState extends State<EditEvents> {
           ),
         );
 
-        // Navigate back
+        // Navigate back with updated event
         Navigator.pop(context, updatedEvent);
       }
     } catch (e) {
+      print('Error saving event: $e');
       if (mounted) {
         _showErrorSnackBar('Failed to update event: ${e.toString()}');
       }
@@ -354,7 +378,9 @@ class _EditEventsState extends State<EditEvents> {
       return email;
     }
 
-    return widget.event.organizerName; // Keep original if nothing else is available
+    return widget
+        .event
+        .organizerName; // Keep original if nothing else is available
   }
 
   void _showErrorSnackBar(String message) {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:provider/provider.dart';
 import 'package:megavent/models/attendee.dart';
 import 'package:megavent/services/database_service.dart';
@@ -158,14 +159,13 @@ class _AttendeesState extends State<Attendees> with TickerProviderStateMixin {
   }
 
   Widget _buildLoadingState() {
-    return const Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          CircularProgressIndicator(),
-          SizedBox(height: 16),
-          Text('Loading attendees...', style: TextStyle(fontSize: 16)),
-        ],
+    return Container(
+      color: AppConstants.primaryColor.withOpacity(0.1),
+      child: const Center(
+        child: SpinKitThreeBounce(
+          color: AppConstants.primaryColor,
+          size: 20.0,
+        ),
       ),
     );
   }

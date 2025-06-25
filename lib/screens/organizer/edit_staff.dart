@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:megavent/models/staff.dart';
 import 'package:megavent/services/database_service.dart';
@@ -371,7 +372,15 @@ class _EditStaffState extends State<EditStaff> {
           screenTitle: widget.staff?.fullName ?? 'Add New Staff',
         ),
         drawer: OrganizerSidebar(currentRoute: currentRoute),
-        body: const Center(child: CircularProgressIndicator()),
+        body: Container(
+          color: AppConstants.primaryColor.withOpacity(0.1),
+          child: const Center(
+            child: SpinKitThreeBounce(
+              color: AppConstants.primaryColor,
+              size: 20.0,
+            ),
+          ),
+        ),
       );
     }
 

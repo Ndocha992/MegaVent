@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:provider/provider.dart';
 import 'package:megavent/models/attendee.dart';
 import 'package:megavent/models/event.dart';
@@ -167,7 +168,17 @@ class _AttendeesBottomSheetState extends State<AttendeesBottomSheet> {
 
   Widget _buildContent() {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(
+        child: Container(
+          color: AppConstants.primaryColor.withOpacity(0.1),
+          child: const Center(
+            child: SpinKitThreeBounce(
+              color: AppConstants.primaryColor,
+              size: 20.0,
+            ),
+          ),
+        ),
+      );
     }
 
     if (_error != null) {

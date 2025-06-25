@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:megavent/utils/constants.dart';
 
 class ActionButtons extends StatelessWidget {
@@ -65,12 +66,13 @@ class ActionButtons extends StatelessWidget {
             ),
             child:
                 isLoading
-                    ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ? Container(
+                      color: AppConstants.primaryColor.withOpacity(0.1),
+                      child: const Center(
+                        child: SpinKitThreeBounce(
+                          color: AppConstants.primaryColor,
+                          size: 20.0,
+                        ),
                       ),
                     )
                     : Text(

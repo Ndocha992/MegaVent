@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:megavent/screens/authentication/login_screen.dart';
 import 'package:megavent/screens/authentication/verification_screen.dart';
 import 'package:megavent/screens/admin/admin_dashboard.dart';
@@ -512,14 +513,10 @@ class _SplashScreenState extends State<SplashScreen>
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.white.withOpacity(0.9),
-                            ),
+                        const Center(
+                          child: SpinKitThreeBounce(
+                            color: AppConstants.primaryColor,
+                            size: 20.0,
                           ),
                         ),
                         const SizedBox(width: 12),

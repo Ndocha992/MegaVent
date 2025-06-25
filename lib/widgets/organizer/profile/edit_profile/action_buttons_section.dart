@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:megavent/utils/constants.dart';
 
 class ActionButtonsSection extends StatelessWidget {
@@ -22,9 +23,7 @@ class ActionButtonsSection extends StatelessWidget {
             onPressed: isLoading ? null : onCancel,
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 16),
-              side: BorderSide(
-                color: AppConstants.primaryColor,
-              ),
+              side: BorderSide(color: AppConstants.primaryColor),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -52,24 +51,24 @@ class ActionButtonsSection extends StatelessWidget {
               ),
               elevation: 2,
             ),
-            child: isLoading
-                ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        Colors.white,
+            child:
+                isLoading
+                    ? Container(
+                      color: AppConstants.primaryColor.withOpacity(0.1),
+                      child: const Center(
+                        child: SpinKitThreeBounce(
+                          color: AppConstants.primaryColor,
+                          size: 20.0,
+                        ),
+                      ),
+                    )
+                    : const Text(
+                      'Save Changes',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                  )
-                : const Text(
-                    'Save Changes',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
           ),
         ),
       ],

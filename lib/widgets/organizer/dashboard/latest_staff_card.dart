@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:megavent/models/staff.dart';
 import 'package:megavent/screens/organizer/staff_details.dart';
 import 'package:megavent/utils/constants.dart';
@@ -30,117 +31,121 @@ class LatestStaffCard extends StatelessWidget {
         const SizedBox(height: 16),
         Container(
           decoration: AppConstants.cardDecoration,
-          child: staff.isEmpty
-              ? Padding(
-                  padding: const EdgeInsets.all(32.0),
-                  child: Center(
-                    child: Column(
-                      children: [
-                        Icon(
-                          Icons.people_outline,
-                          size: 48,
-                          color: AppConstants.textSecondaryColor,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No staff members yet',
-                          style: AppConstants.bodyLarge.copyWith(
+          child:
+              staff.isEmpty
+                  ? Padding(
+                    padding: const EdgeInsets.all(32.0),
+                    child: Center(
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.people_outline,
+                            size: 48,
                             color: AppConstants.textSecondaryColor,
                           ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Add your first staff member to get started',
-                          style: AppConstants.bodySmall.copyWith(
-                            color: AppConstants.textSecondaryColor,
+                          const SizedBox(height: 16),
+                          Text(
+                            'No staff members yet',
+                            style: AppConstants.bodyLarge.copyWith(
+                              color: AppConstants.textSecondaryColor,
+                            ),
                           ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
+                          const SizedBox(height: 8),
+                          Text(
+                            'Add your first staff member to get started',
+                            style: AppConstants.bodySmall.copyWith(
+                              color: AppConstants.textSecondaryColor,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                )
-              : ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: staff.length,
-                  separatorBuilder: (context, index) => const Divider(height: 1),
-                  itemBuilder: (context, index) {
-                    final staffMember = staff[index];
-                    return GestureDetector(
-                      onTap: () => _onStaffTap(context, staffMember),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.all(16),
-                        leading: _buildStaffAvatar(staffMember),
-                        title: Text(
-                          staffMember.fullName, // Using fullName from model
-                          style: AppConstants.titleMedium.copyWith(
-                            fontWeight: FontWeight.w600,
+                  )
+                  : ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: staff.length,
+                    separatorBuilder:
+                        (context, index) => const Divider(height: 1),
+                    itemBuilder: (context, index) {
+                      final staffMember = staff[index];
+                      return GestureDetector(
+                        onTap: () => _onStaffTap(context, staffMember),
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.all(16),
+                          leading: _buildStaffAvatar(staffMember),
+                          title: Text(
+                            staffMember.fullName, // Using fullName from model
+                            style: AppConstants.titleMedium.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                        ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const SizedBox(height: 4),
-                            Text(
-                              staffMember.role,
-                              style: AppConstants.bodyMedium.copyWith(
-                                color: AppConstants.primaryColor,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              staffMember.department,
-                              style: AppConstants.bodySmall.copyWith(
-                                color: AppConstants.textSecondaryColor,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              staffMember.email,
-                              style: AppConstants.bodySmall.copyWith(
-                                color: AppConstants.textSecondaryColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                        trailing: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: StaffUtils.getDepartmentColor(
-                                  staffMember.department,
-                                ).withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                staffMember.department,
-                                style: AppConstants.bodySmall.copyWith(
-                                  color: StaffUtils.getDepartmentColor(staffMember.department),
-                                  fontWeight: FontWeight.w600,
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: 4),
+                              Text(
+                                staffMember.role,
+                                style: AppConstants.bodyMedium.copyWith(
+                                  color: AppConstants.primaryColor,
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              StaffUtils.formatHireDate(staffMember.hiredAt),
-                              style: AppConstants.bodySmall.copyWith(
-                                color: AppConstants.textSecondaryColor,
+                              const SizedBox(height: 2),
+                              Text(
+                                staffMember.department,
+                                style: AppConstants.bodySmall.copyWith(
+                                  color: AppConstants.textSecondaryColor,
+                                ),
                               ),
-                            ),
-                          ],
+                              const SizedBox(height: 2),
+                              Text(
+                                staffMember.email,
+                                style: AppConstants.bodySmall.copyWith(
+                                  color: AppConstants.textSecondaryColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                          trailing: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: StaffUtils.getDepartmentColor(
+                                    staffMember.department,
+                                  ).withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  staffMember.department,
+                                  style: AppConstants.bodySmall.copyWith(
+                                    color: StaffUtils.getDepartmentColor(
+                                      staffMember.department,
+                                    ),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                StaffUtils.formatHireDate(staffMember.hiredAt),
+                                style: AppConstants.bodySmall.copyWith(
+                                  color: AppConstants.textSecondaryColor,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                ),
+                      );
+                    },
+                  ),
         ),
       ],
     );
@@ -156,7 +161,9 @@ class LatestStaffCard extends StatelessWidget {
             shape: BoxShape.circle,
             gradient: LinearGradient(
               colors: [
-                StaffUtils.getDepartmentColor(staffMember.department).withOpacity(0.8),
+                StaffUtils.getDepartmentColor(
+                  staffMember.department,
+                ).withOpacity(0.8),
                 StaffUtils.getDepartmentColor(staffMember.department),
               ],
             ),
@@ -183,11 +190,12 @@ class LatestStaffCard extends StatelessWidget {
 
   Widget _buildProfileImage(Staff staffMember) {
     // Handle different types of profile images
-    if (staffMember.profileImage != null && staffMember.profileImage!.isNotEmpty) {
+    if (staffMember.profileImage != null &&
+        staffMember.profileImage!.isNotEmpty) {
       // Check if it's a base64 encoded image
       if (staffMember.profileImage!.startsWith('data:image/')) {
         return _buildBase64Image(staffMember);
-      } 
+      }
       // Check if it's a base64 string without prefix
       else if (_isBase64String(staffMember.profileImage!)) {
         return _buildBase64ImageFromString(staffMember);
@@ -200,17 +208,17 @@ class LatestStaffCard extends StatelessWidget {
             width: 48,
             height: 48,
             fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) =>
-                _buildInitialsAvatar(staffMember),
+            errorBuilder:
+                (context, error, stackTrace) =>
+                    _buildInitialsAvatar(staffMember),
             loadingBuilder: (context, child, loadingProgress) {
               if (loadingProgress == null) return child;
-              return Center(
-                child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              return Container(
+                color: AppConstants.primaryColor.withOpacity(0.1),
+                child: const Center(
+                  child: SpinKitThreeBounce(
+                    color: AppConstants.primaryColor,
+                    size: 20.0,
                   ),
                 ),
               );
@@ -219,7 +227,7 @@ class LatestStaffCard extends StatelessWidget {
         );
       }
     }
-    
+
     // Default to initials avatar
     return _buildInitialsAvatar(staffMember);
   }
@@ -229,15 +237,15 @@ class LatestStaffCard extends StatelessWidget {
       // Extract base64 data from data URL
       final base64Data = staffMember.profileImage!.split(',')[1];
       final bytes = base64Decode(base64Data);
-      
+
       return ClipOval(
         child: Image.memory(
           bytes,
           width: 48,
           height: 48,
           fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) =>
-              _buildInitialsAvatar(staffMember),
+          errorBuilder:
+              (context, error, stackTrace) => _buildInitialsAvatar(staffMember),
         ),
       );
     } catch (e) {
@@ -248,15 +256,15 @@ class LatestStaffCard extends StatelessWidget {
   Widget _buildBase64ImageFromString(Staff staffMember) {
     try {
       final bytes = base64Decode(staffMember.profileImage!);
-      
+
       return ClipOval(
         child: Image.memory(
           bytes,
           width: 48,
           height: 48,
           fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) =>
-              _buildInitialsAvatar(staffMember),
+          errorBuilder:
+              (context, error, stackTrace) => _buildInitialsAvatar(staffMember),
         ),
       );
     } catch (e) {

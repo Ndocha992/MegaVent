@@ -69,97 +69,15 @@ class EventLocationSection extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
 
-                // Additional location details
+                // Timezone info
                 _buildLocationDetail(
                   icon: Icons.access_time,
                   title: 'Timezone',
                   value: _getTimezone(),
                 ),
-                const SizedBox(height: 8),
-                _buildLocationDetail(
-                  icon: Icons.info_outline,
-                  title: 'Venue Type',
-                  value: _getVenueType(),
-                ),
               ],
             ),
           ),
-
-          const SizedBox(height: 16),
-
-          // Map Placeholder
-          // Container(
-          //   height: 200,
-          //   width: double.infinity,
-          //   decoration: BoxDecoration(
-          //     color: AppConstants.primaryColor.withOpacity(0.1),
-          //     borderRadius: BorderRadius.circular(12),
-          //     border: Border.all(
-          //       color: AppConstants.primaryColor.withOpacity(0.2),
-          //     ),
-          //   ),
-          //   child: Column(
-          //     mainAxisAlignment: MainAxisAlignment.center,
-          //     children: [
-          //       Icon(
-          //         Icons.map,
-          //         size: 48,
-          //         color: AppConstants.primaryColor.withOpacity(0.6),
-          //       ),
-          //       const SizedBox(height: 8),
-          //       Text(
-          //         'Interactive Map',
-          //         style: AppConstants.bodyMedium.copyWith(
-          //           color: AppConstants.primaryColor,
-          //           fontWeight: FontWeight.w600,
-          //         ),
-          //       ),
-          //       const SizedBox(height: 4),
-          //       Text(
-          //         'Tap to view location on map',
-          //         style: AppConstants.bodySmallSecondary,
-          //       ),
-          //     ],
-          //   ),
-          // ),
-          const SizedBox(height: 16),
-
-          // Action Buttons
-          // Row(
-          //   children: [
-          //     Expanded(
-          //       child: OutlinedButton.icon(
-          //         onPressed: _handleGetDirections,
-          //         icon: const Icon(Icons.directions),
-          //         label: const Text('Get Directions'),
-          //         style: OutlinedButton.styleFrom(
-          //           foregroundColor: AppConstants.primaryColor,
-          //           side: BorderSide(color: AppConstants.primaryColor),
-          //           shape: RoundedRectangleBorder(
-          //             borderRadius: BorderRadius.circular(12),
-          //           ),
-          //           padding: const EdgeInsets.symmetric(vertical: 12),
-          //         ),
-          //       ),
-          //     ),
-          //     const SizedBox(width: 12),
-          //     Expanded(
-          //       child: ElevatedButton.icon(
-          //         onPressed: _handleShareLocation,
-          //         icon: const Icon(Icons.share),
-          //         label: const Text('Share Location'),
-          //         style: ElevatedButton.styleFrom(
-          //           backgroundColor: AppConstants.primaryColor,
-          //           foregroundColor: Colors.white,
-          //           shape: RoundedRectangleBorder(
-          //             borderRadius: BorderRadius.circular(12),
-          //           ),
-          //           padding: const EdgeInsets.symmetric(vertical: 12),
-          //         ),
-          //       ),
-          //     ),
-          //   ],
-          // ),
         ],
       ),
     );
@@ -184,47 +102,57 @@ class EventLocationSection extends StatelessWidget {
   }
 
   String _getTimezone() {
-    // Simple timezone detection based on location
+    // Enhanced timezone detection for more locations including Kenya
     final location = event.location.toLowerCase();
-    if (location.contains('new york') || location.contains('ny')) {
+
+    // Kenya and East Africa
+    if (location.contains('nakuru') ||
+        location.contains('nairobi') ||
+        location.contains('kenya') ||
+        location.contains('kampala') ||
+        location.contains('dar es salaam')) {
+      return 'EAT (UTC+3)';
+    }
+    // US East Coast
+    else if (location.contains('new york') ||
+        location.contains('ny') ||
+        location.contains('miami') ||
+        location.contains('atlanta')) {
       return 'EST (UTC-5)';
-    } else if (location.contains('los angeles') ||
-        location.contains('california')) {
+    }
+    // US West Coast
+    else if (location.contains('los angeles') ||
+        location.contains('california') ||
+        location.contains('san francisco')) {
       return 'PST (UTC-8)';
-    } else if (location.contains('london')) {
+    }
+    // UK
+    else if (location.contains('london') ||
+        location.contains('manchester') ||
+        location.contains('birmingham')) {
       return 'GMT (UTC+0)';
-    } else if (location.contains('tokyo')) {
+    }
+    // Japan
+    else if (location.contains('tokyo') ||
+        location.contains('osaka') ||
+        location.contains('kyoto')) {
       return 'JST (UTC+9)';
-    } else {
+    }
+    // South Africa
+    else if (location.contains('cape town') ||
+        location.contains('johannesburg') ||
+        location.contains('durban')) {
+      return 'SAST (UTC+2)';
+    }
+    // Nigeria
+    else if (location.contains('lagos') ||
+        location.contains('abuja') ||
+        location.contains('nigeria')) {
+      return 'WAT (UTC+1)';
+    }
+    // Default fallback
+    else {
       return 'Local Time';
     }
-  }
-
-  String _getVenueType() {
-    final location = event.location.toLowerCase();
-    if (location.contains('center') || location.contains('hall')) {
-      return 'Conference Center';
-    } else if (location.contains('hotel')) {
-      return 'Hotel Venue';
-    } else if (location.contains('university') ||
-        location.contains('college')) {
-      return 'Educational Facility';
-    } else if (location.contains('park') || location.contains('outdoor')) {
-      return 'Outdoor Venue';
-    } else {
-      return 'Indoor Venue';
-    }
-  }
-
-  void _handleGetDirections() {
-    // Handle getting directions to the location
-    // This would typically open a maps app or show directions
-    print('Getting directions to: ${event.location}');
-  }
-
-  void _handleShareLocation() {
-    // Handle sharing the location
-    // This would typically open a share dialog
-    print('Sharing location: ${event.location}');
   }
 }

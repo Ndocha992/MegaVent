@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:megavent/utils/constants.dart';
 
 class ShareButtonWidget extends StatelessWidget {
   final IconData icon;
@@ -28,29 +30,23 @@ class ShareButtonWidget extends StatelessWidget {
           decoration: BoxDecoration(
             color: color.withOpacity(0.1),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: color.withOpacity(0.3),
-              width: 1,
-            ),
+            border: Border.all(color: color.withOpacity(0.3), width: 1),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               if (isLoading)
-                SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(color),
+                Container(
+                  color: AppConstants.primaryColor.withOpacity(0.1),
+                  child: const Center(
+                    child: SpinKitThreeBounce(
+                      color: AppConstants.primaryColor,
+                      size: 20.0,
+                    ),
                   ),
                 )
               else
-                Icon(
-                  icon,
-                  color: color,
-                  size: 24,
-                ),
+                Icon(icon, color: color, size: 24),
               const SizedBox(height: 8),
               Text(
                 label,

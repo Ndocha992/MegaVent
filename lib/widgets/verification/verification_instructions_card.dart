@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:megavent/utils/constants.dart';
 
 class VerificationInstructionsCard extends StatelessWidget {
@@ -102,10 +103,7 @@ class VerificationInstructionsCard extends StatelessWidget {
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: AppConstants.borderColor,
-                  width: 1,
-                ),
+                border: Border.all(color: AppConstants.borderColor, width: 1),
               ),
               child: Padding(
                 padding: const EdgeInsets.all(20),
@@ -137,7 +135,7 @@ class VerificationInstructionsCard extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    
+
                     // Countdown display with gradient background
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -145,31 +143,37 @@ class VerificationInstructionsCard extends StatelessWidget {
                         vertical: 12,
                       ),
                       decoration: BoxDecoration(
-                        gradient: canResend
-                            ? const LinearGradient(
-                                colors: AppConstants.accentGradient,
-                              )
-                            : LinearGradient(
-                                colors: [
-                                  AppConstants.primaryColor.withOpacity(0.1),
-                                  AppConstants.primaryColor.withOpacity(0.05),
-                                ],
-                              ),
-                        borderRadius: BorderRadius.circular(15),
-                        boxShadow: canResend
-                            ? [
-                                BoxShadow(
-                                  color: AppConstants.successColor.withOpacity(0.3),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
+                        gradient:
+                            canResend
+                                ? const LinearGradient(
+                                  colors: AppConstants.accentGradient,
+                                )
+                                : LinearGradient(
+                                  colors: [
+                                    AppConstants.primaryColor.withOpacity(0.1),
+                                    AppConstants.primaryColor.withOpacity(0.05),
+                                  ],
                                 ),
-                              ]
-                            : null,
+                        borderRadius: BorderRadius.circular(15),
+                        boxShadow:
+                            canResend
+                                ? [
+                                  BoxShadow(
+                                    color: AppConstants.successColor
+                                        .withOpacity(0.3),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ]
+                                : null,
                       ),
                       child: Text(
                         canResend ? 'Available Now!' : countdownDisplay,
                         style: AppConstants.headlineSmall.copyWith(
-                          color: canResend ? Colors.white : AppConstants.primaryColor,
+                          color:
+                              canResend
+                                  ? Colors.white
+                                  : AppConstants.primaryColor,
                           fontWeight: FontWeight.bold,
                           fontSize: 28,
                         ),
@@ -184,80 +188,91 @@ class VerificationInstructionsCard extends StatelessWidget {
             // Enhanced resend button
             isLoading
                 ? Container(
-                    width: double.infinity,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      color: AppConstants.borderColor,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
+                  width: double.infinity,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: AppConstants.borderColor,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Container(
+                    color: AppConstants.primaryColor.withOpacity(0.1),
                     child: const Center(
-                      child: SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(
-                          color: AppConstants.primaryColor,
-                          strokeWidth: 2,
-                        ),
+                      child: SpinKitThreeBounce(
+                        color: AppConstants.primaryColor,
+                        size: 20.0,
                       ),
                     ),
-                  )
+                  ),
+                )
                 : AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    width: double.infinity,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      gradient: canResend
-                          ? const LinearGradient(
+                  duration: const Duration(milliseconds: 300),
+                  width: double.infinity,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    gradient:
+                        canResend
+                            ? const LinearGradient(
                               colors: AppConstants.primaryGradient,
                             )
-                          : null,
-                      color: canResend ? null : AppConstants.borderColor,
-                      borderRadius: BorderRadius.circular(16),
-                      border: !canResend
-                          ? Border.all(
+                            : null,
+                    color: canResend ? null : AppConstants.borderColor,
+                    borderRadius: BorderRadius.circular(16),
+                    border:
+                        !canResend
+                            ? Border.all(
                               color: AppConstants.borderColor,
                               width: 1.5,
                             )
-                          : null,
-                      boxShadow: canResend
-                          ? [
+                            : null,
+                    boxShadow:
+                        canResend
+                            ? [
                               BoxShadow(
-                                color: AppConstants.primaryColor.withOpacity(0.3),
+                                color: AppConstants.primaryColor.withOpacity(
+                                  0.3,
+                                ),
                                 blurRadius: 15,
                                 offset: const Offset(0, 6),
                               ),
                             ]
-                          : null,
+                            : null,
+                  ),
+                  child: ElevatedButton(
+                    onPressed: canResend ? onResendPressed : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                      foregroundColor:
+                          canResend
+                              ? Colors.white
+                              : AppConstants.textSecondaryColor,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                     ),
-                    child: ElevatedButton(
-                      onPressed: canResend ? onResendPressed : null,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        shadowColor: Colors.transparent,
-                        foregroundColor: canResend ? Colors.white : AppConstants.textSecondaryColor,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          canResend
+                              ? Icons.send_rounded
+                              : Icons.schedule_rounded,
+                          size: 20,
                         ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            canResend ? Icons.send_rounded : Icons.schedule_rounded,
-                            size: 20,
+                        const SizedBox(width: 8),
+                        Text(
+                          canResend
+                              ? 'Resend Verification Email'
+                              : 'Wait to Resend',
+                          style: AppConstants.bodyMedium.copyWith(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
                           ),
-                          const SizedBox(width: 8),
-                          Text(
-                            canResend ? 'Resend Verification Email' : 'Wait to Resend',
-                            style: AppConstants.bodyMedium.copyWith(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
+                ),
           ],
         ),
       ),

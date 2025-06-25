@@ -15,7 +15,8 @@ class EventActionsSection extends StatelessWidget {
     super.key,
     required this.event,
     required this.onEdit,
-    required this.onDelete, required bool isDeleting,
+    required this.onDelete,
+    required bool isDeleting,
   });
 
   @override

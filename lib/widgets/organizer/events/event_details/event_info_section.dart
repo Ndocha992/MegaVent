@@ -91,17 +91,21 @@ class EventInfoSection extends StatelessWidget {
       'December',
     ];
 
-    String startTime =
-        '${event.startDate.hour.toString().padLeft(2, '0')}:${event.startDate.minute.toString().padLeft(2, '0')}';
-    String endTime =
-        '${event.endDate.hour.toString().padLeft(2, '0')}:${event.endDate.minute.toString().padLeft(2, '0')}';
+    // Use the startTime and endTime strings from the Event model
+    String timeRange = '${event.startTime} - ${event.endTime}';
 
+    // Handle single day events
     if (event.startDate.day == event.endDate.day &&
         event.startDate.month == event.endDate.month &&
         event.startDate.year == event.endDate.year) {
-      return '${months[event.startDate.month - 1]} ${event.startDate.day}, ${event.startDate.year}\n$startTime - $endTime';
+      return '${months[event.startDate.month - 1]} ${event.startDate.day}, ${event.startDate.year}\n$timeRange';
     } else {
-      return '${months[event.startDate.month - 1]} ${event.startDate.day} - ${months[event.endDate.month - 1]} ${event.endDate.day}, ${event.endDate.year}';
+      // Handle multi-day events
+      String startDateStr =
+          '${months[event.startDate.month - 1]} ${event.startDate.day}, ${event.startDate.year}';
+      String endDateStr =
+          '${months[event.endDate.month - 1]} ${event.endDate.day}, ${event.endDate.year}';
+      return '$startDateStr - $endDateStr\n$timeRange';
     }
   }
 }

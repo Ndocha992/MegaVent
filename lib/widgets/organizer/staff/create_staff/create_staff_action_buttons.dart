@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:megavent/utils/constants.dart';
 
 class CreateStaffActionButtons extends StatelessWidget {
@@ -50,42 +51,44 @@ class CreateStaffActionButtons extends StatelessWidget {
               ),
               elevation: 2,
             ),
-            child: isLoading
-                ? Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+            child:
+                isLoading
+                    ? Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          color: AppConstants.primaryColor.withOpacity(0.1),
+                          child: const Center(
+                            child: SpinKitThreeBounce(
+                              color: AppConstants.primaryColor,
+                              size: 20.0,
+                            ),
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Creating...',
-                        style: AppConstants.bodyMedium.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
+                        const SizedBox(width: 12),
+                        Text(
+                          'Creating...',
+                          style: AppConstants.bodyMedium.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ),
-                    ],
-                  )
-                : Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.person_add_outlined, size: 20),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Create Staff',
-                        style: AppConstants.bodyMedium.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
+                      ],
+                    )
+                    : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.person_add_outlined, size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Create Staff',
+                          style: AppConstants.bodyMedium.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
           ),
         ),
       ],

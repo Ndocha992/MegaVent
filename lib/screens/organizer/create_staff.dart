@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:megavent/models/staff.dart';
 import 'package:megavent/services/database_service.dart';
@@ -188,7 +189,15 @@ class _CreateStaffState extends State<CreateStaff> {
         backgroundColor: AppConstants.backgroundColor,
         appBar: NestedScreenAppBar(screenTitle: 'Create Staff'),
         drawer: OrganizerSidebar(currentRoute: currentRoute),
-        body: const Center(child: CircularProgressIndicator()),
+        body: Container(
+          color: AppConstants.primaryColor.withOpacity(0.1),
+          child: const Center(
+            child: SpinKitThreeBounce(
+              color: AppConstants.primaryColor,
+              size: 20.0,
+            ),
+          ),
+        ),
       );
     }
 
@@ -277,65 +286,66 @@ class _CreateStaffState extends State<CreateStaff> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(20),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppConstants.borderColor,
-                borderRadius: BorderRadius.circular(2),
-              ),
+      builder:
+          (context) => Container(
+            padding: const EdgeInsets.all(20),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
             ),
-            const SizedBox(height: 20),
-            Text(
-              'Add Profile Photo',
-              style: AppConstants.bodyMedium.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                _buildImageOption(
-                  icon: Icons.photo_camera_outlined,
-                  label: 'Camera',
-                  onTap: () {
-                    Navigator.pop(context);
-                    _pickImageFromCamera();
-                  },
-                ),
-                _buildImageOption(
-                  icon: Icons.photo_library_outlined,
-                  label: 'Gallery',
-                  onTap: () {
-                    Navigator.pop(context);
-                    _pickImageFromGallery();
-                  },
-                ),
-                if (_profileImageBase64 != null)
-                  _buildImageOption(
-                    icon: Icons.delete_outline,
-                    label: 'Remove',
-                    onTap: () {
-                      Navigator.pop(context);
-                      setState(() => _profileImageBase64 = null);
-                    },
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppConstants.borderColor,
+                    borderRadius: BorderRadius.circular(2),
                   ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'Add Profile Photo',
+                  style: AppConstants.bodyMedium.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _buildImageOption(
+                      icon: Icons.photo_camera_outlined,
+                      label: 'Camera',
+                      onTap: () {
+                        Navigator.pop(context);
+                        _pickImageFromCamera();
+                      },
+                    ),
+                    _buildImageOption(
+                      icon: Icons.photo_library_outlined,
+                      label: 'Gallery',
+                      onTap: () {
+                        Navigator.pop(context);
+                        _pickImageFromGallery();
+                      },
+                    ),
+                    if (_profileImageBase64 != null)
+                      _buildImageOption(
+                        icon: Icons.delete_outline,
+                        label: 'Remove',
+                        onTap: () {
+                          Navigator.pop(context);
+                          setState(() => _profileImageBase64 = null);
+                        },
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 20),
               ],
             ),
-            const SizedBox(height: 20),
-          ],
-        ),
-      ),
+          ),
     );
   }
 
