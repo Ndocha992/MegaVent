@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:megavent/models/staff.dart';
 import 'package:megavent/screens/organizer/create_staff.dart';
 import 'package:megavent/screens/organizer/staff_details.dart';
@@ -129,7 +130,12 @@ class _StaffScreenState extends State<StaffScreen>
   }
 
   Widget _buildLoadingState() {
-    return const Center(child: CircularProgressIndicator());
+    return Container(
+      color: AppConstants.primaryColor.withOpacity(0.1),
+      child: const Center(
+        child: SpinKitThreeBounce(color: AppConstants.primaryColor, size: 20.0),
+      ),
+    );
   }
 
   Widget _buildErrorState() {

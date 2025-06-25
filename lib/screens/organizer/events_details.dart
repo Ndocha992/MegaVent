@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:provider/provider.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/models/event.dart';
@@ -96,11 +97,19 @@ class _EventsDetailsState extends State<EventsDetails> {
   }
 
   Widget _buildLoadingState() {
-    return const Center(
+    return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          CircularProgressIndicator(),
+          Container(
+            color: AppConstants.primaryColor.withOpacity(0.1),
+            child: const Center(
+              child: SpinKitThreeBounce(
+                color: AppConstants.primaryColor,
+                size: 20.0,
+              ),
+            ),
+          ),
           SizedBox(height: 16),
           Text('Loading event details...'),
         ],
@@ -315,7 +324,7 @@ class _EventsDetailsState extends State<EventsDetails> {
               actions:
                   _isDeleting
                       ? [
-                        const Padding(
+                        Padding(
                           padding: EdgeInsets.all(16.0),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -323,8 +332,16 @@ class _EventsDetailsState extends State<EventsDetails> {
                               SizedBox(
                                 width: 20,
                                 height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
+                                child: Container(
+                                  color: AppConstants.primaryColor.withOpacity(
+                                    0.1,
+                                  ),
+                                  child: const Center(
+                                    child: SpinKitThreeBounce(
+                                      color: AppConstants.primaryColor,
+                                      size: 20.0,
+                                    ),
+                                  ),
                                 ),
                               ),
                               SizedBox(width: 12),

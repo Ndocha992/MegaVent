@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:megavent/models/staff.dart';
 import 'package:megavent/screens/organizer/edit_staff.dart';
 import 'package:megavent/services/database_service.dart';
@@ -47,9 +48,12 @@ class _StaffDetailsState extends State<StaffDetails> {
 
   void _loadStaffData() async {
     try {
-      final databaseService = Provider.of<DatabaseService>(context, listen: false);
+      final databaseService = Provider.of<DatabaseService>(
+        context,
+        listen: false,
+      );
       final staffList = await databaseService.getAllStaff();
-      
+
       if (staffList.isNotEmpty) {
         if (widget.staffId != null) {
           // Find staff by ID
@@ -62,7 +66,7 @@ class _StaffDetailsState extends State<StaffDetails> {
           currentStaff = staffList.first;
         }
       }
-      
+
       setState(() {
         isLoading = false;
       });
@@ -82,8 +86,14 @@ class _StaffDetailsState extends State<StaffDetails> {
         backgroundColor: AppConstants.backgroundColor,
         appBar: const NestedScreenAppBar(screenTitle: 'Loading...'),
         drawer: OrganizerSidebar(currentRoute: currentRoute),
-        body: const Center(
-          child: CircularProgressIndicator(),
+        body: Container(
+          color: AppConstants.primaryColor.withOpacity(0.1),
+          child: const Center(
+            child: SpinKitThreeBounce(
+              color: AppConstants.primaryColor,
+              size: 20.0,
+            ),
+          ),
         ),
       );
     }
@@ -272,17 +282,24 @@ class _StaffDetailsState extends State<StaffDetails> {
 
   void _deleteStaff() async {
     try {
-      final databaseService = Provider.of<DatabaseService>(context, listen: false);
+      final databaseService = Provider.of<DatabaseService>(
+        context,
+        listen: false,
+      );
       await databaseService.deleteStaff(currentStaff!.id);
 
       // Show success message
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${currentStaff!.name} has been removed from the team'),
+            content: Text(
+              '${currentStaff!.name} has been removed from the team',
+            ),
             backgroundColor: AppConstants.successColor,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
 
@@ -296,7 +313,9 @@ class _StaffDetailsState extends State<StaffDetails> {
             content: Text('Failed to delete staff: $e'),
             backgroundColor: AppConstants.errorColor,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
       }

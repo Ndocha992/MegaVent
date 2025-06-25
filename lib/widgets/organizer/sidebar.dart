@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/services/auth_service.dart';
 import 'package:provider/provider.dart';
@@ -253,8 +254,15 @@ class OrganizerSidebar extends StatelessWidget {
                               context: context,
                               barrierDismissible: false,
                               builder:
-                                  (context) => const Center(
-                                    child: CircularProgressIndicator(),
+                                  (context) => Container(
+                                    color: AppConstants.primaryColor
+                                        .withOpacity(0.1),
+                                    child: const Center(
+                                      child: SpinKitThreeBounce(
+                                        color: AppConstants.primaryColor,
+                                        size: 20.0,
+                                      ),
+                                    ),
                                   ),
                             );
 
@@ -296,13 +304,12 @@ class OrganizerSidebar extends StatelessWidget {
                   ),
                   child:
                       authService.isLoading
-                          ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Colors.white,
+                          ? Container(
+                            color: AppConstants.primaryColor.withOpacity(0.1),
+                            child: const Center(
+                              child: SpinKitThreeBounce(
+                                color: AppConstants.primaryColor,
+                                size: 20.0,
                               ),
                             ),
                           )

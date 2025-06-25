@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:megavent/screens/loading_screen.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/widgets/organizer/nested_app_bar.dart';
@@ -260,7 +261,15 @@ class _EditProfileState extends State<EditProfile> {
                 screenTitle: 'Edit Profile', // Default title while loading
               ),
               drawer: OrganizerSidebar(currentRoute: currentRoute),
-              body: const Center(child: CircularProgressIndicator()),
+              body: Container(
+                color: AppConstants.primaryColor.withOpacity(0.1),
+                child: const Center(
+                  child: SpinKitThreeBounce(
+                    color: AppConstants.primaryColor,
+                    size: 20.0,
+                  ),
+                ),
+              ),
             );
           }
 

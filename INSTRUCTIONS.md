@@ -914,7 +914,15 @@ flutter build apk --verbose
 // Use cached network images
 CachedNetworkImage(
   imageUrl: 'https://example.com/image.jpg',
-  placeholder: (context, url) => CircularProgressIndicator(),
+  placeholder: (context, url) => Container(
+  color: AppConstants.primaryColor.withOpacity(0.1),
+  child: const Center(
+    child: SpinKitThreeBounce(
+      color: AppConstants.primaryColor,
+      size: 20.0,
+    ),
+  ),
+),,
   errorWidget: (context, url, error) => Icon(Icons.error),
 )
 

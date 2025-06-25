@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:megavent/utils/constants.dart';
 
 class VerificationActions extends StatelessWidget {
@@ -23,22 +24,24 @@ class VerificationActions extends StatelessWidget {
           width: double.infinity,
           height: 56,
           decoration: BoxDecoration(
-            gradient: isLoading
-                ? null
-                : const LinearGradient(
-                    colors: AppConstants.primaryGradient,
-                  ),
+            gradient:
+                isLoading
+                    ? null
+                    : const LinearGradient(
+                      colors: AppConstants.primaryGradient,
+                    ),
             color: isLoading ? AppConstants.borderColor : null,
             borderRadius: BorderRadius.circular(16),
-            boxShadow: isLoading
-                ? null
-                : [
-                    BoxShadow(
-                      color: AppConstants.primaryColor.withOpacity(0.3),
-                      blurRadius: 15,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
+            boxShadow:
+                isLoading
+                    ? null
+                    : [
+                      BoxShadow(
+                        color: AppConstants.primaryColor.withOpacity(0.3),
+                        blurRadius: 15,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
           ),
           child: ElevatedButton(
             onPressed: isLoading ? null : onCheckVerification,
@@ -50,32 +53,31 @@ class VerificationActions extends StatelessWidget {
                 borderRadius: BorderRadius.circular(16),
               ),
             ),
-            child: isLoading
-                ? const SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      color: AppConstants.primaryColor,
-                      strokeWidth: 2,
-                    ),
-                  )
-                : Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.refresh_rounded,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Check Verification Status',
-                        style: AppConstants.bodyMedium.copyWith(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 16,
+            child:
+                isLoading
+                    ? Container(
+                      color: AppConstants.primaryColor.withOpacity(0.1),
+                      child: const Center(
+                        child: SpinKitThreeBounce(
+                          color: AppConstants.primaryColor,
+                          size: 20.0,
                         ),
                       ),
-                    ],
-                  ),
+                    )
+                    : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.refresh_rounded, size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Check Verification Status',
+                          style: AppConstants.bodyMedium.copyWith(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
           ),
         ),
         const SizedBox(height: 16),
@@ -87,10 +89,7 @@ class VerificationActions extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: AppConstants.borderColor,
-              width: 1.5,
-            ),
+            border: Border.all(color: AppConstants.borderColor, width: 1.5),
             boxShadow: [
               BoxShadow(
                 color: AppConstants.primaryColor.withOpacity(0.05),
@@ -112,10 +111,7 @@ class VerificationActions extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(
-                  Icons.edit_rounded,
-                  size: 20,
-                ),
+                const Icon(Icons.edit_rounded, size: 20),
                 const SizedBox(width: 8),
                 Text(
                   'Change Email Address',
@@ -284,7 +280,7 @@ class VerificationActions extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 24),
-              
+
               // Support options
               _buildSupportOption(
                 icon: Icons.email_rounded,
@@ -337,10 +333,7 @@ class VerificationActions extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppConstants.backgroundColor,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: AppConstants.borderColor,
-            width: 1,
-          ),
+          border: Border.all(color: AppConstants.borderColor, width: 1),
         ),
         child: Row(
           children: [
@@ -350,11 +343,7 @@ class VerificationActions extends StatelessWidget {
                 color: AppConstants.primaryColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(
-                icon,
-                color: AppConstants.primaryColor,
-                size: 20,
-              ),
+              child: Icon(icon, color: AppConstants.primaryColor, size: 20),
             ),
             const SizedBox(width: 12),
             Expanded(

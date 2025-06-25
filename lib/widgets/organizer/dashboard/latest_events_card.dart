@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:provider/provider.dart';
 import 'package:megavent/screens/organizer/events_details.dart';
 import 'package:megavent/utils/constants.dart';
@@ -42,10 +43,11 @@ class _LatestEventsCardState extends State<LatestEventsCard> {
             // Sort events by creation date (most recent first) and limit
             final sortedEvents = List<Event>.from(events);
             sortedEvents.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-            
-            final limitedEvents = widget.limit != null 
-                ? sortedEvents.take(widget.limit!).toList()
-                : sortedEvents;
+
+            final limitedEvents =
+                widget.limit != null
+                    ? sortedEvents.take(widget.limit!).toList()
+                    : sortedEvents;
 
             setState(() {
               _events = limitedEvents;
@@ -135,19 +137,18 @@ class _LatestEventsCardState extends State<LatestEventsCard> {
   }
 
   Widget _buildLoadingState() {
-    return Container(
+    return SizedBox(
       height: 220,
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  AppConstants.primaryColor,
+            Container(
+              color: AppConstants.primaryColor.withOpacity(0.1),
+              child: const Center(
+                child: SpinKitThreeBounce(
+                  color: AppConstants.primaryColor,
+                  size: 20.0,
                 ),
               ),
             ),
@@ -171,11 +172,7 @@ class _LatestEventsCardState extends State<LatestEventsCard> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.error_outline,
-              size: 32,
-              color: AppConstants.errorColor,
-            ),
+            Icon(Icons.error_outline, size: 32, color: AppConstants.errorColor),
             const SizedBox(height: 12),
             Text(
               'Error loading events',

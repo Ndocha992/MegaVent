@@ -1,11 +1,100 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:megavent/models/event.dart';
+import 'package:megavent/services/location_service.dart';
 import 'package:megavent/utils/constants.dart';
+import 'package:megavent/widgets/organizer/events/event_details/location_actions.dart';
+import 'package:megavent/widgets/organizer/events/event_details/location_details.dart';
+import 'package:megavent/widgets/organizer/events/event_details/location_map.dart';
 
-class EventLocationSection extends StatelessWidget {
+class EventLocationSection extends StatefulWidget {
   final Event event;
 
   const EventLocationSection({super.key, required this.event});
+
+  @override
+  State<EventLocationSection> createState() => _EventLocationSectionState();
+}
+
+class _EventLocationSectionState extends State<EventLocationSection> {
+  late final LocationService _locationService;
+
+  LatLng? _eventCoordinates;
+  LatLng? _currentPosition;
+  bool _isLoading = true;
+  String _errorMessage = '';
+  final MapController _mapController = MapController();
+
+  @override
+  void initState() {
+    super.initState();
+    _locationService = LocationService();
+    _initLocationData();
+  }
+
+  Future<void> _initLocationData() async {
+    try {
+      setState(() {
+        _isLoading = true;
+        _errorMessage = '';
+      });
+
+      // Get event coordinates
+      final eventCoords = await _locationService.getEventCoordinates(
+        widget.event.location,
+      );
+      if (eventCoords != null) {
+        setState(() {
+          _eventCoordinates = eventCoords;
+        });
+      }
+
+      // Get current position
+      try {
+        final currentCoords = await _locationService.getCurrentPosition();
+        if (currentCoords != null) {
+          setState(() {
+            _currentPosition = currentCoords;
+          });
+        }
+      } catch (e) {
+        debugPrint('Could not get current position: $e');
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Could not load event location';
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _showSnackBar(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+    }
+  }
+
+  void _zoomToFitMarkers() {
+    if (_eventCoordinates == null) return;
+
+    if (_currentPosition != null) {
+      final bounds = LatLngBounds.fromPoints([
+        _eventCoordinates!,
+        _currentPosition!,
+      ]);
+      _mapController.fitCamera(
+        CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(50)),
+      );
+    } else {
+      _mapController.move(_eventCoordinates!, 14.0);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -16,215 +105,53 @@ class EventLocationSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Location', style: AppConstants.titleLarge),
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppConstants.primaryColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  Icons.directions,
-                  color: AppConstants.primaryColor,
-                  size: 20,
-                ),
-              ),
-            ],
+          _buildHeader(),
+          const SizedBox(height: 16),
+          LocationDetailsWidget(
+            event: widget.event,
+            currentPosition: _currentPosition,
+            eventCoordinates: _eventCoordinates,
           ),
           const SizedBox(height: 16),
-
-          // Location Details
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppConstants.primaryColor.withOpacity(0.05),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: AppConstants.primaryColor.withOpacity(0.1),
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.location_on,
-                      color: AppConstants.primaryColor,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        event.location,
-                        style: AppConstants.bodyMedium.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-
-                // Additional location details
-                _buildLocationDetail(
-                  icon: Icons.access_time,
-                  title: 'Timezone',
-                  value: _getTimezone(),
-                ),
-                const SizedBox(height: 8),
-                _buildLocationDetail(
-                  icon: Icons.info_outline,
-                  title: 'Venue Type',
-                  value: _getVenueType(),
-                ),
-              ],
-            ),
+          LocationMapWidget(
+            isLoading: _isLoading,
+            errorMessage: _errorMessage,
+            eventCoordinates: _eventCoordinates,
+            currentPosition: _currentPosition,
+            mapController: _mapController,
+            onRefresh: _initLocationData,
+            onZoomToFit: _zoomToFitMarkers,
+            event: widget.event,
           ),
-
           const SizedBox(height: 16),
-
-          // Map Placeholder
-          // Container(
-          //   height: 200,
-          //   width: double.infinity,
-          //   decoration: BoxDecoration(
-          //     color: AppConstants.primaryColor.withOpacity(0.1),
-          //     borderRadius: BorderRadius.circular(12),
-          //     border: Border.all(
-          //       color: AppConstants.primaryColor.withOpacity(0.2),
-          //     ),
-          //   ),
-          //   child: Column(
-          //     mainAxisAlignment: MainAxisAlignment.center,
-          //     children: [
-          //       Icon(
-          //         Icons.map,
-          //         size: 48,
-          //         color: AppConstants.primaryColor.withOpacity(0.6),
-          //       ),
-          //       const SizedBox(height: 8),
-          //       Text(
-          //         'Interactive Map',
-          //         style: AppConstants.bodyMedium.copyWith(
-          //           color: AppConstants.primaryColor,
-          //           fontWeight: FontWeight.w600,
-          //         ),
-          //       ),
-          //       const SizedBox(height: 4),
-          //       Text(
-          //         'Tap to view location on map',
-          //         style: AppConstants.bodySmallSecondary,
-          //       ),
-          //     ],
-          //   ),
-          // ),
-          const SizedBox(height: 16),
-
-          // Action Buttons
-          // Row(
-          //   children: [
-          //     Expanded(
-          //       child: OutlinedButton.icon(
-          //         onPressed: _handleGetDirections,
-          //         icon: const Icon(Icons.directions),
-          //         label: const Text('Get Directions'),
-          //         style: OutlinedButton.styleFrom(
-          //           foregroundColor: AppConstants.primaryColor,
-          //           side: BorderSide(color: AppConstants.primaryColor),
-          //           shape: RoundedRectangleBorder(
-          //             borderRadius: BorderRadius.circular(12),
-          //           ),
-          //           padding: const EdgeInsets.symmetric(vertical: 12),
-          //         ),
-          //       ),
-          //     ),
-          //     const SizedBox(width: 12),
-          //     Expanded(
-          //       child: ElevatedButton.icon(
-          //         onPressed: _handleShareLocation,
-          //         icon: const Icon(Icons.share),
-          //         label: const Text('Share Location'),
-          //         style: ElevatedButton.styleFrom(
-          //           backgroundColor: AppConstants.primaryColor,
-          //           foregroundColor: Colors.white,
-          //           shape: RoundedRectangleBorder(
-          //             borderRadius: BorderRadius.circular(12),
-          //           ),
-          //           padding: const EdgeInsets.symmetric(vertical: 12),
-          //         ),
-          //       ),
-          //     ),
-          //   ],
-          // ),
+          LocationActionsWidget(
+            eventCoordinates: _eventCoordinates,
+            event: widget.event,
+            onShowSnackBar: _showSnackBar,
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildLocationDetail({
-    required IconData icon,
-    required String title,
-    required String value,
-  }) {
+  Widget _buildHeader() {
     return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Icon(icon, color: AppConstants.textSecondaryColor, size: 16),
-        const SizedBox(width: 8),
-        Text('$title: ', style: AppConstants.bodySmallSecondary),
-        Text(
-          value,
-          style: AppConstants.bodySmall.copyWith(fontWeight: FontWeight.w500),
+        Text('Location', style: AppConstants.titleLarge),
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: AppConstants.primaryColor.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(
+            Icons.directions,
+            color: AppConstants.primaryColor,
+            size: 20,
+          ),
         ),
       ],
     );
-  }
-
-  String _getTimezone() {
-    // Simple timezone detection based on location
-    final location = event.location.toLowerCase();
-    if (location.contains('new york') || location.contains('ny')) {
-      return 'EST (UTC-5)';
-    } else if (location.contains('los angeles') ||
-        location.contains('california')) {
-      return 'PST (UTC-8)';
-    } else if (location.contains('london')) {
-      return 'GMT (UTC+0)';
-    } else if (location.contains('tokyo')) {
-      return 'JST (UTC+9)';
-    } else {
-      return 'Local Time';
-    }
-  }
-
-  String _getVenueType() {
-    final location = event.location.toLowerCase();
-    if (location.contains('center') || location.contains('hall')) {
-      return 'Conference Center';
-    } else if (location.contains('hotel')) {
-      return 'Hotel Venue';
-    } else if (location.contains('university') ||
-        location.contains('college')) {
-      return 'Educational Facility';
-    } else if (location.contains('park') || location.contains('outdoor')) {
-      return 'Outdoor Venue';
-    } else {
-      return 'Indoor Venue';
-    }
-  }
-
-  void _handleGetDirections() {
-    // Handle getting directions to the location
-    // This would typically open a maps app or show directions
-    print('Getting directions to: ${event.location}');
-  }
-
-  void _handleShareLocation() {
-    // Handle sharing the location
-    // This would typically open a share dialog
-    print('Sharing location: ${event.location}');
   }
 }

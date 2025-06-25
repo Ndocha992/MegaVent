@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/services/database_service.dart';
 import 'package:megavent/models/attendee_stats.dart';
@@ -76,15 +77,16 @@ class AttendeesCountBadge extends StatelessWidget {
               ),
               borderRadius: BorderRadius.circular(20),
             ),
-            child: const Row(
+            child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                Container(
+                  color: AppConstants.primaryColor.withOpacity(0.1),
+                  child: const Center(
+                    child: SpinKitThreeBounce(
+                      color: AppConstants.primaryColor,
+                      size: 20.0,
+                    ),
                   ),
                 ),
                 SizedBox(width: 8),
@@ -205,10 +207,14 @@ class AttendeesStatsRow extends StatelessWidget {
         ),
         child: Column(
           children: [
-            const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
+            Container(
+              color: AppConstants.primaryColor.withOpacity(0.1),
+              child: const Center(
+                child: SpinKitThreeBounce(
+                  color: AppConstants.primaryColor,
+                  size: 20.0,
+                ),
+              ),
             ),
             const SizedBox(height: 4),
             Text(

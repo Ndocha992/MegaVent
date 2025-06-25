@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:provider/provider.dart';
 import 'package:megavent/screens/organizer/create_events.dart';
 import 'package:megavent/screens/organizer/events_details.dart';
@@ -102,25 +103,27 @@ class _EventsState extends State<Events> with TickerProviderStateMixin {
 
     // Filter by search query
     if (_searchQuery.isNotEmpty) {
-      events = events
-          .where(
-            (event) =>
-                event.name.toLowerCase().contains(
-                  _searchQuery.toLowerCase(),
-                ) ||
-                event.category.toLowerCase().contains(
-                  _searchQuery.toLowerCase(),
-                ) ||
-                event.location.toLowerCase().contains(
-                  _searchQuery.toLowerCase(),
-                ),
-          )
-          .toList();
+      events =
+          events
+              .where(
+                (event) =>
+                    event.name.toLowerCase().contains(
+                      _searchQuery.toLowerCase(),
+                    ) ||
+                    event.category.toLowerCase().contains(
+                      _searchQuery.toLowerCase(),
+                    ) ||
+                    event.location.toLowerCase().contains(
+                      _searchQuery.toLowerCase(),
+                    ),
+              )
+              .toList();
     }
 
     // Filter by category
     if (_selectedCategory != 'All') {
-      events = events.where((event) => event.category == _selectedCategory).toList();
+      events =
+          events.where((event) => event.category == _selectedCategory).toList();
     }
 
     // Filter by tab
@@ -132,7 +135,8 @@ class _EventsState extends State<Events> with TickerProviderStateMixin {
         events = events.where((event) => event.startDate.isAfter(now)).toList();
         break;
       case 2: // Past
-        events = events.where((event) => event.startDate.isBefore(now)).toList();
+        events =
+            events.where((event) => event.startDate.isBefore(now)).toList();
         break;
     }
 
@@ -153,24 +157,25 @@ class _EventsState extends State<Events> with TickerProviderStateMixin {
         onMenuPressed: () => _scaffoldKey.currentState?.openDrawer(),
       ),
       drawer: OrganizerSidebar(currentRoute: currentRoute),
-      body: _isLoading
-          ? _buildLoadingState()
-          : _error != null
+      body:
+          _isLoading
+              ? _buildLoadingState()
+              : _error != null
               ? _buildErrorState()
               : Column(
-                  children: [
-                    _buildHeader(),
-                    _buildTabBar(),
-                    _buildSearchAndFilters(),
-                    Expanded(child: _buildEventsList()),
-                  ],
-                ),
+                children: [
+                  _buildHeader(),
+                  _buildTabBar(),
+                  _buildSearchAndFilters(),
+                  Expanded(child: _buildEventsList()),
+                ],
+              ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
-          final result = await Navigator.of(context).push(
-            MaterialPageRoute(builder: (context) => const CreateEvents()),
-          );
-          
+          final result = await Navigator.of(
+            context,
+          ).push(MaterialPageRoute(builder: (context) => const CreateEvents()));
+
           // Refresh events if a new event was created
           if (result != null) {
             _refreshEvents();
@@ -188,16 +193,9 @@ class _EventsState extends State<Events> with TickerProviderStateMixin {
 
   Widget _buildLoadingState() {
     return Container(
-      color: AppConstants.backgroundColor,
+      color: AppConstants.primaryColor.withOpacity(0.1),
       child: const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Loading events...'),
-          ],
-        ),
+        child: SpinKitThreeBounce(color: AppConstants.primaryColor, size: 20.0),
       ),
     );
   }
@@ -209,11 +207,7 @@ class _EventsState extends State<Events> with TickerProviderStateMixin {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: AppConstants.errorColor,
-            ),
+            Icon(Icons.error_outline, size: 64, color: AppConstants.errorColor),
             const SizedBox(height: 16),
             Text(
               'Error Loading Events',
@@ -320,12 +314,14 @@ class _EventsState extends State<Events> with TickerProviderStateMixin {
   }
 
   Widget _buildStatsRow() {
-    final upcomingCount = _events
-        .where((event) => event.startDate.isAfter(DateTime.now()))
-        .length;
-    final pastCount = _events
-        .where((event) => event.startDate.isBefore(DateTime.now()))
-        .length;
+    final upcomingCount =
+        _events
+            .where((event) => event.startDate.isAfter(DateTime.now()))
+            .length;
+    final pastCount =
+        _events
+            .where((event) => event.startDate.isBefore(DateTime.now()))
+            .length;
 
     return Row(
       children: [
@@ -413,15 +409,16 @@ class _EventsState extends State<Events> with TickerProviderStateMixin {
                         Icons.search,
                         color: AppConstants.textSecondaryColor,
                       ),
-                      suffixIcon: _searchQuery.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.clear),
-                              onPressed: () {
-                                _searchController.clear();
-                                setState(() => _searchQuery = '');
-                              },
-                            )
-                          : null,
+                      suffixIcon:
+                          _searchQuery.isNotEmpty
+                              ? IconButton(
+                                icon: const Icon(Icons.clear),
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() => _searchQuery = '');
+                                },
+                              )
+                              : null,
                       border: InputBorder.none,
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16,
@@ -520,7 +517,9 @@ class _EventsState extends State<Events> with TickerProviderStateMixin {
                 onTap: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (context) => EventsDetails(event: filteredEvents[index]),
+                      builder:
+                          (context) =>
+                              EventsDetails(event: filteredEvents[index]),
                     ),
                   );
                 },
@@ -574,7 +573,7 @@ class _EventsState extends State<Events> with TickerProviderStateMixin {
                 final result = await Navigator.of(context).push(
                   MaterialPageRoute(builder: (context) => const CreateEvents()),
                 );
-                
+
                 // Refresh events if a new event was created
                 if (result != null) {
                   _refreshEvents();
@@ -600,14 +599,15 @@ class _EventsState extends State<Events> with TickerProviderStateMixin {
   void _showFilterDialog() {
     showDialog(
       context: context,
-      builder: (context) => EventFilters(
-        selectedCategory: _selectedCategory,
-        categories: _categories, // Pass categories list
-        onCategoryChanged: (category) {
-          setState(() => _selectedCategory = category);
-          Navigator.pop(context);
-        },
-      ),
+      builder:
+          (context) => EventFilters(
+            selectedCategory: _selectedCategory,
+            categories: _categories, // Pass categories list
+            onCategoryChanged: (category) {
+              setState(() => _selectedCategory = category);
+              Navigator.pop(context);
+            },
+          ),
     );
   }
 }

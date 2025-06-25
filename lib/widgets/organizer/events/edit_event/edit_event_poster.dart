@@ -1,15 +1,16 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/widgets/organizer/events/edit_event/section_container.dart';
 import 'package:megavent/services/cloudinary.dart';
 
 class EditEventPoster extends StatefulWidget {
-  final String? initialPosterUrl; // Current poster URL
-  final String eventId; // Event ID for upload naming
-  final String? eventName; // Event name for upload naming
-  final ValueChanged<String?> onPosterUrlChanged; // Callback for URL changes
+  final String? initialPosterUrl;
+  final String eventId;
+  final String? eventName;
+  final ValueChanged<String?> onPosterUrlChanged;
 
   const EditEventPoster({
     super.key,
@@ -26,14 +27,6 @@ class EditEventPoster extends StatefulWidget {
 class _EditEventPosterState extends State<EditEventPoster> {
   final ImagePicker _picker = ImagePicker();
   bool _isUploading = false;
-  String? _currentPosterUrl;
-
-  @override
-  void initState() {
-    super.initState();
-    // Initialize with the current poster URL
-    _currentPosterUrl = widget.initialPosterUrl;
-  }
 
   Future<void> _pickAndUploadImage() async {
     try {
@@ -49,7 +42,9 @@ class _EditEventPosterState extends State<EditEventPoster> {
           _isUploading = true;
         });
 
-        // Upload to Cloudinary using the event ID and name
+        print('Starting image upload for event: ${widget.eventId}');
+
+        // Upload to Cloudinary using the same method as create event
         final String? cloudinaryUrl = await Cloudinary.uploadEventBanner(
           File(image.path),
           eventId: widget.eventId,
@@ -57,12 +52,11 @@ class _EditEventPosterState extends State<EditEventPoster> {
         );
 
         if (cloudinaryUrl != null) {
-          setState(() {
-            _currentPosterUrl = cloudinaryUrl;
-          });
+          print('Upload successful, new URL: $cloudinaryUrl');
 
-          // Notify parent about the change
+          // Notify parent about the change immediately
           widget.onPosterUrlChanged(cloudinaryUrl);
+          print('Parent notified with new URL: $cloudinaryUrl');
 
           // Show success message
           if (mounted) {
@@ -78,7 +72,7 @@ class _EditEventPosterState extends State<EditEventPoster> {
             );
           }
         } else {
-          // Show error message
+          print('Upload failed - cloudinaryUrl is null');
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -119,12 +113,10 @@ class _EditEventPosterState extends State<EditEventPoster> {
   }
 
   void _removePoster() {
-    setState(() {
-      _currentPosterUrl = null;
-    });
-
-    // Notify parent about the change
+    print('Removing poster, current URL: ${widget.initialPosterUrl}');
+    // Notify parent about the removal
     widget.onPosterUrlChanged(null);
+    print('Parent notified - poster removed');
   }
 
   @override
@@ -160,13 +152,12 @@ class _EditEventPosterState extends State<EditEventPoster> {
                 ? Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          AppConstants.primaryColor,
+                    Container(
+                      color: AppConstants.primaryColor.withOpacity(0.1),
+                      child: const Center(
+                        child: SpinKitThreeBounce(
+                          color: AppConstants.primaryColor,
+                          size: 20.0,
                         ),
                       ),
                     ),
@@ -190,7 +181,8 @@ class _EditEventPosterState extends State<EditEventPoster> {
                     ),
                     const SizedBox(width: 12),
                     Text(
-                      _currentPosterUrl != null && _currentPosterUrl!.isNotEmpty
+                      widget.initialPosterUrl != null &&
+                              widget.initialPosterUrl!.isNotEmpty
                           ? 'Change Event Poster'
                           : 'Upload Event Poster',
                       style: AppConstants.bodyMedium.copyWith(
@@ -205,7 +197,9 @@ class _EditEventPosterState extends State<EditEventPoster> {
   }
 
   Widget _buildPosterPreview() {
-    if (_currentPosterUrl != null && _currentPosterUrl!.isNotEmpty) {
+    final currentUrl = widget.initialPosterUrl;
+
+    if (currentUrl != null && currentUrl.isNotEmpty) {
       return Container(
         height: 200,
         width: double.infinity,
@@ -225,7 +219,7 @@ class _EditEventPosterState extends State<EditEventPoster> {
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: Image.network(
-                _currentPosterUrl!,
+                currentUrl,
                 fit: BoxFit.cover,
                 width: double.infinity,
                 height: double.infinity,
@@ -248,6 +242,7 @@ class _EditEventPosterState extends State<EditEventPoster> {
                   );
                 },
                 errorBuilder: (context, error, stackTrace) {
+                  print('Error loading image: $error');
                   return Container(
                     color: AppConstants.backgroundColor,
                     child: const Center(
@@ -311,14 +306,14 @@ class _EditEventPosterState extends State<EditEventPoster> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Upload an image to preview',
+              'No poster uploaded',
               style: AppConstants.bodySmall.copyWith(
                 color: AppConstants.textSecondaryColor,
               ),
             ),
             const SizedBox(height: 4),
             Text(
-              'Recommended: 16:9 aspect ratio',
+              'Tap "Upload Event Poster" to add an image',
               style: AppConstants.bodySmall.copyWith(
                 color: AppConstants.textSecondaryColor.withOpacity(0.7),
                 fontStyle: FontStyle.italic,

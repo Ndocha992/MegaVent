@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:megavent/models/dashboard_stats.dart';
 import 'package:megavent/models/staff.dart';
 import 'package:megavent/models/attendee.dart'; // Add this import
@@ -115,14 +116,10 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
   }
 
   Widget _buildLoadingState() {
-    return const Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          CircularProgressIndicator(),
-          SizedBox(height: 16),
-          Text('Loading dashboard...'),
-        ],
+    return Container(
+      color: AppConstants.primaryColor.withOpacity(0.1),
+      child: const Center(
+        child: SpinKitThreeBounce(color: AppConstants.primaryColor, size: 20.0),
       ),
     );
   }

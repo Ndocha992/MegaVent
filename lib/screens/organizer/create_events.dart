@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:provider/provider.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/widgets/organizer/events/create_event/action_buttons.dart';
@@ -178,8 +179,13 @@ class _CreateEventsState extends State<CreateEvents> {
           // Loading overlay
           if (_isLoading)
             Container(
-              color: Colors.black54,
-              child: const Center(child: CircularProgressIndicator()),
+              color: AppConstants.primaryColor.withOpacity(0.1),
+              child: const Center(
+                child: SpinKitThreeBounce(
+                  color: AppConstants.primaryColor,
+                  size: 20.0,
+                ),
+              ),
             ),
         ],
       ),
