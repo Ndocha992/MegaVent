@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:megavent/models/staff.dart';
+import 'package:megavent/screens/organizer/create_staff.dart';
 import 'package:megavent/screens/organizer/staff_details.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/utils/organizer/staff/staff_utils.dart';
@@ -33,35 +34,7 @@ class LatestStaffCard extends StatelessWidget {
           decoration: AppConstants.cardDecoration,
           child:
               staff.isEmpty
-                  ? Padding(
-                    padding: const EdgeInsets.all(32.0),
-                    child: Center(
-                      child: Column(
-                        children: [
-                          Icon(
-                            Icons.people_outline,
-                            size: 48,
-                            color: AppConstants.textSecondaryColor,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'No staff members yet',
-                            style: AppConstants.bodyLarge.copyWith(
-                              color: AppConstants.textSecondaryColor,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Add your first staff member to get started',
-                            style: AppConstants.bodySmall.copyWith(
-                              color: AppConstants.textSecondaryColor,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
+                  ? _buildEmptyStaffState(context)
                   : ListView.separated(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
@@ -148,6 +121,56 @@ class LatestStaffCard extends StatelessWidget {
                   ),
         ),
       ],
+    );
+  }
+
+  Widget _buildEmptyStaffState(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(32),
+      child: Center(
+        child: Column(
+          children: [
+            Icon(
+              Icons.people_outline,
+              size: 48,
+              color: AppConstants.primaryColor,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No Staff Members Yet',
+              style: AppConstants.titleMedium.copyWith(
+                color: AppConstants.textSecondaryColor,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Add your first staff member to get started',
+              textAlign: TextAlign.center,
+              style: AppConstants.bodySmall.copyWith(
+                color: AppConstants.textSecondaryColor,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => const CreateStaff()),
+                );
+              },
+              icon: const Icon(Icons.person_add),
+              label: const Text('Add Staff'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppConstants.primaryColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 10,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

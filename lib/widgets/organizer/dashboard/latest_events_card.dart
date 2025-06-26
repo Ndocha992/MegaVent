@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:provider/provider.dart';
 import 'package:megavent/screens/organizer/events_details.dart';
+import 'package:megavent/screens/organizer/create_events.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/widgets/organizer/events/event_card.dart';
 import 'package:megavent/services/database_service.dart';
@@ -137,29 +138,16 @@ class _LatestEventsCardState extends State<LatestEventsCard> {
   }
 
   Widget _buildLoadingState() {
-    return SizedBox(
+    return Container(
       height: 220,
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              color: AppConstants.primaryColor.withOpacity(0.1),
-              child: const Center(
-                child: SpinKitThreeBounce(
-                  color: AppConstants.primaryColor,
-                  size: 20.0,
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Loading events...',
-              style: AppConstants.bodySmall.copyWith(
-                color: AppConstants.textSecondaryColor,
-              ),
-            ),
-          ],
+      decoration: AppConstants.cardDecoration,
+      child: Container(
+        color: AppConstants.primaryColor.withOpacity(0.1),
+        child: const Center(
+          child: SpinKitThreeBounce(
+            color: AppConstants.primaryColor,
+            size: 20.0,
+          ),
         ),
       ),
     );
@@ -168,39 +156,47 @@ class _LatestEventsCardState extends State<LatestEventsCard> {
   Widget _buildErrorState() {
     return Container(
       height: 220,
+      decoration: AppConstants.cardDecoration,
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.error_outline, size: 32, color: AppConstants.errorColor),
+            Icon(Icons.error_outline, size: 48, color: AppConstants.errorColor),
             const SizedBox(height: 12),
             Text(
-              'Error loading events',
-              style: AppConstants.bodyMedium.copyWith(
+              'Error Loading Events',
+              style: AppConstants.titleLarge.copyWith(
                 color: AppConstants.errorColor,
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              _error ?? 'An unexpected error occurred',
-              textAlign: TextAlign.center,
-              style: AppConstants.bodySmall.copyWith(
-                color: AppConstants.textSecondaryColor,
+            const SizedBox(height: 6),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Text(
+                _error ?? 'An unexpected error occurred',
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: AppConstants.bodySmall.copyWith(
+                  color: AppConstants.textSecondaryColor,
+                ),
               ),
             ),
-            const SizedBox(height: 12),
-            ElevatedButton.icon(
-              onPressed: _loadLatestEvents,
-              icon: const Icon(Icons.refresh, size: 16),
-              label: const Text('Retry'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppConstants.primaryColor,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
+            const SizedBox(height: 16),
+            SizedBox(
+              width: 120,
+              child: ElevatedButton.icon(
+                onPressed: _loadLatestEvents,
+                icon: const Icon(Icons.refresh, size: 16),
+                label: const Text('Retry', style: TextStyle(fontSize: 12)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppConstants.primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                 ),
-                textStyle: const TextStyle(fontSize: 12),
               ),
             ),
           ],
@@ -212,52 +208,55 @@ class _LatestEventsCardState extends State<LatestEventsCard> {
   Widget _buildEmptyState() {
     return Container(
       height: 220,
+      padding: const EdgeInsets.all(16),
+      decoration: AppConstants.cardDecoration,
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                color: AppConstants.primaryColor.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.event_busy,
-                size: 30,
-                color: AppConstants.primaryColor,
-              ),
-            ),
-            const SizedBox(height: 16),
+            Icon(Icons.event_busy, size: 40, color: AppConstants.primaryColor),
+            const SizedBox(height: 12),
             Text(
-              'No events yet',
+              'No Events Yet',
               style: AppConstants.titleMedium.copyWith(
                 color: AppConstants.textSecondaryColor,
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Create your first event to get started',
-              style: AppConstants.bodySmall.copyWith(
-                color: AppConstants.textSecondaryColor,
+            const SizedBox(height: 6),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                'Create your first event to get started',
+                textAlign: TextAlign.center,
+                style: AppConstants.bodySmall.copyWith(
+                  color: AppConstants.textSecondaryColor,
+                ),
               ),
             ),
             const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.of(context).pushNamed('/organizer-create-events');
-              },
-              icon: const Icon(Icons.add, size: 16),
-              label: const Text('Create Event'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppConstants.primaryColor,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
+            SizedBox(
+              width: 140,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const CreateEvents(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.add, size: 16),
+                label: const Text(
+                  'Create Event',
+                  style: TextStyle(fontSize: 12),
                 ),
-                textStyle: const TextStyle(fontSize: 12),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppConstants.primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                ),
               ),
             ),
           ],

@@ -3,6 +3,7 @@ import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:megavent/models/dashboard_stats.dart';
 import 'package:megavent/models/staff.dart';
 import 'package:megavent/models/attendee.dart'; // Add this import
+import 'package:megavent/screens/organizer/create_events.dart';
 import 'package:provider/provider.dart';
 import 'package:megavent/screens/organizer/events_details.dart';
 import 'package:megavent/utils/constants.dart';
@@ -259,16 +260,13 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
   }
 
   Widget _buildEmptyActivityState() {
-    return Padding(
-      padding: const EdgeInsets.all(32.0),
+    return Container(
+      padding: const EdgeInsets.all(32),
+      decoration: AppConstants.cardDecoration,
       child: Center(
         child: Column(
           children: [
-            Icon(
-              Icons.history,
-              size: 48,
-              color: AppConstants.textSecondaryColor,
-            ),
+            Icon(Icons.history, size: 48, color: AppConstants.primaryColor),
             const SizedBox(height: 16),
             Text(
               'No Recent Activity',
@@ -282,6 +280,22 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
               textAlign: TextAlign.center,
               style: AppConstants.bodySmall.copyWith(
                 color: AppConstants.textSecondaryColor,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.of(context).pushReplacementNamed('/organizer-events');
+              },
+              icon: const Icon(Icons.event),
+              label: const Text('View Events'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppConstants.primaryColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 10,
+                ),
               ),
             ),
           ],
@@ -442,7 +456,7 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
             Icon(
               Icons.event_available,
               size: 48,
-              color: AppConstants.textSecondaryColor,
+              color: AppConstants.primaryColor,
             ),
             const SizedBox(height: 16),
             Text(
@@ -462,9 +476,9 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
             const SizedBox(height: 16),
             ElevatedButton.icon(
               onPressed: () {
-                Navigator.of(
-                  context,
-                ).pushReplacementNamed('/organizer-create-event');
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => const CreateEvents()),
+                );
               },
               icon: const Icon(Icons.add),
               label: const Text('Create Event'),

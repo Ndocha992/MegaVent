@@ -159,14 +159,8 @@ class _AttendeesState extends State<Attendees> with TickerProviderStateMixin {
   }
 
   Widget _buildLoadingState() {
-    return Container(
-      color: AppConstants.primaryColor.withOpacity(0.1),
-      child: const Center(
-        child: SpinKitThreeBounce(
-          color: AppConstants.primaryColor,
-          size: 20.0,
-        ),
-      ),
+    return const Center(
+      child: SpinKitThreeBounce(color: AppConstants.primaryColor, size: 20.0),
     );
   }
 
@@ -209,13 +203,6 @@ class _AttendeesState extends State<Attendees> with TickerProviderStateMixin {
       appBar: OrganizerAppBar(
         title: 'MegaVent',
         onMenuPressed: () => _scaffoldKey.currentState?.openDrawer(),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _refreshAttendees,
-            tooltip: 'Refresh',
-          ),
-        ],
       ),
       drawer: OrganizerSidebar(currentRoute: currentRoute),
       body: Column(

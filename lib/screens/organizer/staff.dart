@@ -130,11 +130,8 @@ class _StaffScreenState extends State<StaffScreen>
   }
 
   Widget _buildLoadingState() {
-    return Container(
-      color: AppConstants.primaryColor.withOpacity(0.1),
-      child: const Center(
-        child: SpinKitThreeBounce(color: AppConstants.primaryColor, size: 20.0),
-      ),
+    return const Center(
+      child: SpinKitThreeBounce(color: AppConstants.primaryColor, size: 20.0),
     );
   }
 

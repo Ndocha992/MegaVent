@@ -77,27 +77,11 @@ class AttendeesCountBadge extends StatelessWidget {
               ),
               borderRadius: BorderRadius.circular(20),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  color: AppConstants.primaryColor.withOpacity(0.1),
-                  child: const Center(
-                    child: SpinKitThreeBounce(
-                      color: AppConstants.primaryColor,
-                      size: 20.0,
-                    ),
-                  ),
-                ),
-                SizedBox(width: 8),
-                Text(
-                  'Loading...',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
+            child: const Center(
+              child: SpinKitThreeBounce(
+                color: AppConstants.primaryColor,
+                size: 20.0,
+              ),
             ),
           );
         }
@@ -207,13 +191,10 @@ class AttendeesStatsRow extends StatelessWidget {
         ),
         child: Column(
           children: [
-            Container(
-              color: AppConstants.primaryColor.withOpacity(0.1),
-              child: const Center(
-                child: SpinKitThreeBounce(
-                  color: AppConstants.primaryColor,
-                  size: 20.0,
-                ),
+            const Center(
+              child: SpinKitThreeBounce(
+                color: AppConstants.primaryColor,
+                size: 20.0,
               ),
             ),
             const SizedBox(height: 4),

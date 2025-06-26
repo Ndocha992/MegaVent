@@ -38,16 +38,71 @@ class LatestAttendeesCard extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 16),
-        // Use individual cards instead of a single container with ListView
-        ...attendees
-            .map(
-              (attendee) => LatestAttendeeCard(
-                attendee: attendee,
-                onTap: () => _onAttendeeTap(context, attendee),
-              ),
-            )
-            .toList(),
+        attendees.isEmpty
+            ? _buildEmptyAttendeesState(context)
+            : Column(
+              children:
+                  attendees
+                      .map(
+                        (attendee) => LatestAttendeeCard(
+                          attendee: attendee,
+                          onTap: () => _onAttendeeTap(context, attendee),
+                        ),
+                      )
+                      .toList(),
+            ),
       ],
+    );
+  }
+
+  Widget _buildEmptyAttendeesState(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(32),
+      decoration: AppConstants.cardDecoration,
+      child: Center(
+        child: Column(
+          children: [
+            Icon(
+              Icons.people_alt_outlined,
+              size: 48,
+              color: AppConstants.primaryColor,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No Attendees Yet',
+              style: AppConstants.titleMedium.copyWith(
+                color: AppConstants.textSecondaryColor,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Attendees will appear here once they register for your events',
+              textAlign: TextAlign.center,
+              style: AppConstants.bodySmall.copyWith(
+                color: AppConstants.textSecondaryColor,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.of(
+                  context,
+                ).pushReplacementNamed('/organizer-attendees');
+              },
+              icon: const Icon(Icons.visibility),
+              label: const Text('View Attendees'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppConstants.primaryColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 10,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -64,17 +119,17 @@ class LatestAttendeeCard extends StatelessWidget {
 
   bool _isBase64(String? value) {
     if (value == null || value.isEmpty) return false;
-    
+
     try {
       // Remove data URL prefix if present (e.g., "data:image/jpeg;base64,")
       String base64String = value;
       if (value.contains(',')) {
         base64String = value.split(',').last;
       }
-      
+
       // Check if it's a valid base64 string
       if (base64String.isEmpty) return false;
-      
+
       // Try to decode
       base64Decode(base64String);
       return true;
@@ -108,7 +163,7 @@ class LatestAttendeeCard extends StatelessWidget {
 
   String _getInitials(String? name) {
     if (name == null || name.isEmpty) return '?';
-    
+
     List<String> names = name.trim().split(' ');
     if (names.length >= 2) {
       return '${names[0][0]}${names[1][0]}'.toUpperCase();
@@ -129,7 +184,8 @@ class LatestAttendeeCard extends StatelessWidget {
               fit: BoxFit.cover,
               width: 48,
               height: 48,
-              errorBuilder: (context, error, stackTrace) => _buildInitialsAvatar(),
+              errorBuilder:
+                  (context, error, stackTrace) => _buildInitialsAvatar(),
             ),
           );
         } catch (e) {
@@ -144,7 +200,8 @@ class LatestAttendeeCard extends StatelessWidget {
             fit: BoxFit.cover,
             width: 48,
             height: 48,
-            errorBuilder: (context, error, stackTrace) => _buildInitialsAvatar(),
+            errorBuilder:
+                (context, error, stackTrace) => _buildInitialsAvatar(),
           ),
         );
       }
@@ -198,9 +255,10 @@ class LatestAttendeeCard extends StatelessWidget {
                       height: 48,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: attendee.hasAttended
-                            ? AppConstants.successColor
-                            : AppConstants.primaryColor,
+                        color:
+                            attendee.hasAttended
+                                ? AppConstants.successColor
+                                : AppConstants.primaryColor,
                       ),
                       child: _buildAvatarContent(),
                     ),
@@ -245,7 +303,9 @@ class LatestAttendeeCard extends StatelessWidget {
                                 vertical: 4,
                               ),
                               decoration: BoxDecoration(
-                                color: AppConstants.primaryColor.withOpacity(0.1),
+                                color: AppConstants.primaryColor.withOpacity(
+                                  0.1,
+                                ),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
@@ -277,9 +337,10 @@ class LatestAttendeeCard extends StatelessWidget {
                                 ? Icons.check_circle
                                 : Icons.access_time,
                             size: 16,
-                            color: attendee.hasAttended
-                                ? AppConstants.successColor
-                                : Colors.orange,
+                            color:
+                                attendee.hasAttended
+                                    ? AppConstants.successColor
+                                    : Colors.orange,
                           ),
                           const SizedBox(width: 4),
                           Text(
@@ -287,9 +348,10 @@ class LatestAttendeeCard extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
-                              color: attendee.hasAttended
-                                  ? AppConstants.successColor
-                                  : Colors.orange,
+                              color:
+                                  attendee.hasAttended
+                                      ? AppConstants.successColor
+                                      : Colors.orange,
                             ),
                           ),
                           const Spacer(),
