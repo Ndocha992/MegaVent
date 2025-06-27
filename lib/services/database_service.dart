@@ -13,6 +13,7 @@ import 'package:megavent/services/modules/database_service/organizer_service.dar
 import 'package:megavent/services/modules/database_service/registration_service.dart';
 import 'package:megavent/services/modules/database_service/staff_service.dart';
 import 'package:megavent/services/modules/database_service/dashboard_service.dart';
+import 'package:megavent/services/modules/database_service/stats_service.dart';
 
 class DatabaseService extends ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -26,6 +27,7 @@ class DatabaseService extends ChangeNotifier {
   late final AttendeeStatsService _attendeeStatsService;
   late final RegistrationService _registrationService;
   late final DashboardService _dashboardService;
+  late final StatsService _statsService;
 
   DatabaseService() {
     // Initialize service modules with shared dependencies
@@ -36,6 +38,7 @@ class DatabaseService extends ChangeNotifier {
     _attendeeStatsService = AttendeeStatsService(_firestore, _auth, this);
     _registrationService = RegistrationService(_firestore, _auth, this);
     _dashboardService = DashboardService(_firestore, _auth, this);
+    _statsService = StatsService(_firestore, _auth, this);
   }
 
   /**
@@ -171,4 +174,20 @@ class DatabaseService extends ChangeNotifier {
    */
   Future<Map<String, dynamic>> getOrganizerDashboardStats() =>
       _dashboardService.getOrganizerDashboardStats();
+
+  /**
+   * ====== STATS METHODS ======
+   */
+  Future<Map<String, dynamic>> getOrganizerStats() =>
+      _statsService.getOrganizerStats();
+
+  Stream<Map<String, dynamic>> streamOrganizerStats() =>
+      _statsService.streamOrganizerStats();
+
+  Future<int> getTotalAttendeesCount() =>
+      _statsService.getTotalAttendeesCount();
+
+  Future<int> getTotalEventsCount() => _statsService.getTotalEventsCount();
+
+  Future<int> getTotalStaffCount() => _statsService.getTotalStaffCount();
 }

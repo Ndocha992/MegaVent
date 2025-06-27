@@ -29,6 +29,11 @@ class _ProfileState extends State<Profile> {
 
   @override
   Widget build(BuildContext context) {
+    final databaseService = Provider.of<DatabaseService>(
+      context,
+      listen: false,
+    );
+
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: AppConstants.backgroundColor,
@@ -38,11 +43,7 @@ class _ProfileState extends State<Profile> {
       ),
       drawer: OrganizerSidebar(currentRoute: currentRoute),
       body: StreamBuilder<Organizer?>(
-        stream:
-            Provider.of<DatabaseService>(
-              context,
-              listen: false,
-            ).streamCurrentOrganizerData(),
+        stream: databaseService.streamCurrentOrganizerData(),
         builder: (context, snapshot) {
           // Handle loading state
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -118,10 +119,16 @@ class _ProfileState extends State<Profile> {
                 ProfileHeaderCard(organizer: organizer),
                 const SizedBox(height: 20),
                 // Stats Overview
-                StatsOverview(organizer: organizer),
+                StatsOverview(
+                  organizer: organizer,
+                  databaseService: databaseService,
+                ),
                 const SizedBox(height: 20),
                 // Personal Information
-                PersonalInfoSection(organizer: organizer),
+                PersonalInfoSection(
+                  organizer: organizer,
+                  databaseService: databaseService,
+                ),
                 const SizedBox(height: 20),
                 // Contact Information
                 ContactInfoSection(

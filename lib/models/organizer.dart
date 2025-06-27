@@ -152,8 +152,6 @@ class Organizer {
       isApproved: isApproved ?? this.isApproved,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
-      totalEvents: totalEvents ?? this.totalEvents,
-      totalAttendees: totalAttendees ?? this.totalAttendees,
     );
   }
 
@@ -171,14 +169,6 @@ class Organizer {
     if (city != null && city!.isNotEmpty) addressParts.add(city!);
     if (country != null && country!.isNotEmpty) addressParts.add(country!);
     return addressParts.join(', ');
-  }
-
-  // Getter for experience level based on total events
-  String get experienceLevel {
-    if (totalEvents >= 50) return 'Expert';
-    if (totalEvents >= 20) return 'Advanced';
-    if (totalEvents >= 5) return 'Intermediate';
-    return 'Beginner';
   }
 
   @override

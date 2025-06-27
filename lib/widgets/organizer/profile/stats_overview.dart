@@ -1,45 +1,85 @@
 import 'package:flutter/material.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/models/organizer.dart';
+import 'package:megavent/services/database_service.dart';
 
 class StatsOverview extends StatelessWidget {
   final Organizer organizer;
+  final DatabaseService databaseService;
 
   const StatsOverview({
     super.key,
     required this.organizer,
+    required this.databaseService,
   });
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 110, // Slightly reduced height
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        children: [
-          _buildStatCard(
-            'Total Events',
-            organizer.totalEvents.toString(),
-            Icons.event,
-            AppConstants.primaryColor,
+    return StreamBuilder<Map<String, dynamic>>(
+      stream: databaseService.streamOrganizerStats(),
+      builder: (context, snapshot) {
+        final stats = snapshot.data ?? {
+          'totalEvents': 0,
+          'totalAttendees': 0,
+          'totalStaff': 0,
+          'experienceLevel': 'Beginner'
+        };
+
+        final isLoading = snapshot.connectionState == ConnectionState.waiting;
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Column(
+            children: [
+              // Top row
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildStatCard(
+                      'Total Events',
+                      isLoading ? '...' : stats['totalEvents'].toString(),
+                      Icons.event,
+                      AppConstants.primaryColor,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildStatCard(
+                      'Total Attendees',
+                      isLoading ? '...' : _formatNumber(stats['totalAttendees']),
+                      Icons.people,
+                      AppConstants.secondaryColor,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              // Bottom row
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildStatCard(
+                      'Total Staff',
+                      isLoading ? '...' : stats['totalStaff'].toString(),
+                      Icons.group,
+                      AppConstants.accentColor,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildStatCard(
+                      'Experience Level',
+                      isLoading ? '...' : stats['experienceLevel'],
+                      Icons.star,
+                      Colors.orange,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-          const SizedBox(width: 12),
-          _buildStatCard(
-            'Total Attendees',
-            _formatNumber(organizer.totalAttendees),
-            Icons.people,
-            AppConstants.secondaryColor,
-          ),
-          const SizedBox(width: 12),
-          _buildStatCard(
-            'Experience Level',
-            organizer.experienceLevel,
-            Icons.star,
-            AppConstants.accentColor,
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -50,41 +90,45 @@ class StatsOverview extends StatelessWidget {
     Color color,
   ) {
     return Container(
-      width: 120, // Reduced width to prevent overflow
-      padding: const EdgeInsets.all(12), // Reduced padding
+      height: 90,
+      padding: const EdgeInsets.all(12),
       decoration: AppConstants.cardDecoration,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.all(6), // Reduced padding
+            padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
               color: color.withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(icon, color: color, size: 20), // Smaller icon
+            child: Icon(icon, color: color, size: 18),
           ),
-          const SizedBox(height: 6), // Reduced spacing
-          Text(
-            value,
-            style: AppConstants.titleLarge.copyWith(
-              fontWeight: FontWeight.bold,
-              fontSize: 16, // Smaller font
+          const SizedBox(height: 6),
+          Flexible(
+            child: Text(
+              value,
+              style: AppConstants.titleLarge.copyWith(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 2), // Reduced spacing
-          Text(
-            title,
-            style: AppConstants.bodySmall.copyWith(
-              color: AppConstants.textSecondaryColor,
-              fontSize: 11, // Smaller font
+          const SizedBox(height: 2),
+          Flexible(
+            child: Text(
+              title,
+              style: AppConstants.bodySmall.copyWith(
+                color: AppConstants.textSecondaryColor,
+                fontSize: 10,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
