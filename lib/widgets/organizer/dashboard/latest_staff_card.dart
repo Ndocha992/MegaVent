@@ -49,7 +49,10 @@ class LatestStaffCard extends StatelessWidget {
                           contentPadding: const EdgeInsets.all(16),
                           leading: StaffAvatarWithLoading(staff: staffMember),
                           title: Text(
-                            staffMember.fullName,
+                            // Fixed: Use consistent property access
+                            staffMember.fullName.isNotEmpty
+                                ? staffMember.fullName
+                                : staffMember.name,
                             style: AppConstants.titleMedium.copyWith(
                               fontWeight: FontWeight.w600,
                             ),
@@ -108,7 +111,8 @@ class LatestStaffCard extends StatelessWidget {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                StaffUtils.formatHireDate(staffMember.hiredAt),
+                                // Fixed: Ensure proper date formatting
+                                'Hired ${StaffUtils.formatHireDate(staffMember.hiredAt)}',
                                 style: AppConstants.bodySmall.copyWith(
                                   color: AppConstants.textSecondaryColor,
                                 ),
@@ -175,6 +179,8 @@ class LatestStaffCard extends StatelessWidget {
   }
 
   void _onStaffTap(BuildContext context, Staff staff) {
+    // Fixed: Ensure complete staff data is passed
+    debugPrint('Staff data being passed: ${staff.toString()}');
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => StaffDetails(staff: staff)),
@@ -194,6 +200,16 @@ class StaffAvatarWithLoading extends StatefulWidget {
 class _StaffAvatarWithLoadingState extends State<StaffAvatarWithLoading> {
   bool _isNetworkImageLoading = false;
   bool _hasImageError = false;
+
+  bool _isBase64(String? value) {
+    if (value == null || value.isEmpty) return false;
+    try {
+      base64Decode(value);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -216,9 +232,10 @@ class _StaffAvatarWithLoadingState extends State<StaffAvatarWithLoading> {
           child:
               _isNetworkImageLoading
                   ? _buildLoadingIndicator()
-                  : _buildProfileImage(),
+                  : _buildAvatarContent(),
         ),
-        if (widget.staff.isNew)
+        // Fixed: Properly check isNew status and positioning
+        if (widget.staff.isNew == true)
           Positioned(
             top: 0,
             right: 0,
@@ -230,6 +247,7 @@ class _StaffAvatarWithLoadingState extends State<StaffAvatarWithLoading> {
                 shape: BoxShape.circle,
                 boxShadow: [BoxShadow(color: Colors.white, spreadRadius: 2)],
               ),
+              child: const Icon(Icons.fiber_new, size: 8, color: Colors.white),
             ),
           ),
       ],
@@ -242,37 +260,38 @@ class _StaffAvatarWithLoadingState extends State<StaffAvatarWithLoading> {
     );
   }
 
-  Widget _buildProfileImage() {
-    if (widget.staff.profileImage != null &&
-        widget.staff.profileImage!.isNotEmpty &&
-        !_hasImageError) {
-      // Check if it's a base64 encoded image with data URL prefix
-      if (widget.staff.profileImage!.startsWith('data:image/')) {
-        return _buildBase64Image(widget.staff);
-      }
-      // Check if it's a base64 string without prefix
-      else if (_isBase64String(widget.staff.profileImage!)) {
-        return _buildBase64ImageFromString(widget.staff);
-      }
-      // Handle network images
-      else if (widget.staff.profileImage!.startsWith('http')) {
+  Widget _buildAvatarContent() {
+    final profileImage = widget.staff.profileImage;
+
+    if (profileImage != null && profileImage.isNotEmpty && !_hasImageError) {
+      if (_isBase64(profileImage)) {
+        // Base64 images load instantly, no loading builder needed
         return ClipOval(
-          child: Image.network(
-            widget.staff.profileImage!,
+          child: Image.memory(
+            base64Decode(profileImage),
+            fit: BoxFit.cover,
             width: 48,
             height: 48,
-            fit: BoxFit.cover,
             errorBuilder: (context, error, stackTrace) {
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (mounted) {
                   setState(() {
                     _hasImageError = true;
-                    _isNetworkImageLoading = false;
                   });
                 }
               });
               return _buildInitialsAvatar();
             },
+          ),
+        );
+      } else {
+        // Network images need loading builder
+        return ClipOval(
+          child: Image.network(
+            profileImage,
+            fit: BoxFit.cover,
+            width: 48,
+            height: 48,
             loadingBuilder: (context, child, loadingProgress) {
               if (loadingProgress == null) {
                 WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -293,69 +312,21 @@ class _StaffAvatarWithLoadingState extends State<StaffAvatarWithLoading> {
               });
               return _buildLoadingIndicator();
             },
+            errorBuilder: (context, error, stackTrace) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) {
+                  setState(() {
+                    _hasImageError = true;
+                    _isNetworkImageLoading = false;
+                  });
+                }
+              });
+              return _buildInitialsAvatar();
+            },
           ),
         );
       }
-    }
-
-    // Default to initials avatar
-    return _buildInitialsAvatar();
-  }
-
-  Widget _buildBase64Image(Staff staffMember) {
-    try {
-      // Extract base64 data from data URL
-      final base64Data = staffMember.profileImage!.split(',')[1];
-      final bytes = base64Decode(base64Data);
-
-      return ClipOval(
-        child: Image.memory(
-          bytes,
-          width: 48,
-          height: 48,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) {
-                setState(() {
-                  _hasImageError = true;
-                });
-              }
-            });
-            return _buildInitialsAvatar();
-          },
-          // No loadingBuilder for Image.memory - it loads instantly
-        ),
-      );
-    } catch (e) {
-      return _buildInitialsAvatar();
-    }
-  }
-
-  Widget _buildBase64ImageFromString(Staff staffMember) {
-    try {
-      final bytes = base64Decode(staffMember.profileImage!);
-
-      return ClipOval(
-        child: Image.memory(
-          bytes,
-          width: 48,
-          height: 48,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) {
-                setState(() {
-                  _hasImageError = true;
-                });
-              }
-            });
-            return _buildInitialsAvatar();
-          },
-          // No loadingBuilder for Image.memory - it loads instantly
-        ),
-      );
-    } catch (e) {
+    } else {
       return _buildInitialsAvatar();
     }
   }
@@ -363,7 +334,12 @@ class _StaffAvatarWithLoadingState extends State<StaffAvatarWithLoading> {
   Widget _buildInitialsAvatar() {
     return Center(
       child: Text(
-        StaffUtils.getInitials(widget.staff.fullName),
+        // Fixed: Use consistent property access and handle safely
+        StaffUtils.getInitials(
+          widget.staff.fullName.isNotEmpty
+              ? widget.staff.fullName
+              : widget.staff.name,
+        ),
         style: const TextStyle(
           color: Colors.white,
           fontWeight: FontWeight.bold,
@@ -371,15 +347,5 @@ class _StaffAvatarWithLoadingState extends State<StaffAvatarWithLoading> {
         ),
       ),
     );
-  }
-
-  bool _isBase64String(String str) {
-    try {
-      // Basic check for base64 string
-      final regex = RegExp(r'^[A-Za-z0-9+/]*={0,2}$');
-      return regex.hasMatch(str) && str.length % 4 == 0;
-    } catch (e) {
-      return false;
-    }
   }
 }

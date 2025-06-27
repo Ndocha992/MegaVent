@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:megavent/models/dashboard_stats.dart';
 import 'package:megavent/models/staff.dart';
-import 'package:megavent/models/attendee.dart'; // Add this import
+import 'package:megavent/models/attendee.dart';
 import 'package:megavent/screens/organizer/create_events.dart';
 import 'package:provider/provider.dart';
 import 'package:megavent/screens/organizer/events_details.dart';
@@ -30,9 +30,9 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
 
   late DatabaseService _databaseService;
   List<Event> _events = [];
-  List<Attendee> _attendees =
-      []; // Changed from List<Map<String, dynamic>> to List<Attendee>
-  List<Staff> _staff = [];
+  List<Attendee> _attendees = [];
+  List<Staff> _staff =
+      []; // This will now contain properly converted Staff objects
   DashboardStats _dashboardStats = DashboardStats(
     totalEvents: 0,
     totalAttendees: 0,
@@ -58,23 +58,36 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
         _error = null;
       });
 
-      // Load all required data in parallel
+      // Load all required data in parallel - FIXED: Use direct database calls
       final results = await Future.wait([
         _databaseService.getEvents(),
-        _databaseService.getLatestAttendees(), // Now returns List<Attendee>
-        _databaseService.getLatestStaff(),
+        _databaseService.getLatestAttendees(),
+        _databaseService
+            .getAllStaff(), // CHANGED: Use getAllStaff() instead of getLatestStaff()
         _databaseService.getOrganizerDashboardStats(),
       ]);
 
       setState(() {
         _events = results[0] as List<Event>;
-        _attendees =
-            results[1]
-                as List<Attendee>; // Now correctly typed as List<Attendee>
+        _attendees = results[1] as List<Attendee>;
 
-        // Convert Map data to Staff objects
-        final staffData = results[2] as List<Map<String, dynamic>>;
-        _staff = staffData.map((data) => Staff.fromMap(data)).toList();
+        // FIXED: Direct assignment since getAllStaff() returns List<Staff>
+        final allStaff = results[2] as List<Staff>;
+
+        // Get only the latest 5 staff members, sorted by hire date
+        _staff =
+            allStaff
+              ..sort(
+                (a, b) => b.hiredAt.compareTo(a.hiredAt),
+              ) // Sort by newest first
+              ..take(5).toList(); // Take only the latest 5
+
+        // Debug print to verify data integrity
+        for (final staff in _staff) {
+          debugPrint(
+            'Staff: ${staff.name}, Hired: ${staff.hiredAt}, IsNew: ${staff.isNew}',
+          );
+        }
 
         // Convert Map data to DashboardStats object
         final statsData = results[3] as Map<String, dynamic>;
@@ -94,6 +107,9 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
         _error = 'Failed to load dashboard data: ${e.toString()}';
         _isLoading = false;
       });
+
+      // Additional debug info
+      debugPrint('Dashboard loading error: $e');
     }
   }
 
@@ -175,17 +191,15 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
           children: [
             const WelcomeCard(),
             const SizedBox(height: 24),
-            StatsOverview(
-              stats: _dashboardStats,
-            ), // Now passing DashboardStats object
+            StatsOverview(stats: _dashboardStats),
             const SizedBox(height: 24),
-            LatestEventsCard(
-              limit: 5,
-            ), // Removed events parameter, using limit instead
+            LatestEventsCard(limit: 5),
             const SizedBox(height: 24),
-            LatestAttendeesCard(attendees: _attendees), // Now correctly typed
+            LatestAttendeesCard(attendees: _attendees),
             const SizedBox(height: 24),
-            LatestStaffCard(staff: _staff), // Now passing List<Staff>
+            LatestStaffCard(
+              staff: _staff,
+            ), // Now passing properly converted List<Staff>
             const SizedBox(height: 24),
             QuickActionsGrid(
               onNavigate: (route) {
@@ -308,8 +322,11 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
     final upcomingEvents =
         _events
             .where((event) => event.startDate.isAfter(DateTime.now()))
-            .take(3)
-            .toList();
+            .toList()
+          ..sort(
+            (a, b) => a.startDate.compareTo(b.startDate),
+          ) // Sort by nearest date first
+          ..take(3).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -512,39 +529,43 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
         'icon': Icons.event,
         'color': AppConstants.primaryColor,
         'isNew': _isRecent(event.createdAt),
+        'dateTime': event.createdAt, // Add actual DateTime for sorting
       });
     }
 
-    // Add recent attendee activities - Updated to use Attendee objects
+    // Add recent attendee activities
     for (final attendee in _attendees.take(2)) {
       activities.add({
-        'title':
-            'New attendee ${attendee.fullName} registered', // Changed to attendee.fullName
-        'time': _getTimeAgo(
-          attendee.registeredAt,
-        ), // Changed to attendee.registeredAt
+        'title': 'New attendee ${attendee.fullName} registered',
+        'time': _getTimeAgo(attendee.registeredAt),
         'icon': Icons.person_add,
         'color': AppConstants.successColor,
-        'isNew': _isRecent(
-          attendee.registeredAt,
-        ), // Changed to attendee.registeredAt
+        'isNew': _isRecent(attendee.registeredAt),
+        'dateTime': attendee.registeredAt, // Add actual DateTime for sorting
       });
     }
 
     // Add recent staff activities
-    for (final staff in _staff.take(1)) {
+    for (final staff in _staff.take(2)) {
       activities.add({
         'title': 'Staff member ${staff.name} joined',
         'time': _getTimeAgo(staff.hiredAt),
         'icon': Icons.badge,
         'color': AppConstants.accentColor,
         'isNew': _isRecent(staff.hiredAt),
+        'dateTime': staff.hiredAt, // Add actual DateTime for sorting
       });
     }
 
-    // Sort by most recent and take top 5
-    activities.sort((a, b) => b['time'].compareTo(a['time']));
-    return activities.take(5).toList();
+    // Sort by most recent using actual DateTime objects
+    activities.sort((a, b) => b['dateTime'].compareTo(a['dateTime']));
+
+    // Remove the dateTime field after sorting (optional, for cleaner data)
+    for (var activity in activities) {
+      activity.remove('dateTime');
+    }
+
+    return activities.take(6).toList();
   }
 
   String _getTimeAgo(DateTime dateTime) {
@@ -567,7 +588,7 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
   bool _isRecent(DateTime dateTime) {
     final now = DateTime.now();
     final difference = now.difference(dateTime);
-    return difference.inHours < 24;
+    return difference.inHours < 6;
   }
 
   String _getMonthName(int month) {

@@ -54,7 +54,10 @@ class _StaffHeaderWidgetState extends State<StaffHeaderWidget> {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      height: 280,
+      constraints: const BoxConstraints(
+        minHeight: 280,
+        maxHeight: 320, // Allow some flexibility for content
+      ),
       child: Stack(
         children: [
           // Blurred background image
@@ -66,9 +69,11 @@ class _StaffHeaderWidgetState extends State<StaffHeaderWidget> {
                     image: _backgroundImageProvider!,
                     fit: BoxFit.cover,
                     onError: (exception, stackTrace) {
-                      setState(() {
-                        _backgroundImageProvider = null;
-                      });
+                      if (mounted) {
+                        setState(() {
+                          _backgroundImageProvider = null;
+                        });
+                      }
                     },
                   ),
                 ),
@@ -100,99 +105,115 @@ class _StaffHeaderWidgetState extends State<StaffHeaderWidget> {
               ),
             ),
 
-          // Content
+          // Content with SafeArea and proper spacing
           Positioned.fill(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Profile Image
-                  Container(
-                    width: 120,
-                    height: 120,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 4),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.3),
-                          blurRadius: 15,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
-                    ),
-                    child:
-                        _isNetworkImageLoading
-                            ? _buildLoadingIndicator()
-                            : _buildProfileImage(),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Staff Name
-                  Text(
-                    widget.staff.name,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      shadows: [
-                        Shadow(
-                          offset: Offset(0, 2),
-                          blurRadius: 4,
-                          color: Colors.black26,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-
-                  // Role
-                  Text(
-                    widget.staff.role,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      color: Colors.white70,
-                      shadows: [
-                        Shadow(
-                          offset: Offset(0, 1),
-                          blurRadius: 2,
-                          color: Colors.black26,
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // New Badge
-                  if (widget.staff.isNew) ...[
-                    const SizedBox(height: 12),
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Profile Image
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
+                      width: 120,
+                      height: 120,
                       decoration: BoxDecoration(
-                        color: AppConstants.successColor,
-                        borderRadius: BorderRadius.circular(20),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 4),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
+                            color: Colors.black.withOpacity(0.3),
+                            blurRadius: 15,
+                            offset: const Offset(0, 8),
                           ),
                         ],
                       ),
-                      child: const Text(
-                        'NEW',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
+                      child:
+                          _isNetworkImageLoading
+                              ? _buildLoadingIndicator()
+                              : _buildProfileImage(),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Staff Name
+                    Flexible(
+                      child: Text(
+                        widget.staff.name,
+                        style: const TextStyle(
+                          fontSize: 24,
                           fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          shadows: [
+                            Shadow(
+                              offset: Offset(0, 2),
+                              blurRadius: 4,
+                              color: Colors.black26,
+                            ),
+                          ],
                         ),
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
+                    const SizedBox(height: 8),
+
+                    // Role
+                    Flexible(
+                      child: Text(
+                        widget.staff.role,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: Colors.white70,
+                          shadows: [
+                            Shadow(
+                              offset: Offset(0, 1),
+                              blurRadius: 2,
+                              color: Colors.black26,
+                            ),
+                          ],
+                        ),
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+
+                    // New Badge
+                    if (widget.staff.isNew) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppConstants.successColor,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.2),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: const Text(
+                          'NEW',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
           ),

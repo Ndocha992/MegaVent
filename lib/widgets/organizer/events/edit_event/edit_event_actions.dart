@@ -54,13 +54,10 @@ class EditEventActions extends StatelessWidget {
             ),
             child:
                 isLoading
-                    ? Container(
-                      color: AppConstants.primaryColor.withOpacity(0.1),
-                      child: const Center(
-                        child: SpinKitThreeBounce(
-                          color: AppConstants.primaryColor,
-                          size: 20.0,
-                        ),
+                    ? const Center(
+                      child: SpinKitThreeBounce(
+                        color: AppConstants.primaryColor,
+                        size: 20.0,
                       ),
                     )
                     : Text(

@@ -215,16 +215,10 @@ class _EditEventsState extends State<EditEvents> {
           ),
           // Loading overlay
           if (_isLoading)
-            Container(
-              color: Colors.black54,
-              child: Container(
-                color: AppConstants.primaryColor.withOpacity(0.1),
-                child: const Center(
-                  child: SpinKitThreeBounce(
-                    color: AppConstants.primaryColor,
-                    size: 20.0,
-                  ),
-                ),
+            const Center(
+              child: SpinKitThreeBounce(
+                color: AppConstants.primaryColor,
+                size: 20.0,
               ),
             ),
         ],

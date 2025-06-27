@@ -30,7 +30,6 @@ class _EditStaffState extends State<EditStaff> {
 
   // Form controllers
   late TextEditingController _nameController;
-  late TextEditingController _emailController;
   late TextEditingController _phoneController;
 
   // Profile image
@@ -59,7 +58,6 @@ class _EditStaffState extends State<EditStaff> {
     final staff = widget.staff;
 
     _nameController = TextEditingController(text: staff?.fullName ?? '');
-    _emailController = TextEditingController(text: staff?.email ?? '');
     _phoneController = TextEditingController(text: staff?.phone ?? '');
 
     _selectedRole = staff?.role;
@@ -191,7 +189,6 @@ class _EditStaffState extends State<EditStaff> {
   @override
   void dispose() {
     _nameController.dispose();
-    _emailController.dispose();
     _phoneController.dispose();
     super.dispose();
   }
@@ -418,10 +415,7 @@ class _EditStaffState extends State<EditStaff> {
                 icon: Icons.contact_phone_outlined,
               ),
               const SizedBox(height: 16),
-              StaffContactInfoForm(
-                emailController: _emailController,
-                phoneController: _phoneController,
-              ),
+              StaffContactInfoForm(phoneController: _phoneController),
               const SizedBox(height: 24),
 
               // Work Information Section
@@ -559,47 +553,22 @@ class _EditStaffState extends State<EditStaff> {
 
     try {
       final databaseService = context.read<DatabaseService>();
-      final now = DateTime.now();
 
       if (widget.staff != null) {
-        // Update existing staff
+        // Update existing staff - only update fields from the form
         final updatedStaff = widget.staff!.copyWith(
           fullName: _nameController.text.trim(),
-          email: _emailController.text.trim(),
           phone: _phoneController.text.trim(),
           role: _selectedRole!,
           department: _selectedDepartment!,
           profileImage: _profileImageBase64,
-          updatedAt: now,
+          updatedAt: DateTime.now(),
         );
 
         await databaseService.updateStaff(updatedStaff);
 
         _showSnackBar(
           '${_nameController.text} has been updated successfully',
-          isSuccess: true,
-        );
-      } else {
-        // Create new staff
-        final newStaff = Staff(
-          id: '', // Will be set by the database service
-          fullName: _nameController.text.trim(),
-          email: _emailController.text.trim(),
-          phone: _phoneController.text.trim(),
-          profileImage: _profileImageBase64,
-          organizerId: '', // Will be set by the database service
-          role: _selectedRole!,
-          department: _selectedDepartment!,
-          isApproved: true,
-          createdAt: now,
-          updatedAt: now,
-          hiredAt: now, // This determines if staff is "new"
-        );
-
-        await databaseService.addStaff(newStaff);
-
-        _showSnackBar(
-          '${_nameController.text} has been added to the team',
           isSuccess: true,
         );
       }
