@@ -943,4 +943,239 @@ class AuthService extends ChangeNotifier {
     _secondaryApp?.delete();
     super.dispose();
   }
+
+  // Delete staff member (only callable by organizer) - NEW METHOD
+  Future<Map<String, dynamic>> deleteStaff(String staffId) async {
+    _setLoading(true);
+    try {
+      // Check if current user is an organizer
+      final currentUserData = await getUserData();
+      if (!currentUserData['success'] ||
+          currentUserData['role'] != 'organizer') {
+        return {
+          'success': false,
+          'message': 'Only organizers can delete staff',
+        };
+      }
+
+      // Check if organizer is approved and active
+      final organizer = currentUserData['user'] as Organizer;
+      if (!organizer.isApproved) {
+        return {
+          'success': false,
+          'message': 'Your organizer account must be approved first',
+        };
+      }
+
+      // Get staff data first to verify they belong to this organizer
+      DocumentSnapshot staffDoc =
+          await _firestore.collection('staff').doc(staffId).get();
+
+      if (!staffDoc.exists) {
+        return {'success': false, 'message': 'Staff member not found'};
+      }
+
+      Map<String, dynamic> staffData = staffDoc.data() as Map<String, dynamic>;
+
+      // Verify this staff member belongs to the current organizer
+      if (staffData['organizerId'] != organizer.id) {
+        return {
+          'success': false,
+          'message': 'You can only delete staff members from your organization',
+        };
+      }
+
+      // Start a batch write for atomic operations
+      WriteBatch batch = _firestore.batch();
+
+      // Add staff document deletion to batch
+      DocumentReference staffRef = _firestore.collection('staff').doc(staffId);
+      batch.delete(staffRef);
+
+      // Add user document deletion to batch
+      DocumentReference userRef = _firestore.collection('users').doc(staffId);
+      batch.delete(userRef);
+
+      // Check if staff has any associated data and clean it up
+
+      // Delete any staff-related event assignments
+      QuerySnapshot eventAssignments =
+          await _firestore
+              .collection('event_assignments')
+              .where('staffId', isEqualTo: staffId)
+              .get();
+
+      for (DocumentSnapshot doc in eventAssignments.docs) {
+        batch.delete(doc.reference);
+      }
+
+      // Delete any staff-related notifications
+      QuerySnapshot notifications =
+          await _firestore
+              .collection('notifications')
+              .where('userId', isEqualTo: staffId)
+              .get();
+
+      for (DocumentSnapshot doc in notifications.docs) {
+        batch.delete(doc.reference);
+      }
+
+      // Delete any staff-related activity logs
+      QuerySnapshot activityLogs =
+          await _firestore
+              .collection('activity_logs')
+              .where('userId', isEqualTo: staffId)
+              .get();
+
+      for (DocumentSnapshot doc in activityLogs.docs) {
+        batch.delete(doc.reference);
+      }
+
+      // Execute all deletions atomically
+      await batch.commit();
+
+      // Add a deletion record for audit trail
+      await _firestore.collection('deleted_users').add({
+        'deletedUserId': staffId,
+        'deletedUserEmail': staffData['email'],
+        'deletedUserName': staffData['fullName'],
+        'deletedUserRole': 'staff',
+        'deletedBy': organizer.id,
+        'deletedByName': organizer.fullName,
+        'deletedByRole': 'organizer',
+        'organizationId': organizer.id,
+        'organizationName': organizer.organization,
+        'deletedAt': DateTime.now(),
+        'reason': 'Staff member deleted by organizer',
+        'authUserStatus': 'requires_manual_cleanup', // Flag for Auth cleanup
+      });
+
+      // Log the successful deletion
+      await _firestore.collection('activity_logs').add({
+        'userId': organizer.id,
+        'userRole': 'organizer',
+        'action': 'staff_deleted',
+        'targetUserId': staffId,
+        'targetUserEmail': staffData['email'],
+        'details': {
+          'staffName': staffData['fullName'],
+          'staffRole': staffData['role'],
+          'department': staffData['department'],
+          'organizationId': organizer.id,
+        },
+        'timestamp': DateTime.now(),
+        'success': true,
+      });
+
+      return {
+        'success': true,
+        'message': 'Staff member deleted successfully from all collections',
+        'warning': 'Firebase Auth account cleanup may be required',
+        'deletedStaffInfo': {
+          'name': staffData['fullName'],
+          'email': staffData['email'],
+          'role': staffData['role'],
+          'department': staffData['department'],
+        },
+      };
+    } on FirebaseException catch (e) {
+      // Log the failed deletion attempt
+      try {
+        await _firestore.collection('activity_logs').add({
+          'userId': currentUser?.uid ?? 'unknown',
+          'userRole': 'organizer',
+          'action': 'staff_deletion_failed',
+          'targetUserId': staffId,
+          'error': e.message,
+          'errorCode': e.code,
+          'timestamp': DateTime.now(),
+          'success': false,
+        });
+      } catch (logError) {
+        print('Failed to log deletion error: $logError');
+      }
+
+      if (e.code == 'unavailable') {
+        return {'success': false, 'message': 'No internet connection'};
+      }
+      return {
+        'success': false,
+        'message': 'Failed to delete staff member: ${e.message}',
+      };
+    } catch (e) {
+      // Log the failed deletion attempt
+      try {
+        await _firestore.collection('activity_logs').add({
+          'userId': currentUser?.uid ?? 'unknown',
+          'userRole': 'organizer',
+          'action': 'staff_deletion_failed',
+          'targetUserId': staffId,
+          'error': e.toString(),
+          'timestamp': DateTime.now(),
+          'success': false,
+        });
+      } catch (logError) {
+        print('Failed to log deletion error: $logError');
+      }
+
+      return {
+        'success': false,
+        'message': 'Failed to delete staff member. Please try again later.',
+      };
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Helper method to get all staff members that need Auth cleanup
+  Future<Map<String, dynamic>> getOrphanedAuthUsers() async {
+    try {
+      final currentUserData = await getUserData();
+      if (!currentUserData['success'] || currentUserData['role'] != 'admin') {
+        return {'success': false, 'message': 'Admin access required'};
+      }
+
+      QuerySnapshot deletedUsers =
+          await _firestore
+              .collection('deleted_users')
+              .where('authUserStatus', isEqualTo: 'requires_manual_cleanup')
+              .orderBy('deletedAt', descending: true)
+              .get();
+
+      List<Map<String, dynamic>> orphanedUsers =
+          deletedUsers.docs.map((doc) {
+            Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+            data['documentId'] = doc.id;
+            return data;
+          }).toList();
+
+      return {
+        'success': true,
+        'orphanedUsers': orphanedUsers,
+        'count': orphanedUsers.length,
+      };
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Failed to get orphaned users: ${e.toString()}',
+      };
+    }
+  }
+
+  // Helper method to mark Auth user as manually cleaned up
+  Future<Map<String, dynamic>> markAuthUserCleanedUp(String documentId) async {
+    try {
+      await _firestore.collection('deleted_users').doc(documentId).update({
+        'authUserStatus': 'manually_cleaned',
+        'cleanedUpAt': DateTime.now(),
+      });
+
+      return {'success': true, 'message': 'Auth user marked as cleaned up'};
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Failed to update cleanup status: ${e.toString()}',
+      };
+    }
+  }
 }
