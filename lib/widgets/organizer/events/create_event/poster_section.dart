@@ -142,13 +142,10 @@ class _PosterSectionState extends State<PosterSection> {
                 ? Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Container(
-                      color: AppConstants.primaryColor.withOpacity(0.1),
-                      child: const Center(
-                        child: SpinKitThreeBounce(
-                          color: AppConstants.primaryColor,
-                          size: 20.0,
-                        ),
+                    const Center(
+                      child: SpinKitThreeBounce(
+                        color: AppConstants.primaryColor,
+                        size: 20.0,
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -212,13 +209,10 @@ class _PosterSectionState extends State<PosterSection> {
                 height: double.infinity,
                 loadingBuilder: (context, child, loadingProgress) {
                   if (loadingProgress == null) return child;
-                  return Container(
-                    color: AppConstants.primaryColor.withOpacity(0.1),
-                    child: const Center(
-                      child: SpinKitThreeBounce(
-                        color: AppConstants.primaryColor,
-                        size: 20.0,
-                      ),
+                  return const Center(
+                    child: SpinKitThreeBounce(
+                      color: AppConstants.primaryColor,
+                      size: 20.0,
                     ),
                   );
                 },

@@ -147,11 +147,11 @@ class Attendee {
     return hasAttended ? 'Attended' : 'Registered';
   }
 
-  // Calculate if attendee registration is "new" (registered within the last 30 minutes)
+  // Calculate if attendee registration is "new" (registered within the last 6 hours)
   bool get isNew {
     final now = DateTime.now();
-    final thirtyMinutesAgo = now.subtract(const Duration(minutes: 30));
-    return registeredAt.isAfter(thirtyMinutesAgo);
+    final sixHoursAgo = now.subtract(const Duration(hours: 6));
+    return createdAt.isAfter(sixHoursAgo);
   }
 
   @override

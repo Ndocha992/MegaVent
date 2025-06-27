@@ -95,14 +95,16 @@ class Event {
       description: map['description'] ?? '',
       category: map['category'] ?? '',
       posterUrl: map['posterUrl'] ?? '',
-      startDate: map['startDate'] is Timestamp
-          ? (map['startDate'] as Timestamp).toDate()
-          : map['startDate'] is DateTime
+      startDate:
+          map['startDate'] is Timestamp
+              ? (map['startDate'] as Timestamp).toDate()
+              : map['startDate'] is DateTime
               ? map['startDate']
               : DateTime.now(),
-      endDate: map['endDate'] is Timestamp
-          ? (map['endDate'] as Timestamp).toDate()
-          : map['endDate'] is DateTime
+      endDate:
+          map['endDate'] is Timestamp
+              ? (map['endDate'] as Timestamp).toDate()
+              : map['endDate'] is DateTime
               ? map['endDate']
               : DateTime.now(),
       startTime: map['startTime'] ?? '',
@@ -113,14 +115,16 @@ class Event {
       attendedCount: map['attendedCount'] ?? 0,
       organizerId: map['organizerId'] ?? '',
       organizerName: map['organizerName'],
-      createdAt: map['createdAt'] is Timestamp
-          ? (map['createdAt'] as Timestamp).toDate()
-          : map['createdAt'] is DateTime
+      createdAt:
+          map['createdAt'] is Timestamp
+              ? (map['createdAt'] as Timestamp).toDate()
+              : map['createdAt'] is DateTime
               ? map['createdAt']
               : DateTime.now(),
-      updatedAt: map['updatedAt'] is Timestamp
-          ? (map['updatedAt'] as Timestamp).toDate()
-          : map['updatedAt'] is DateTime
+      updatedAt:
+          map['updatedAt'] is Timestamp
+              ? (map['updatedAt'] as Timestamp).toDate()
+              : map['updatedAt'] is DateTime
               ? map['updatedAt']
               : DateTime.now(),
     );
@@ -134,12 +138,14 @@ class Event {
       description: json['description'] ?? '',
       category: json['category'] ?? '',
       posterUrl: json['posterUrl'] ?? '',
-      startDate: json['startDate'] != null
-          ? DateTime.parse(json['startDate'])
-          : DateTime.now(),
-      endDate: json['endDate'] != null
-          ? DateTime.parse(json['endDate'])
-          : DateTime.now(),
+      startDate:
+          json['startDate'] != null
+              ? DateTime.parse(json['startDate'])
+              : DateTime.now(),
+      endDate:
+          json['endDate'] != null
+              ? DateTime.parse(json['endDate'])
+              : DateTime.now(),
       startTime: json['startTime'] ?? '',
       endTime: json['endTime'] ?? '',
       location: json['location'] ?? '',
@@ -148,12 +154,14 @@ class Event {
       attendedCount: json['attendedCount'] ?? 0,
       organizerId: json['organizerId'] ?? '',
       organizerName: json['organizerName'],
-      createdAt: json['createdAt'] != null
-          ? DateTime.parse(json['createdAt'])
-          : DateTime.now(),
-      updatedAt: json['updatedAt'] != null
-          ? DateTime.parse(json['updatedAt'])
-          : DateTime.now(),
+      createdAt:
+          json['createdAt'] != null
+              ? DateTime.parse(json['createdAt'])
+              : DateTime.now(),
+      updatedAt:
+          json['updatedAt'] != null
+              ? DateTime.parse(json['updatedAt'])
+              : DateTime.now(),
     );
   }
 
@@ -226,21 +234,21 @@ class Event {
 
   bool get isOngoing =>
       DateTime.now().isAfter(startDate) && DateTime.now().isBefore(endDate);
-  
+
   bool get isCompleted => endDate.isBefore(DateTime.now());
-  
+
   bool get hasAvailableSpots => registeredCount < capacity;
-  
+
   int get availableSpots => capacity - registeredCount;
-  
+
   double get attendanceRate =>
       registeredCount > 0 ? (attendedCount / registeredCount) * 100 : 0.0;
 
-  // Calculate if event is "new" (created within the last 30 minutes)
+  // Calculate if event is "new" (created within the last 6 hours)
   bool get isNew {
     final now = DateTime.now();
-    final thirtyMinutesAgo = now.subtract(const Duration(minutes: 30));
-    return createdAt.isAfter(thirtyMinutesAgo);
+    final sixHoursAgo = now.subtract(const Duration(hours: 6));
+    return createdAt.isAfter(sixHoursAgo);
   }
 
   String get status {

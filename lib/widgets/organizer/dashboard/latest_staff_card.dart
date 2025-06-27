@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:megavent/models/staff.dart';
+import 'package:megavent/screens/organizer/create_staff.dart';
 import 'package:megavent/screens/organizer/staff_details.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/utils/organizer/staff/staff_utils.dart';
@@ -33,35 +34,7 @@ class LatestStaffCard extends StatelessWidget {
           decoration: AppConstants.cardDecoration,
           child:
               staff.isEmpty
-                  ? Padding(
-                    padding: const EdgeInsets.all(32.0),
-                    child: Center(
-                      child: Column(
-                        children: [
-                          Icon(
-                            Icons.people_outline,
-                            size: 48,
-                            color: AppConstants.textSecondaryColor,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'No staff members yet',
-                            style: AppConstants.bodyLarge.copyWith(
-                              color: AppConstants.textSecondaryColor,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Add your first staff member to get started',
-                            style: AppConstants.bodySmall.copyWith(
-                              color: AppConstants.textSecondaryColor,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
+                  ? _buildEmptyStaffState(context)
                   : ListView.separated(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
@@ -74,9 +47,12 @@ class LatestStaffCard extends StatelessWidget {
                         onTap: () => _onStaffTap(context, staffMember),
                         child: ListTile(
                           contentPadding: const EdgeInsets.all(16),
-                          leading: _buildStaffAvatar(staffMember),
+                          leading: StaffAvatarWithLoading(staff: staffMember),
                           title: Text(
-                            staffMember.fullName, // Using fullName from model
+                            // Fixed: Use consistent property access
+                            staffMember.fullName.isNotEmpty
+                                ? staffMember.fullName
+                                : staffMember.name,
                             style: AppConstants.titleMedium.copyWith(
                               fontWeight: FontWeight.w600,
                             ),
@@ -135,7 +111,8 @@ class LatestStaffCard extends StatelessWidget {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                StaffUtils.formatHireDate(staffMember.hiredAt),
+                                // Fixed: Ensure proper date formatting
+                                'Hired ${StaffUtils.formatHireDate(staffMember.hiredAt)}',
                                 style: AppConstants.bodySmall.copyWith(
                                   color: AppConstants.textSecondaryColor,
                                 ),
@@ -151,7 +128,91 @@ class LatestStaffCard extends StatelessWidget {
     );
   }
 
-  Widget _buildStaffAvatar(Staff staffMember) {
+  Widget _buildEmptyStaffState(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(32),
+      child: Center(
+        child: Column(
+          children: [
+            Icon(
+              Icons.people_outline,
+              size: 48,
+              color: AppConstants.primaryColor,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No Staff Members Yet',
+              style: AppConstants.titleMedium.copyWith(
+                color: AppConstants.textSecondaryColor,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Add your first staff member to get started',
+              textAlign: TextAlign.center,
+              style: AppConstants.bodySmall.copyWith(
+                color: AppConstants.textSecondaryColor,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => const CreateStaff()),
+                );
+              },
+              icon: const Icon(Icons.person_add),
+              label: const Text('Add Staff'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppConstants.primaryColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 10,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _onStaffTap(BuildContext context, Staff staff) {
+    // Fixed: Ensure complete staff data is passed
+    debugPrint('Staff data being passed: ${staff.toString()}');
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => StaffDetails(staff: staff)),
+    );
+  }
+}
+
+class StaffAvatarWithLoading extends StatefulWidget {
+  final Staff staff;
+
+  const StaffAvatarWithLoading({super.key, required this.staff});
+
+  @override
+  State<StaffAvatarWithLoading> createState() => _StaffAvatarWithLoadingState();
+}
+
+class _StaffAvatarWithLoadingState extends State<StaffAvatarWithLoading> {
+  bool _isNetworkImageLoading = false;
+  bool _hasImageError = false;
+
+  bool _isBase64(String? value) {
+    if (value == null || value.isEmpty) return false;
+    try {
+      base64Decode(value);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Stack(
       children: [
         Container(
@@ -162,15 +223,19 @@ class LatestStaffCard extends StatelessWidget {
             gradient: LinearGradient(
               colors: [
                 StaffUtils.getDepartmentColor(
-                  staffMember.department,
+                  widget.staff.department,
                 ).withOpacity(0.8),
-                StaffUtils.getDepartmentColor(staffMember.department),
+                StaffUtils.getDepartmentColor(widget.staff.department),
               ],
             ),
           ),
-          child: _buildProfileImage(staffMember),
+          child:
+              _isNetworkImageLoading
+                  ? _buildLoadingIndicator()
+                  : _buildAvatarContent(),
         ),
-        if (staffMember.isNew)
+        // Fixed: Properly check isNew status and positioning
+        if (widget.staff.isNew == true)
           Positioned(
             top: 0,
             right: 0,
@@ -182,123 +247,105 @@ class LatestStaffCard extends StatelessWidget {
                 shape: BoxShape.circle,
                 boxShadow: [BoxShadow(color: Colors.white, spreadRadius: 2)],
               ),
+              child: const Icon(Icons.fiber_new, size: 8, color: Colors.white),
             ),
           ),
       ],
     );
   }
 
-  Widget _buildProfileImage(Staff staffMember) {
-    // Handle different types of profile images
-    if (staffMember.profileImage != null &&
-        staffMember.profileImage!.isNotEmpty) {
-      // Check if it's a base64 encoded image
-      if (staffMember.profileImage!.startsWith('data:image/')) {
-        return _buildBase64Image(staffMember);
-      }
-      // Check if it's a base64 string without prefix
-      else if (_isBase64String(staffMember.profileImage!)) {
-        return _buildBase64ImageFromString(staffMember);
-      }
-      // Handle network images
-      else if (staffMember.profileImage!.startsWith('http')) {
+  Widget _buildLoadingIndicator() {
+    return const Center(
+      child: SpinKitThreeBounce(color: Colors.white, size: 16.0),
+    );
+  }
+
+  Widget _buildAvatarContent() {
+    final profileImage = widget.staff.profileImage;
+
+    if (profileImage != null && profileImage.isNotEmpty && !_hasImageError) {
+      if (_isBase64(profileImage)) {
+        // Base64 images load instantly, no loading builder needed
         return ClipOval(
-          child: Image.network(
-            staffMember.profileImage!,
+          child: Image.memory(
+            base64Decode(profileImage),
+            fit: BoxFit.cover,
             width: 48,
             height: 48,
+            errorBuilder: (context, error, stackTrace) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) {
+                  setState(() {
+                    _hasImageError = true;
+                  });
+                }
+              });
+              return _buildInitialsAvatar();
+            },
+          ),
+        );
+      } else {
+        // Network images need loading builder
+        return ClipOval(
+          child: Image.network(
+            profileImage,
             fit: BoxFit.cover,
-            errorBuilder:
-                (context, error, stackTrace) =>
-                    _buildInitialsAvatar(staffMember),
+            width: 48,
+            height: 48,
             loadingBuilder: (context, child, loadingProgress) {
-              if (loadingProgress == null) return child;
-              return Container(
-                color: AppConstants.primaryColor.withOpacity(0.1),
-                child: const Center(
-                  child: SpinKitThreeBounce(
-                    color: AppConstants.primaryColor,
-                    size: 20.0,
-                  ),
-                ),
-              );
+              if (loadingProgress == null) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) {
+                    setState(() {
+                      _isNetworkImageLoading = false;
+                    });
+                  }
+                });
+                return child;
+              }
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) {
+                  setState(() {
+                    _isNetworkImageLoading = true;
+                  });
+                }
+              });
+              return _buildLoadingIndicator();
+            },
+            errorBuilder: (context, error, stackTrace) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) {
+                  setState(() {
+                    _hasImageError = true;
+                    _isNetworkImageLoading = false;
+                  });
+                }
+              });
+              return _buildInitialsAvatar();
             },
           ),
         );
       }
-    }
-
-    // Default to initials avatar
-    return _buildInitialsAvatar(staffMember);
-  }
-
-  Widget _buildBase64Image(Staff staffMember) {
-    try {
-      // Extract base64 data from data URL
-      final base64Data = staffMember.profileImage!.split(',')[1];
-      final bytes = base64Decode(base64Data);
-
-      return ClipOval(
-        child: Image.memory(
-          bytes,
-          width: 48,
-          height: 48,
-          fit: BoxFit.cover,
-          errorBuilder:
-              (context, error, stackTrace) => _buildInitialsAvatar(staffMember),
-        ),
-      );
-    } catch (e) {
-      return _buildInitialsAvatar(staffMember);
+    } else {
+      return _buildInitialsAvatar();
     }
   }
 
-  Widget _buildBase64ImageFromString(Staff staffMember) {
-    try {
-      final bytes = base64Decode(staffMember.profileImage!);
-
-      return ClipOval(
-        child: Image.memory(
-          bytes,
-          width: 48,
-          height: 48,
-          fit: BoxFit.cover,
-          errorBuilder:
-              (context, error, stackTrace) => _buildInitialsAvatar(staffMember),
-        ),
-      );
-    } catch (e) {
-      return _buildInitialsAvatar(staffMember);
-    }
-  }
-
-  Widget _buildInitialsAvatar(Staff staffMember) {
+  Widget _buildInitialsAvatar() {
     return Center(
       child: Text(
-        StaffUtils.getInitials(staffMember.fullName), // Using fullName
+        // Fixed: Use consistent property access and handle safely
+        StaffUtils.getInitials(
+          widget.staff.fullName.isNotEmpty
+              ? widget.staff.fullName
+              : widget.staff.name,
+        ),
         style: const TextStyle(
           color: Colors.white,
           fontWeight: FontWeight.bold,
           fontSize: 16,
         ),
       ),
-    );
-  }
-
-  bool _isBase64String(String str) {
-    try {
-      // Basic check for base64 string
-      final regex = RegExp(r'^[A-Za-z0-9+/]*={0,2}$');
-      return regex.hasMatch(str) && str.length % 4 == 0;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  void _onStaffTap(BuildContext context, Staff staff) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => StaffDetails(staff: staff)),
     );
   }
 }

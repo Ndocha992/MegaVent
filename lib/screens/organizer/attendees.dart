@@ -141,17 +141,59 @@ class _AttendeesState extends State<Attendees> with TickerProviderStateMixin {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.error_outline, size: 48, color: Colors.red[400]),
-          const SizedBox(height: 16),
-          Text(
-            _errorMessage ?? 'An error occurred',
-            style: const TextStyle(fontSize: 16, color: Colors.red),
+          // Circular background similar to other screens
+          Container(
+            width: 120,
+            height: 120,
+            decoration: BoxDecoration(
+              color: Colors.red[50],
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.error_outline, size: 60, color: Colors.red[300]),
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'Unable to load attendees',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'There was a problem loading your attendees data',
+            style: TextStyle(fontSize: 14, color: Colors.grey),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: _refreshAttendees,
-            child: const Text('Retry'),
+          const SizedBox(height: 24),
+          // Styled button similar to other screens
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.symmetric(horizontal: 40),
+            child: ElevatedButton(
+              onPressed: _refreshAttendees,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppConstants.primaryColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(25),
+                ),
+                elevation: 0,
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.refresh, size: 20),
+                  SizedBox(width: 8),
+                  Text(
+                    'Try Again',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
@@ -159,14 +201,8 @@ class _AttendeesState extends State<Attendees> with TickerProviderStateMixin {
   }
 
   Widget _buildLoadingState() {
-    return Container(
-      color: AppConstants.primaryColor.withOpacity(0.1),
-      child: const Center(
-        child: SpinKitThreeBounce(
-          color: AppConstants.primaryColor,
-          size: 20.0,
-        ),
-      ),
+    return const Center(
+      child: SpinKitThreeBounce(color: AppConstants.primaryColor, size: 20.0),
     );
   }
 
@@ -175,14 +211,27 @@ class _AttendeesState extends State<Attendees> with TickerProviderStateMixin {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.people_outline, size: 64, color: Colors.grey[400]),
-          const SizedBox(height: 16),
+          // Circular background similar to other screens
+          Container(
+            width: 120,
+            height: 120,
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.people_outline,
+              size: 60,
+              color: Colors.grey[400],
+            ),
+          ),
+          const SizedBox(height: 24),
           const Text(
             'No attendees found',
             style: TextStyle(
               fontSize: 18,
-              fontWeight: FontWeight.w500,
-              color: Colors.grey,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
             ),
           ),
           const SizedBox(height: 8),
@@ -191,10 +240,34 @@ class _AttendeesState extends State<Attendees> with TickerProviderStateMixin {
             style: TextStyle(fontSize: 14, color: Colors.grey),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: _refreshAttendees,
-            child: const Text('Refresh'),
+          const SizedBox(height: 24),
+          // Styled button similar to other screens
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.symmetric(horizontal: 40),
+            child: ElevatedButton(
+              onPressed: _refreshAttendees,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppConstants.primaryColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(25),
+                ),
+                elevation: 0,
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.refresh, size: 20),
+                  SizedBox(width: 8),
+                  Text(
+                    'Refresh',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
@@ -209,13 +282,6 @@ class _AttendeesState extends State<Attendees> with TickerProviderStateMixin {
       appBar: OrganizerAppBar(
         title: 'MegaVent',
         onMenuPressed: () => _scaffoldKey.currentState?.openDrawer(),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _refreshAttendees,
-            tooltip: 'Refresh',
-          ),
-        ],
       ),
       drawer: OrganizerSidebar(currentRoute: currentRoute),
       body: Column(
@@ -270,14 +336,23 @@ class _AttendeesState extends State<Attendees> with TickerProviderStateMixin {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.search_off, size: 64, color: Colors.grey[400]),
-            const SizedBox(height: 16),
+            // Circular background for consistency
+            Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.search_off, size: 60, color: Colors.grey[400]),
+            ),
+            const SizedBox(height: 24),
             const Text(
               'No attendees match your filters',
               style: TextStyle(
                 fontSize: 18,
-                fontWeight: FontWeight.w500,
-                color: Colors.grey,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
               ),
             ),
             const SizedBox(height: 8),
@@ -285,16 +360,43 @@ class _AttendeesState extends State<Attendees> with TickerProviderStateMixin {
               'Try adjusting your search or filter criteria',
               style: TextStyle(fontSize: 14, color: Colors.grey),
             ),
-            const SizedBox(height: 16),
-            TextButton(
-              onPressed: () {
-                _searchController.clear();
-                setState(() {
-                  _searchQuery = '';
-                  _selectedEvent = 'All';
-                });
-              },
-              child: const Text('Clear Filters'),
+            const SizedBox(height: 24),
+            // Styled button for consistency
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.symmetric(horizontal: 40),
+              child: ElevatedButton(
+                onPressed: () {
+                  _searchController.clear();
+                  setState(() {
+                    _searchQuery = '';
+                    _selectedEvent = 'All';
+                  });
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppConstants.primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(25),
+                  ),
+                  elevation: 0,
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.clear_all, size: 20),
+                    SizedBox(width: 8),
+                    Text(
+                      'Clear Filters',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),

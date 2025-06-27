@@ -111,7 +111,7 @@ class StaffService {
     }
   }
 
-  // Update staff member
+  // Update staff member - FIXED VERSION
   Future<void> updateStaff(Staff staff) async {
     try {
       final user = _auth.currentUser;
@@ -123,11 +123,25 @@ class StaffService {
         throw Exception('Unauthorized: You can only update your own staff');
       }
 
-      final updatedStaff = staff.copyWith(updatedAt: DateTime.now());
+      // Only update the fields that can be modified from the form
+      Map<String, dynamic> updateData = {
+        'fullName': staff.fullName,
+        'email': staff.email,
+        'phone': staff.phone,
+        'role': staff.role,
+        'department': staff.department,
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+
+      // Only add profileImage if it's not null
+      if (staff.profileImage != null) {
+        updateData['profileImage'] = staff.profileImage;
+      }
+
       await _firestore
           .collection('staff')
           .doc(staff.id)
-          .update(updatedStaff.toMap());
+          .update(updateData);
 
       _notifier.notifyListeners();
     } catch (e) {

@@ -141,18 +141,18 @@ class Staff {
   // Get display name (for compatibility with fake data)
   String get name => fullName;
 
-  // Calculate if staff is "new" (hired within the last 30 minutes)
+  // Calculate if staff is "new" (hired within the last 6 hours)
   bool get isNew {
     final now = DateTime.now();
-    final thirtyMinutesAgo = now.subtract(const Duration(minutes: 30));
-    return hiredAt.isAfter(thirtyMinutesAgo);
+    final sixHoursAgo = now.subtract(const Duration(hours: 6));
+    return hiredAt.isAfter(sixHoursAgo);
   }
 
   // Helper getters similar to Event model
   bool get isActive => isApproved;
-  
+
   String get displayName => fullName;
-  
+
   String get initials {
     final names = fullName.trim().split(' ');
     if (names.isEmpty) return '';
@@ -162,7 +162,7 @@ class Staff {
 
   // Calculate tenure
   Duration get tenure => DateTime.now().difference(hiredAt);
-  
+
   String get tenureDisplay {
     final days = tenure.inDays;
     if (days < 1) return 'Today';

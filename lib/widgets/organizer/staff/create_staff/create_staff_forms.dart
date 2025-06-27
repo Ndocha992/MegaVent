@@ -93,23 +93,19 @@ class CreateStaffContactInfoForm extends StatelessWidget {
 class CreateStaffWorkInfoForm extends StatelessWidget {
   final String? selectedRole;
   final String? selectedDepartment;
-  final bool isNew;
   final List<String> roles;
   final List<String> departments;
   final void Function(String?) onRoleChanged;
   final void Function(String?) onDepartmentChanged;
-  final void Function(bool) onNewStatusChanged;
 
   const CreateStaffWorkInfoForm({
     super.key,
     required this.selectedRole,
     required this.selectedDepartment,
-    required this.isNew,
     required this.roles,
     required this.departments,
     required this.onRoleChanged,
     required this.onDepartmentChanged,
-    required this.onNewStatusChanged,
   });
 
   @override
@@ -143,8 +139,6 @@ class CreateStaffWorkInfoForm extends StatelessWidget {
             return null;
           },
         ),
-        const SizedBox(height: 16),
-        CreateStaffSwitchTile(isNew: isNew, onChanged: onNewStatusChanged),
       ],
     );
   }
@@ -262,54 +256,6 @@ class CreateStaffDropdownField extends StatelessWidget {
               child: Text(item, style: AppConstants.bodyMedium),
             );
           }).toList(),
-    );
-  }
-}
-
-class CreateStaffSwitchTile extends StatelessWidget {
-  final bool isNew;
-  final void Function(bool) onChanged;
-
-  const CreateStaffSwitchTile({
-    super.key,
-    required this.isNew,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppConstants.borderColor),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.new_releases_outlined, color: AppConstants.primaryColor),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('New Staff Member', style: AppConstants.bodyMedium),
-                Text(
-                  'Mark as new to show "NEW" badge',
-                  style: AppConstants.bodySmall.copyWith(
-                    color: AppConstants.textSecondaryColor,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Switch(
-            value: isNew,
-            onChanged: onChanged,
-            activeColor: AppConstants.primaryColor,
-          ),
-        ],
-      ),
     );
   }
 }

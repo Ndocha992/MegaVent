@@ -39,28 +39,56 @@ class StaffUtils {
     }
   }
 
-  /// Generates initials from a full name
+  /// Generates initials from a full name - Fixed to handle edge cases
   static String getInitials(String fullName) {
-    return fullName.split(' ').map((n) => n[0]).take(2).join().toUpperCase();
+    if (fullName.trim().isEmpty) return 'U'; // Return 'U' for Unknown if empty
+
+    // Split by space and filter out empty strings
+    final nameParts =
+        fullName.trim().split(' ').where((part) => part.isNotEmpty).toList();
+
+    if (nameParts.isEmpty) return 'U'; // Fallback if no valid parts
+
+    if (nameParts.length == 1) {
+      // Single name, take first character
+      return nameParts[0][0].toUpperCase();
+    } else {
+      // Multiple names, take first character of first and last names
+      return '${nameParts.first[0]}${nameParts.last[0]}'.toUpperCase();
+    }
   }
 
   /// Filters staff list based on search query
-  static List<Staff> filterStaffBySearch(List<Staff> staffList, String searchQuery) {
+  static List<Staff> filterStaffBySearch(
+    List<Staff> staffList,
+    String searchQuery,
+  ) {
     if (searchQuery.isEmpty) return staffList;
-    
-    return staffList.where(
-      (member) =>
-          member.name.toLowerCase().contains(searchQuery.toLowerCase()) ||
-          member.role.toLowerCase().contains(searchQuery.toLowerCase()) ||
-          member.department.toLowerCase().contains(searchQuery.toLowerCase()) ||
-          member.email.toLowerCase().contains(searchQuery.toLowerCase()),
-    ).toList();
+
+    return staffList
+        .where(
+          (member) =>
+              member.fullName.toLowerCase().contains(
+                searchQuery.toLowerCase(),
+              ) ||
+              member.role.toLowerCase().contains(searchQuery.toLowerCase()) ||
+              member.department.toLowerCase().contains(
+                searchQuery.toLowerCase(),
+              ) ||
+              member.email.toLowerCase().contains(searchQuery.toLowerCase()),
+        )
+        .toList();
   }
 
   /// Filters staff list by department
-  static List<Staff> filterStaffByDepartment(List<Staff> staffList, String department) {
+  static List<Staff> filterStaffByDepartment(
+    List<Staff> staffList,
+    String department,
+  ) {
     if (department == 'All') return staffList;
-    return staffList.where((member) => member.department == department).toList();
+    return staffList
+        .where((member) => member.department == department)
+        .toList();
   }
 
   /// Filters staff list by tab index
@@ -81,8 +109,9 @@ class StaffUtils {
   static StaffStats getStaffStats(List<Staff> staffList) {
     final newStaffCount = staffList.where((member) => member.isNew).length;
     final activeStaffCount = staffList.where((member) => !member.isNew).length;
-    final departmentCount = staffList.map((member) => member.department).toSet().length;
-    
+    final departmentCount =
+        staffList.map((member) => member.department).toSet().length;
+
     return StaffStats(
       total: staffList.length,
       newStaff: newStaffCount,
@@ -93,7 +122,8 @@ class StaffUtils {
 
   /// Gets unique departments from staff list
   static List<String> getDepartments(List<Staff> staffList) {
-    return staffList.map((member) => member.department).toSet().toList()..sort();
+    return staffList.map((member) => member.department).toSet().toList()
+      ..sort();
   }
 }
 

@@ -56,13 +56,10 @@ class CreateStaffActionButtons extends StatelessWidget {
                     ? Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Container(
-                          color: AppConstants.primaryColor.withOpacity(0.1),
-                          child: const Center(
-                            child: SpinKitThreeBounce(
-                              color: AppConstants.primaryColor,
-                              size: 20.0,
-                            ),
+                        const Center(
+                          child: SpinKitThreeBounce(
+                            color: AppConstants.primaryColor,
+                            size: 20.0,
                           ),
                         ),
                         const SizedBox(width: 12),

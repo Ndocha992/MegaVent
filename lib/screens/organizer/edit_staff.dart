@@ -30,7 +30,6 @@ class _EditStaffState extends State<EditStaff> {
 
   // Form controllers
   late TextEditingController _nameController;
-  late TextEditingController _emailController;
   late TextEditingController _phoneController;
 
   // Profile image
@@ -39,7 +38,6 @@ class _EditStaffState extends State<EditStaff> {
   // Dropdown values
   String? _selectedRole;
   String? _selectedDepartment;
-  bool _isNew = false;
 
   // Available options
   List<String> _roles = [];
@@ -60,12 +58,10 @@ class _EditStaffState extends State<EditStaff> {
     final staff = widget.staff;
 
     _nameController = TextEditingController(text: staff?.fullName ?? '');
-    _emailController = TextEditingController(text: staff?.email ?? '');
     _phoneController = TextEditingController(text: staff?.phone ?? '');
 
     _selectedRole = staff?.role;
     _selectedDepartment = staff?.department;
-    _isNew = staff?.isNew ?? true;
 
     _profileImageBase64 = staff?.profileImage;
   }
@@ -193,7 +189,6 @@ class _EditStaffState extends State<EditStaff> {
   @override
   void dispose() {
     _nameController.dispose();
-    _emailController.dispose();
     _phoneController.dispose();
     super.dispose();
   }
@@ -420,10 +415,7 @@ class _EditStaffState extends State<EditStaff> {
                 icon: Icons.contact_phone_outlined,
               ),
               const SizedBox(height: 16),
-              StaffContactInfoForm(
-                emailController: _emailController,
-                phoneController: _phoneController,
-              ),
+              StaffContactInfoForm(phoneController: _phoneController),
               const SizedBox(height: 24),
 
               // Work Information Section
@@ -435,13 +427,11 @@ class _EditStaffState extends State<EditStaff> {
               StaffWorkInfoForm(
                 selectedRole: _selectedRole,
                 selectedDepartment: _selectedDepartment,
-                isNew: _isNew,
                 roles: _roles,
                 departments: _departments,
                 onRoleChanged: (value) => setState(() => _selectedRole = value),
                 onDepartmentChanged:
                     (value) => setState(() => _selectedDepartment = value),
-                onIsNewChanged: (value) => setState(() => _isNew = value),
               ),
               const SizedBox(height: 32),
 
@@ -565,10 +555,9 @@ class _EditStaffState extends State<EditStaff> {
       final databaseService = context.read<DatabaseService>();
 
       if (widget.staff != null) {
-        // Update existing staff
+        // Update existing staff - only update fields from the form
         final updatedStaff = widget.staff!.copyWith(
           fullName: _nameController.text.trim(),
-          email: _emailController.text.trim(),
           phone: _phoneController.text.trim(),
           role: _selectedRole!,
           department: _selectedDepartment!,
@@ -580,29 +569,6 @@ class _EditStaffState extends State<EditStaff> {
 
         _showSnackBar(
           '${_nameController.text} has been updated successfully',
-          isSuccess: true,
-        );
-      } else {
-        // Create new staff
-        final newStaff = Staff(
-          id: '', // Will be set by the database service
-          fullName: _nameController.text.trim(),
-          email: _emailController.text.trim(),
-          phone: _phoneController.text.trim(),
-          profileImage: _profileImageBase64,
-          organizerId: '', // Will be set by the database service
-          role: _selectedRole!,
-          department: _selectedDepartment!,
-          isApproved: true,
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-          hiredAt: DateTime.now(),
-        );
-
-        await databaseService.addStaff(newStaff);
-
-        _showSnackBar(
-          '${_nameController.text} has been added to the team',
           isSuccess: true,
         );
       }
