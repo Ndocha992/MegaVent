@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:megavent/models/staff.dart';
+import 'package:megavent/models/organizer.dart';
+import 'package:megavent/services/auth_service.dart';
 import 'package:megavent/services/database_service.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/widgets/organizer/nested_app_bar.dart';
@@ -37,7 +39,6 @@ class _CreateStaffState extends State<CreateStaff> {
   // Dropdown values
   String? _selectedRole;
   String? _selectedDepartment;
-  bool _isNew = true; // Default to true for new staff
 
   // Available options
   List<String> _roles = [];
@@ -47,10 +48,29 @@ class _CreateStaffState extends State<CreateStaff> {
   bool _isLoading = false;
   bool _isSaving = false;
 
+  // Current organizer data
+  Organizer? _currentOrganizer;
+
   @override
   void initState() {
     super.initState();
     _loadStaffData();
+    _loadCurrentOrganizer();
+  }
+
+  Future<void> _loadCurrentOrganizer() async {
+    try {
+      final authService = context.read<AuthService>();
+      final userData = await authService.getUserData();
+
+      if (userData['success'] && userData['role'] == 'organizer') {
+        setState(() {
+          _currentOrganizer = userData['user'] as Organizer;
+        });
+      }
+    } catch (e) {
+      print('Error loading current organizer: $e');
+    }
   }
 
   Future<void> _loadStaffData() async {
@@ -258,13 +278,11 @@ class _CreateStaffState extends State<CreateStaff> {
               CreateStaffWorkInfoForm(
                 selectedRole: _selectedRole,
                 selectedDepartment: _selectedDepartment,
-                isNew: _isNew,
                 roles: _roles,
                 departments: _departments,
                 onRoleChanged: (value) => setState(() => _selectedRole = value),
                 onDepartmentChanged:
                     (value) => setState(() => _selectedDepartment = value),
-                onNewStatusChanged: (value) => setState(() => _isNew = value),
               ),
               const SizedBox(height: 32),
 
@@ -381,38 +399,48 @@ class _CreateStaffState extends State<CreateStaff> {
       return;
     }
 
+    // Check if organizer data is loaded
+    if (_currentOrganizer == null) {
+      _showSnackBar(
+        'Unable to load organizer information. Please try again.',
+        isSuccess: false,
+      );
+      return;
+    }
+
     setState(() => _isSaving = true);
 
     try {
-      final databaseService = context.read<DatabaseService>();
+      final authService = context.read<AuthService>();
+      String temporaryPassword = 'password254'; // Temporary password
 
-      // Create new staff
-      final newStaff = Staff(
-        id: '', // Will be set by the database service
+      // Create staff using AuthService with all required parameters
+      final result = await authService.createStaff(
         fullName: _nameController.text.trim(),
         email: _emailController.text.trim(),
+        password: temporaryPassword,
         phone: _phoneController.text.trim(),
+        role: _selectedRole!, // Now passing the required role
+        department: _selectedDepartment!, // Now passing the required department
         profileImage: _profileImageBase64,
-        organizerId: '', // Will be set by the database service
-        role: _selectedRole!,
-        department: _selectedDepartment!,
-        isApproved: true,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-        hiredAt: DateTime.now(),
       );
 
-      await databaseService.addStaff(newStaff);
+      if (result['success']) {
+        _showSnackBar(
+          '${_nameController.text} has been added to the team',
+          isSuccess: true,
+        );
 
-      _showSnackBar(
-        '${_nameController.text} has been added to the team',
-        isSuccess: true,
-      );
-
-      // Navigate back after a short delay to show the success message
-      await Future.delayed(const Duration(milliseconds: 500));
-      if (mounted) {
-        Navigator.of(context).pop();
+        // Navigate back after a short delay to show the success message
+        await Future.delayed(const Duration(milliseconds: 500));
+        if (mounted) {
+          Navigator.of(context).pop();
+        }
+      } else {
+        _showSnackBar(
+          result['message'] ?? 'Failed to create staff member',
+          isSuccess: false,
+        );
       }
     } catch (e) {
       _showSnackBar(

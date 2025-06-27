@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:megavent/models/staff.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/utils/organizer/staff/staff_utils.dart';
@@ -77,10 +78,18 @@ class StaffCard extends StatelessWidget {
   }
 }
 
-class StaffAvatar extends StatelessWidget {
+class StaffAvatar extends StatefulWidget {
   final Staff staff;
 
   const StaffAvatar({super.key, required this.staff});
+
+  @override
+  State<StaffAvatar> createState() => _StaffAvatarState();
+}
+
+class _StaffAvatarState extends State<StaffAvatar> {
+  bool _isNetworkImageLoading = false;
+  bool _hasImageError = false;
 
   bool _isBase64(String? value) {
     if (value == null || value.isEmpty) return false;
@@ -103,14 +112,17 @@ class StaffAvatar extends StatelessWidget {
             shape: BoxShape.circle,
             gradient: LinearGradient(
               colors: [
-                _getDepartmentColor(staff.department).withOpacity(0.8),
-                _getDepartmentColor(staff.department),
+                _getDepartmentColor(widget.staff.department).withOpacity(0.8),
+                _getDepartmentColor(widget.staff.department),
               ],
             ),
           ),
-          child: _buildAvatarContent(),
+          child:
+              _isNetworkImageLoading
+                  ? _buildLoadingIndicator()
+                  : _buildAvatarContent(),
         ),
-        if (staff.isNew)
+        if (widget.staff.isNew)
           Positioned(
             top: 0,
             right: 0,
@@ -129,38 +141,79 @@ class StaffAvatar extends StatelessWidget {
     );
   }
 
-  Widget _buildAvatarContent() {
-    // Handle different image sources with null safety
-    final profileImage = staff.profileImage;
+  Widget _buildLoadingIndicator() {
+    return const Center(
+      child: SpinKitThreeBounce(color: Colors.white, size: 20.0),
+    );
+  }
 
-    if (profileImage != null && profileImage.isNotEmpty) {
-      // Check if it's base64 data
+  Widget _buildAvatarContent() {
+    final profileImage = widget.staff.profileImage;
+
+    if (profileImage != null && profileImage.isNotEmpty && !_hasImageError) {
       if (_isBase64(profileImage)) {
+        // Base64 images load instantly, no loading builder needed
         return ClipOval(
           child: Image.memory(
             base64Decode(profileImage),
             fit: BoxFit.cover,
             width: 60,
             height: 60,
-            errorBuilder:
-                (context, error, stackTrace) => _buildInitialsAvatar(),
+            errorBuilder: (context, error, stackTrace) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) {
+                  setState(() {
+                    _hasImageError = true;
+                  });
+                }
+              });
+              return _buildInitialsAvatar();
+            },
           ),
         );
       } else {
-        // It's a regular URL
+        // Network images need loading builder
         return ClipOval(
           child: Image.network(
             profileImage,
             fit: BoxFit.cover,
             width: 60,
             height: 60,
-            errorBuilder:
-                (context, error, stackTrace) => _buildInitialsAvatar(),
+            loadingBuilder: (context, child, loadingProgress) {
+              if (loadingProgress == null) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) {
+                    setState(() {
+                      _isNetworkImageLoading = false;
+                    });
+                  }
+                });
+                return child;
+              }
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) {
+                  setState(() {
+                    _isNetworkImageLoading = true;
+                  });
+                }
+              });
+              return _buildLoadingIndicator();
+            },
+            errorBuilder: (context, error, stackTrace) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) {
+                  setState(() {
+                    _hasImageError = true;
+                    _isNetworkImageLoading = false;
+                  });
+                }
+              });
+              return _buildInitialsAvatar();
+            },
           ),
         );
       }
     } else {
-      // No image, show initials
       return _buildInitialsAvatar();
     }
   }
@@ -168,7 +221,7 @@ class StaffAvatar extends StatelessWidget {
   Widget _buildInitialsAvatar() {
     return Center(
       child: Text(
-        StaffUtils.getInitials(staff.name),
+        StaffUtils.getInitials(widget.staff.name),
         style: const TextStyle(
           color: Colors.white,
           fontWeight: FontWeight.bold,
@@ -197,7 +250,7 @@ class StaffInfo extends StatelessWidget {
           children: [
             Expanded(
               child: Text(
-                staff.name,
+                staff.fullName,
                 style: AppConstants.titleMedium.copyWith(
                   fontWeight: FontWeight.w600,
                 ),

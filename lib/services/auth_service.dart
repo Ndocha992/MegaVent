@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:megavent/models/admin.dart';
 import 'package:megavent/models/attendee.dart';
@@ -11,11 +12,15 @@ class AuthService extends ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  // Secondary Firebase app for creating users without switching auth context
+  FirebaseApp? _secondaryApp;
+  FirebaseAuth? _secondaryAuth;
+
   // Loading state
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
-  // ADD THIS GETTER - Check if user is logged in
+  // Check if user is logged in
   bool get isLoggedIn => _auth.currentUser != null;
 
   // Alternative getter that also checks email verification
@@ -33,6 +38,23 @@ class AuthService extends ChangeNotifier {
 
   // User state changes
   Stream<User?> get authStateChanges => _auth.authStateChanges();
+
+  // Initialize secondary Firebase app for creating users
+  Future<void> _initializeSecondaryApp() async {
+    if (_secondaryApp == null) {
+      try {
+        _secondaryApp = await Firebase.initializeApp(
+          name: 'SecondaryApp',
+          options: Firebase.app().options,
+        );
+        _secondaryAuth = FirebaseAuth.instanceFor(app: _secondaryApp!);
+      } catch (e) {
+        // If app already exists, get it
+        _secondaryApp = Firebase.app('SecondaryApp');
+        _secondaryAuth = FirebaseAuth.instanceFor(app: _secondaryApp!);
+      }
+    }
+  }
 
   // Register attendee with email and password
   Future<Map<String, dynamic>> registerAttendee({
@@ -290,11 +312,12 @@ class AuthService extends ChangeNotifier {
         return {'success': false, 'message': 'Email already registered'};
       }
 
-      // Create user in Firebase Auth
-      UserCredential credential = await _auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
+      // Initialize secondary app
+      await _initializeSecondaryApp();
+
+      // Create user in Firebase Auth using secondary app
+      UserCredential credential = await _secondaryAuth!
+          .createUserWithEmailAndPassword(email: email, password: password);
 
       // Update display name
       await credential.user!.updateDisplayName(fullName);
@@ -332,6 +355,9 @@ class AuthService extends ChangeNotifier {
         'updatedAt': DateTime.now(),
       });
 
+      // Sign out from secondary app
+      await _secondaryAuth!.signOut();
+
       return {
         'success': true,
         'message': 'Admin created successfully!',
@@ -366,12 +392,14 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  // Create staff member (only callable by organizer)
+  // Create staff member (only callable by organizer) - MODIFIED METHOD
   Future<Map<String, dynamic>> createStaff({
     required String fullName,
     required String email,
     required String password,
     required String phone,
+    required String role,
+    required String department,
     String? profileImage,
   }) async {
     _setLoading(true);
@@ -388,7 +416,7 @@ class AuthService extends ChangeNotifier {
 
       // Check if organizer is approved and active
       final organizer = currentUserData['user'] as Organizer;
-      if (!organizer.isApproved || !organizer.isApproved) {
+      if (!organizer.isApproved) {
         return {
           'success': false,
           'message': 'Your organizer account must be approved first',
@@ -399,7 +427,9 @@ class AuthService extends ChangeNotifier {
       if (fullName.isEmpty ||
           email.isEmpty ||
           password.isEmpty ||
-          phone.isEmpty) {
+          phone.isEmpty ||
+          role.isEmpty ||
+          department.isEmpty) {
         return {'success': false, 'message': 'All fields are required'};
       }
 
@@ -414,16 +444,20 @@ class AuthService extends ChangeNotifier {
         return {'success': false, 'message': 'Email already registered'};
       }
 
-      // Create user in Firebase Auth
-      UserCredential credential = await _auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
+      // Initialize secondary app
+      await _initializeSecondaryApp();
+
+      // Create user in Firebase Auth using secondary app (doesn't switch auth context)
+      UserCredential credential = await _secondaryAuth!
+          .createUserWithEmailAndPassword(email: email, password: password);
 
       // Update display name
       await credential.user!.updateDisplayName(fullName);
 
-      // Create staff document
+      // Send email verification
+      await credential.user!.sendEmailVerification();
+
+      // Create complete staff document with all fields
       Staff staff = Staff(
         id: credential.user!.uid,
         fullName: fullName,
@@ -432,16 +466,13 @@ class AuthService extends ChangeNotifier {
         profileImage: profileImage,
         organizerId: organizer.id,
         organization: organizer.organization,
+        role: role,
+        department: department,
         isApproved: true,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
-        role: '',
-        department: '',
         hiredAt: DateTime.now(),
       );
-
-      // Send email verification
-      await credential.user!.sendEmailVerification();
 
       // Create in staff collection
       await _firestore
@@ -458,11 +489,15 @@ class AuthService extends ChangeNotifier {
         'role': 'staff',
         'organizerId': organizer.id,
         'organization': organizer.organization,
+        'department': department,
         'profileImage': profileImage,
         'isApproved': true,
         'createdAt': DateTime.now(),
         'updatedAt': DateTime.now(),
       });
+
+      // Sign out from secondary app to avoid any auth context issues
+      await _secondaryAuth!.signOut();
 
       return {
         'success': true,
@@ -900,5 +935,12 @@ class AuthService extends ChangeNotifier {
     } finally {
       _setLoading(false);
     }
+  }
+
+  // Clean up resources
+  @override
+  void dispose() {
+    _secondaryApp?.delete();
+    super.dispose();
   }
 }

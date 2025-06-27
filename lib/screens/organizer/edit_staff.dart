@@ -39,7 +39,6 @@ class _EditStaffState extends State<EditStaff> {
   // Dropdown values
   String? _selectedRole;
   String? _selectedDepartment;
-  bool _isNew = false;
 
   // Available options
   List<String> _roles = [];
@@ -65,7 +64,6 @@ class _EditStaffState extends State<EditStaff> {
 
     _selectedRole = staff?.role;
     _selectedDepartment = staff?.department;
-    _isNew = staff?.isNew ?? true;
 
     _profileImageBase64 = staff?.profileImage;
   }
@@ -435,13 +433,11 @@ class _EditStaffState extends State<EditStaff> {
               StaffWorkInfoForm(
                 selectedRole: _selectedRole,
                 selectedDepartment: _selectedDepartment,
-                isNew: _isNew,
                 roles: _roles,
                 departments: _departments,
                 onRoleChanged: (value) => setState(() => _selectedRole = value),
                 onDepartmentChanged:
                     (value) => setState(() => _selectedDepartment = value),
-                onIsNewChanged: (value) => setState(() => _isNew = value),
               ),
               const SizedBox(height: 32),
 
@@ -563,6 +559,7 @@ class _EditStaffState extends State<EditStaff> {
 
     try {
       final databaseService = context.read<DatabaseService>();
+      final now = DateTime.now();
 
       if (widget.staff != null) {
         // Update existing staff
@@ -573,7 +570,7 @@ class _EditStaffState extends State<EditStaff> {
           role: _selectedRole!,
           department: _selectedDepartment!,
           profileImage: _profileImageBase64,
-          updatedAt: DateTime.now(),
+          updatedAt: now,
         );
 
         await databaseService.updateStaff(updatedStaff);
@@ -594,9 +591,9 @@ class _EditStaffState extends State<EditStaff> {
           role: _selectedRole!,
           department: _selectedDepartment!,
           isApproved: true,
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-          hiredAt: DateTime.now(),
+          createdAt: now,
+          updatedAt: now,
+          hiredAt: now, // This determines if staff is "new"
         );
 
         await databaseService.addStaff(newStaff);
