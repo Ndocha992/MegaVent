@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:megavent/models/staff.dart';
 import 'package:megavent/screens/organizer/edit_staff.dart';
+import 'package:megavent/services/auth_service.dart';
 import 'package:megavent/services/database_service.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/widgets/organizer/nested_app_bar.dart';
@@ -432,35 +433,62 @@ class _StaffDetailsState extends State<StaffDetails> {
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => const Center(child: CircularProgressIndicator()),
+        builder:
+            (context) => SizedBox(
+              width: 20,
+              height: 20,
+              child: Container(
+                color: AppConstants.primaryColor.withOpacity(0.1),
+                child: const Center(
+                  child: SpinKitThreeBounce(
+                    color: AppConstants.primaryColor,
+                    size: 20.0,
+                  ),
+                ),
+              ),
+            ),
       );
 
-      final databaseService = Provider.of<DatabaseService>(
-        context,
-        listen: false,
-      );
-      await databaseService.deleteStaff(currentStaff!.id);
+      // Use AuthService to delete staff (handles both Auth and Firestore)
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final result = await authService.deleteStaff(currentStaff!.id);
 
       // Hide loading indicator
       if (mounted) Navigator.of(context).pop();
 
-      // Show success message
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              '${currentStaff!.fullName} has been removed from the team',
+      if (result['success']) {
+        // Show success message
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                '${currentStaff!.fullName} has been removed from the team',
+              ),
+              backgroundColor: AppConstants.successColor,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
-            backgroundColor: AppConstants.successColor,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        );
+          );
 
-        // Navigate back to staff list
-        Navigator.of(context).pop();
+          // Navigate back to staff list
+          Navigator.of(context).pop();
+        }
+      } else {
+        // Show error message
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result['message'] ?? 'Failed to delete staff'),
+              backgroundColor: AppConstants.errorColor,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          );
+        }
       }
     } catch (e) {
       // Hide loading indicator
