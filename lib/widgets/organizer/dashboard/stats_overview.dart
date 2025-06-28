@@ -49,6 +49,16 @@ class StatsOverview extends StatelessWidget {
                 _calculateGrowthPercentage('staff'),
               ),
             ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildStatCard(
+                'Active',
+                stats.activeEvents.toString(),
+                Icons.trending_up,
+                AppConstants.warningColor,
+                _calculateGrowthPercentage('active'),
+              ),
+            ),
           ],
         ),
       ],

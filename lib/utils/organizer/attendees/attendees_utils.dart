@@ -3,8 +3,10 @@ import 'package:megavent/models/attendee_stats.dart';
 
 class AttendeesUtils {
   /// Get comprehensive attendance statistics using the new AttendeeStats model
-  static AttendeeStats getComprehensiveStats(List<Attendee> attendees) {
-    return AttendeeStats.fromAttendeesList(attendees);
+  static OrganizerAttendeeStats getComprehensiveStats(
+    List<Attendee> attendees,
+  ) {
+    return OrganizerAttendeeStats.fromAttendeesList(attendees);
   }
 
   /// Filter attendees by search query

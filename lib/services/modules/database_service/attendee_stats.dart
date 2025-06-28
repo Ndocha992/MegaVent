@@ -16,7 +16,7 @@ class AttendeeStatsService {
    */
 
   // Get comprehensive attendee statistics for current organizer
-  Future<AttendeeStats> getAttendeeStats() async {
+  Future<OrganizerAttendeeStats> getAttendeeStats() async {
     try {
       final user = _auth.currentUser;
       if (user == null) {
@@ -24,22 +24,24 @@ class AttendeeStatsService {
       }
 
       // Get all events by this organizer first
-      final eventsSnapshot = await _firestore
-          .collection('events')
-          .where('organizerId', isEqualTo: user.uid)
-          .get();
+      final eventsSnapshot =
+          await _firestore
+              .collection('events')
+              .where('organizerId', isEqualTo: user.uid)
+              .get();
 
       if (eventsSnapshot.docs.isEmpty) {
-        return AttendeeStats.empty();
+        return OrganizerAttendeeStats.empty();
       }
 
       final eventIds = eventsSnapshot.docs.map((doc) => doc.id).toList();
 
       // Get all registrations for these events
-      final registrationsSnapshot = await _firestore
-          .collection('registrations')
-          .where('eventId', whereIn: eventIds)
-          .get();
+      final registrationsSnapshot =
+          await _firestore
+              .collection('registrations')
+              .where('eventId', whereIn: eventIds)
+              .get();
 
       List<Attendee> attendees = [];
 
@@ -51,13 +53,15 @@ class AttendeeStatsService {
 
         try {
           // Get user details
-          final userDoc = await _firestore.collection('attendees').doc(userId).get();
+          final userDoc =
+              await _firestore.collection('attendees').doc(userId).get();
           if (!userDoc.exists) continue;
 
           final userData = userDoc.data() as Map<String, dynamic>;
 
           // Get event details
-          final eventDoc = await _firestore.collection('events').doc(eventId).get();
+          final eventDoc =
+              await _firestore.collection('events').doc(eventId).get();
           if (!eventDoc.exists) continue;
 
           final eventData = eventDoc.data() as Map<String, dynamic>;
@@ -74,9 +78,15 @@ class AttendeeStatsService {
             qrCode: regData['qrCode'] ?? '',
             hasAttended: regData['attended'] ?? false,
             isApproved: regData['isApproved'] ?? true,
-            createdAt: (userData['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-            updatedAt: (userData['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-            registeredAt: (regData['registeredAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+            createdAt:
+                (userData['createdAt'] as Timestamp?)?.toDate() ??
+                DateTime.now(),
+            updatedAt:
+                (userData['updatedAt'] as Timestamp?)?.toDate() ??
+                DateTime.now(),
+            registeredAt:
+                (regData['registeredAt'] as Timestamp?)?.toDate() ??
+                DateTime.now(),
           );
 
           attendees.add(attendee);
@@ -86,15 +96,15 @@ class AttendeeStatsService {
       }
 
       // Generate stats from attendees list
-      return AttendeeStats.fromAttendeesList(attendees);
+      return OrganizerAttendeeStats.fromAttendeesList(attendees);
     } catch (e) {
       print('Error getting attendee stats: $e');
-      return AttendeeStats.empty();
+      return OrganizerAttendeeStats.empty();
     }
   }
 
   // Get attendee statistics for a specific event
-  Future<AttendeeStats> getEventAttendeeStats(String eventId) async {
+  Future<OrganizerAttendeeStats> getEventAttendeeStats(String eventId) async {
     try {
       final user = _auth.currentUser;
       if (user == null) {
@@ -109,14 +119,17 @@ class AttendeeStatsService {
 
       final eventData = eventDoc.data() as Map<String, dynamic>;
       if (eventData['organizerId'] != user.uid) {
-        throw Exception('Unauthorized: You can only view stats for your own events');
+        throw Exception(
+          'Unauthorized: You can only view stats for your own events',
+        );
       }
 
       // Get registrations for this event
-      final registrationsSnapshot = await _firestore
-          .collection('registrations')
-          .where('eventId', isEqualTo: eventId)
-          .get();
+      final registrationsSnapshot =
+          await _firestore
+              .collection('registrations')
+              .where('eventId', isEqualTo: eventId)
+              .get();
 
       List<Attendee> attendees = [];
 
@@ -126,7 +139,8 @@ class AttendeeStatsService {
 
         try {
           // Get user details
-          final userDoc = await _firestore.collection('attendees').doc(userId).get();
+          final userDoc =
+              await _firestore.collection('attendees').doc(userId).get();
           if (!userDoc.exists) continue;
 
           final userData = userDoc.data() as Map<String, dynamic>;
@@ -143,9 +157,15 @@ class AttendeeStatsService {
             qrCode: regData['qrCode'] ?? '',
             hasAttended: regData['attended'] ?? false,
             isApproved: regData['isApproved'] ?? true,
-            createdAt: (userData['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-            updatedAt: (userData['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-            registeredAt: (regData['registeredAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+            createdAt:
+                (userData['createdAt'] as Timestamp?)?.toDate() ??
+                DateTime.now(),
+            updatedAt:
+                (userData['updatedAt'] as Timestamp?)?.toDate() ??
+                DateTime.now(),
+            registeredAt:
+                (regData['registeredAt'] as Timestamp?)?.toDate() ??
+                DateTime.now(),
           );
 
           attendees.add(attendee);
@@ -154,17 +174,17 @@ class AttendeeStatsService {
         }
       }
 
-      return AttendeeStats.fromAttendeesList(attendees);
+      return OrganizerAttendeeStats.fromAttendeesList(attendees);
     } catch (e) {
       throw Exception('Failed to get event attendee stats: $e');
     }
   }
 
   // Stream attendee stats for real-time updates
-  Stream<AttendeeStats> streamAttendeeStats() {
+  Stream<OrganizerAttendeeStats> streamAttendeeStats() {
     final user = _auth.currentUser;
     if (user == null) {
-      return Stream.value(AttendeeStats.empty());
+      return Stream.value(OrganizerAttendeeStats.empty());
     }
 
     return _firestore
@@ -172,62 +192,71 @@ class AttendeeStatsService {
         .where('organizerId', isEqualTo: user.uid)
         .snapshots()
         .asyncMap((eventsSnapshot) async {
-      if (eventsSnapshot.docs.isEmpty) {
-        return AttendeeStats.empty();
-      }
+          if (eventsSnapshot.docs.isEmpty) {
+            return OrganizerAttendeeStats.empty();
+          }
 
-      final eventIds = eventsSnapshot.docs.map((doc) => doc.id).toList();
+          final eventIds = eventsSnapshot.docs.map((doc) => doc.id).toList();
 
-      // Get all registrations for these events
-      final registrationsSnapshot = await _firestore
-          .collection('registrations')
-          .where('eventId', whereIn: eventIds)
-          .get();
+          // Get all registrations for these events
+          final registrationsSnapshot =
+              await _firestore
+                  .collection('registrations')
+                  .where('eventId', whereIn: eventIds)
+                  .get();
 
-      List<Attendee> attendees = [];
+          List<Attendee> attendees = [];
 
-      for (final regDoc in registrationsSnapshot.docs) {
-        final regData = regDoc.data();
-        final userId = regData['userId'];
-        final eventId = regData['eventId'];
+          for (final regDoc in registrationsSnapshot.docs) {
+            final regData = regDoc.data();
+            final userId = regData['userId'];
+            final eventId = regData['eventId'];
 
-        try {
-          // Get user details
-          final userDoc = await _firestore.collection('attendees').doc(userId).get();
-          if (!userDoc.exists) continue;
+            try {
+              // Get user details
+              final userDoc =
+                  await _firestore.collection('attendees').doc(userId).get();
+              if (!userDoc.exists) continue;
 
-          final userData = userDoc.data() as Map<String, dynamic>;
+              final userData = userDoc.data() as Map<String, dynamic>;
 
-          // Get event details
-          final eventDoc = await _firestore.collection('events').doc(eventId).get();
-          if (!eventDoc.exists) continue;
+              // Get event details
+              final eventDoc =
+                  await _firestore.collection('events').doc(eventId).get();
+              if (!eventDoc.exists) continue;
 
-          final eventData = eventDoc.data() as Map<String, dynamic>;
+              final eventData = eventDoc.data() as Map<String, dynamic>;
 
-          final attendee = Attendee(
-            id: userId,
-            fullName: userData['fullName'] ?? userData['name'] ?? 'Unknown',
-            email: userData['email'] ?? '',
-            phone: userData['phone'] ?? '',
-            profileImage: userData['profileImage'],
-            eventId: eventId,
-            eventName: eventData['name'] ?? '',
-            qrCode: regData['qrCode'] ?? '',
-            hasAttended: regData['attended'] ?? false,
-            isApproved: regData['isApproved'] ?? true,
-            createdAt: (userData['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-            updatedAt: (userData['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-            registeredAt: (regData['registeredAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-          );
+              final attendee = Attendee(
+                id: userId,
+                fullName: userData['fullName'] ?? userData['name'] ?? 'Unknown',
+                email: userData['email'] ?? '',
+                phone: userData['phone'] ?? '',
+                profileImage: userData['profileImage'],
+                eventId: eventId,
+                eventName: eventData['name'] ?? '',
+                qrCode: regData['qrCode'] ?? '',
+                hasAttended: regData['attended'] ?? false,
+                isApproved: regData['isApproved'] ?? true,
+                createdAt:
+                    (userData['createdAt'] as Timestamp?)?.toDate() ??
+                    DateTime.now(),
+                updatedAt:
+                    (userData['updatedAt'] as Timestamp?)?.toDate() ??
+                    DateTime.now(),
+                registeredAt:
+                    (regData['registeredAt'] as Timestamp?)?.toDate() ??
+                    DateTime.now(),
+              );
 
-          attendees.add(attendee);
-        } catch (e) {
-          continue;
-        }
-      }
+              attendees.add(attendee);
+            } catch (e) {
+              continue;
+            }
+          }
 
-      return AttendeeStats.fromAttendeesList(attendees);
-    });
+          return OrganizerAttendeeStats.fromAttendeesList(attendees);
+        });
   }
 
   // Get attendance growth over time (monthly breakdown)
@@ -242,17 +271,22 @@ class AttendeeStatsService {
   }
 
   // Get top performing events by attendee count
-  Future<List<Map<String, dynamic>>> getTopEventsByAttendees({int limit = 5}) async {
+  Future<List<Map<String, dynamic>>> getTopEventsByAttendees({
+    int limit = 5,
+  }) async {
     try {
       final stats = await getAttendeeStats();
-      
-      final sortedEvents = stats.attendeesByEvent.entries.toList()
-        ..sort((a, b) => b.value.compareTo(a.value));
 
-      return sortedEvents.take(limit).map((entry) => {
-        'eventName': entry.key,
-        'attendeeCount': entry.value,
-      }).toList();
+      final sortedEvents =
+          stats.attendeesByEvent.entries.toList()
+            ..sort((a, b) => b.value.compareTo(a.value));
+
+      return sortedEvents
+          .take(limit)
+          .map(
+            (entry) => {'eventName': entry.key, 'attendeeCount': entry.value},
+          )
+          .toList();
     } catch (e) {
       print('Error getting top events by attendees: $e');
       return [];
@@ -263,10 +297,12 @@ class AttendeeStatsService {
   Future<Map<String, dynamic>> getAttendanceTrends() async {
     try {
       final now = DateTime.now();
-      final currentMonth = '${now.year}-${now.month.toString().padLeft(2, '0')}';
-      final previousMonth = now.month == 1 
-          ? '${now.year - 1}-12'
-          : '${now.year}-${(now.month - 1).toString().padLeft(2, '0')}';
+      final currentMonth =
+          '${now.year}-${now.month.toString().padLeft(2, '0')}';
+      final previousMonth =
+          now.month == 1
+              ? '${now.year - 1}-12'
+              : '${now.year}-${(now.month - 1).toString().padLeft(2, '0')}';
 
       final stats = await getAttendeeStats();
       final currentMonthCount = stats.attendeesByMonth[currentMonth] ?? 0;
@@ -274,7 +310,9 @@ class AttendeeStatsService {
 
       double growthRate = 0.0;
       if (previousMonthCount > 0) {
-        growthRate = ((currentMonthCount - previousMonthCount) / previousMonthCount) * 100;
+        growthRate =
+            ((currentMonthCount - previousMonthCount) / previousMonthCount) *
+            100;
       }
 
       return {
