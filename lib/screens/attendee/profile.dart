@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:megavent/screens/loading_screen.dart';
 import 'package:megavent/utils/constants.dart';
-import 'package:megavent/widgets/organizer/app_bar.dart';
+import 'package:megavent/widgets/app_bar.dart';
 import 'package:megavent/widgets/organizer/profile/action_buttons.dart';
 import 'package:megavent/widgets/organizer/profile/contact_info_section.dart';
 import 'package:megavent/widgets/organizer/profile/personal_info_section.dart';
@@ -15,14 +15,14 @@ import 'package:megavent/screens/organizer/edit_profile.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-class Profile extends StatefulWidget {
-  const Profile({super.key});
+class AttendeeProfile extends StatefulWidget {
+  const AttendeeProfile({super.key});
 
   @override
-  State<Profile> createState() => _ProfileState();
+  State<AttendeeProfile> createState() => _AttendeeProfileState();
 }
 
-class _ProfileState extends State<Profile> {
+class _AttendeeProfileState extends State<AttendeeProfile> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   String currentRoute = '/organizer-profile';
   bool _isLoading = false;

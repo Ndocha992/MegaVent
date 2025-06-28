@@ -3,7 +3,7 @@ import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:provider/provider.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/models/event.dart';
-import 'package:megavent/widgets/organizer/nested_app_bar.dart';
+import 'package:megavent/widgets/nested_app_bar.dart';
 import 'package:megavent/widgets/organizer/sidebar.dart';
 import 'package:megavent/screens/organizer/edit_events.dart';
 import 'package:megavent/widgets/organizer/events/event_details/event_header.dart';
@@ -14,18 +14,18 @@ import 'package:megavent/widgets/organizer/events/event_details/event_location_s
 import 'package:megavent/widgets/organizer/events/event_details/event_actions_section.dart';
 import 'package:megavent/services/database_service.dart';
 
-class EventsDetails extends StatefulWidget {
+class AttendeeEventsDetails extends StatefulWidget {
   final Event? event;
   final String?
   eventId; // Add eventId parameter for cases where we only have ID
 
-  const EventsDetails({super.key, this.event, this.eventId});
+  const AttendeeEventsDetails({super.key, this.event, this.eventId});
 
   @override
-  State<EventsDetails> createState() => _EventsDetailsState();
+  State<AttendeeEventsDetails> createState() => _AttendeeEventsDetailsState();
 }
 
-class _EventsDetailsState extends State<EventsDetails> {
+class _AttendeeEventsDetailsState extends State<AttendeeEventsDetails> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   String currentRoute = '/organizer-events';
 

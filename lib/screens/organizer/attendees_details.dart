@@ -8,7 +8,7 @@ import 'package:megavent/widgets/organizer/attendees/attendees_details/attendee_
 import 'package:megavent/widgets/organizer/attendees/attendees_details/contact_section.dart';
 import 'package:megavent/widgets/organizer/attendees/attendees_details/event_registration_section.dart';
 import 'package:megavent/widgets/organizer/attendees/attendees_details/qr_code_section.dart';
-import 'package:megavent/widgets/organizer/nested_app_bar.dart';
+import 'package:megavent/widgets/nested_app_bar.dart';
 import 'package:megavent/widgets/organizer/sidebar.dart';
 
 class AttendeesDetails extends StatefulWidget {

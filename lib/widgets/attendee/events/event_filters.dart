@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:megavent/utils/constants.dart';
 
-class EventFilters extends StatefulWidget {
+class AttendeeEventFilters extends StatefulWidget {
   final String selectedCategory;
   final List<String> categories;
   final Function(String) onCategoryChanged;
 
-  const EventFilters({
+  const AttendeeEventFilters({
     super.key,
     required this.selectedCategory,
     required this.categories,
@@ -14,10 +14,10 @@ class EventFilters extends StatefulWidget {
   });
 
   @override
-  State<EventFilters> createState() => _EventFiltersState();
+  State<AttendeeEventFilters> createState() => _AttendeeEventFiltersState();
 }
 
-class _EventFiltersState extends State<EventFilters> {
+class _AttendeeEventFiltersState extends State<AttendeeEventFilters> {
   late String _selectedCategory;
 
   @override

@@ -7,7 +7,7 @@ import 'package:megavent/models/organizer.dart';
 import 'package:megavent/services/auth_service.dart';
 import 'package:megavent/services/database_service.dart';
 import 'package:megavent/utils/constants.dart';
-import 'package:megavent/widgets/organizer/nested_app_bar.dart';
+import 'package:megavent/widgets/nested_app_bar.dart';
 import 'package:megavent/widgets/organizer/sidebar.dart';
 import 'package:megavent/widgets/organizer/staff/create_staff/create_staff_action_buttons.dart';
 import 'package:megavent/widgets/organizer/staff/create_staff/create_staff_forms.dart';

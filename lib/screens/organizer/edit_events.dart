@@ -10,7 +10,7 @@ import 'package:megavent/widgets/organizer/events/edit_event/edit_event_datetime
 import 'package:megavent/widgets/organizer/events/edit_event/edit_event_header.dart';
 import 'package:megavent/widgets/organizer/events/edit_event/edit_event_location.dart';
 import 'package:megavent/widgets/organizer/events/edit_event/edit_event_poster.dart';
-import 'package:megavent/widgets/organizer/nested_app_bar.dart';
+import 'package:megavent/widgets/nested_app_bar.dart';
 import 'package:megavent/widgets/organizer/sidebar.dart';
 import 'package:megavent/services/database_service.dart';
 import 'package:megavent/models/event.dart';

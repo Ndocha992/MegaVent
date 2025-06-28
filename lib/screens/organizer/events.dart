@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:megavent/screens/organizer/create_events.dart';
 import 'package:megavent/screens/organizer/events_details.dart';
 import 'package:megavent/utils/constants.dart';
-import 'package:megavent/widgets/organizer/app_bar.dart';
+import 'package:megavent/widgets/app_bar.dart';
 import 'package:megavent/widgets/organizer/sidebar.dart';
 import 'package:megavent/widgets/organizer/events/event_card.dart';
 import 'package:megavent/widgets/organizer/events/event_filters.dart';

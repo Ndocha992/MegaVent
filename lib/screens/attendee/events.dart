@@ -1,26 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:megavent/screens/attendee/events_details.dart';
+import 'package:megavent/widgets/attendee/events/event_card.dart';
+import 'package:megavent/widgets/attendee/events/event_filters.dart';
+import 'package:megavent/widgets/attendee/sidebar.dart';
 import 'package:provider/provider.dart';
-import 'package:megavent/screens/organizer/create_events.dart';
-import 'package:megavent/screens/organizer/events_details.dart';
 import 'package:megavent/utils/constants.dart';
-import 'package:megavent/widgets/organizer/app_bar.dart';
-import 'package:megavent/widgets/organizer/sidebar.dart';
-import 'package:megavent/widgets/organizer/events/event_card.dart';
-import 'package:megavent/widgets/organizer/events/event_filters.dart';
+import 'package:megavent/widgets/app_bar.dart';
 import 'package:megavent/services/database_service.dart';
 import 'package:megavent/models/event.dart';
 
-class Events extends StatefulWidget {
-  const Events({super.key});
+class AttendeeAllEvents extends StatefulWidget {
+  const AttendeeAllEvents({super.key});
 
   @override
-  State<Events> createState() => _EventsState();
+  State<AttendeeAllEvents> createState() => _AttendeeAllEventsState();
 }
 
-class _EventsState extends State<Events> with TickerProviderStateMixin {
+class _AttendeeAllEventsState extends State<AttendeeAllEvents>
+    with TickerProviderStateMixin {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  String currentRoute = '/organizer-events';
+  String currentRoute = 'attendee-all-events'; // Fixed route name
 
   late TabController _tabController;
   String _selectedCategory = 'All';
@@ -70,8 +70,8 @@ class _EventsState extends State<Events> with TickerProviderStateMixin {
 
   Future<void> _loadEvents() async {
     try {
-      // Listen to organizer events stream
-      _databaseService.streamEventsByOrganizer().listen(
+      // Listen to ALL events stream (not just organizer events)
+      _databaseService.streamAllEvents().listen(
         (events) {
           if (mounted) {
             setState(() {
@@ -115,6 +115,9 @@ class _EventsState extends State<Events> with TickerProviderStateMixin {
                     ) ||
                     event.location.toLowerCase().contains(
                       _searchQuery.toLowerCase(),
+                    ) ||
+                    event.description.toLowerCase().contains(
+                      _searchQuery.toLowerCase(),
                     ),
               )
               .toList();
@@ -140,6 +143,23 @@ class _EventsState extends State<Events> with TickerProviderStateMixin {
         break;
     }
 
+    // Sort events by start date (upcoming first, then past events in reverse)
+    events.sort((a, b) {
+      if (a.startDate.isAfter(now) && b.startDate.isAfter(now)) {
+        // Both upcoming - earliest first
+        return a.startDate.compareTo(b.startDate);
+      } else if (a.startDate.isBefore(now) && b.startDate.isBefore(now)) {
+        // Both past - latest first
+        return b.startDate.compareTo(a.startDate);
+      } else if (a.startDate.isAfter(now)) {
+        // a is upcoming, b is past - a comes first
+        return -1;
+      } else {
+        // a is past, b is upcoming - b comes first
+        return 1;
+      }
+    });
+
     return events;
   }
 
@@ -153,10 +173,10 @@ class _EventsState extends State<Events> with TickerProviderStateMixin {
       key: _scaffoldKey,
       backgroundColor: AppConstants.backgroundColor,
       appBar: CustomAppBar(
-        title: 'MegaVent',
+        title: 'Browse Events',
         onMenuPressed: () => _scaffoldKey.currentState?.openDrawer(),
       ),
-      drawer: OrganizerSidebar(currentRoute: currentRoute),
+      drawer: AttendeeSidebar(currentRoute: currentRoute),
       body:
           _isLoading
               ? _buildLoadingState()
@@ -170,24 +190,6 @@ class _EventsState extends State<Events> with TickerProviderStateMixin {
                   Expanded(child: _buildEventsList()),
                 ],
               ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          final result = await Navigator.of(
-            context,
-          ).push(MaterialPageRoute(builder: (context) => const CreateEvents()));
-
-          // Refresh events if a new event was created
-          if (result != null) {
-            _refreshEvents();
-          }
-        },
-        backgroundColor: AppConstants.primaryColor,
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text(
-          'Create Event',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-        ),
-      ),
     );
   }
 
@@ -201,43 +203,48 @@ class _EventsState extends State<Events> with TickerProviderStateMixin {
     return Container(
       color: AppConstants.backgroundColor,
       child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.error_outline, size: 64, color: AppConstants.errorColor),
-            const SizedBox(height: 16),
-            Text(
-              'Error Loading Events',
-              style: AppConstants.titleLarge.copyWith(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.error_outline,
+                size: 64,
                 color: AppConstants.errorColor,
               ),
-            ),
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: Text(
+              const SizedBox(height: 16),
+              Text(
+                'Error Loading Events',
+                style: AppConstants.titleLarge.copyWith(
+                  color: AppConstants.errorColor,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
                 _error ?? 'An unexpected error occurred',
                 textAlign: TextAlign.center,
                 style: AppConstants.bodyMedium.copyWith(
                   color: AppConstants.textSecondaryColor,
                 ),
               ),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: _initializeData,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppConstants.primaryColor,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 12,
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: _initializeData,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Retry'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppConstants.primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -245,6 +252,7 @@ class _EventsState extends State<Events> with TickerProviderStateMixin {
 
   Widget _buildHeader() {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -259,22 +267,27 @@ class _EventsState extends State<Events> with TickerProviderStateMixin {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          // Title and event count - now stacked vertically for better space management
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Events Management', style: AppConstants.headlineLarge),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Manage and organize your events',
-                    style: AppConstants.bodyLarge.copyWith(
-                      color: AppConstants.textSecondaryColor,
-                    ),
-                  ),
-                ],
+              Text(
+                'Discover Events',
+                style: AppConstants.headlineLarge,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
               ),
+              const SizedBox(height: 4),
+              Text(
+                'Find and join amazing events happening around you',
+                style: AppConstants.bodyLarge.copyWith(
+                  color: AppConstants.textSecondaryColor,
+                ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
+              ),
+              const SizedBox(height: 12),
+              // Event count badge
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
@@ -291,11 +304,14 @@ class _EventsState extends State<Events> with TickerProviderStateMixin {
                   children: [
                     const Icon(Icons.event, color: Colors.white, size: 16),
                     const SizedBox(width: 8),
-                    Text(
-                      '${_events.length} Events',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
+                    Flexible(
+                      child: Text(
+                        '${_events.length} Events',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
@@ -319,29 +335,54 @@ class _EventsState extends State<Events> with TickerProviderStateMixin {
         _events
             .where((event) => event.startDate.isBefore(DateTime.now()))
             .length;
+    final todayCount =
+        _events
+            .where(
+              (event) =>
+                  event.startDate.year == DateTime.now().year &&
+                  event.startDate.month == DateTime.now().month &&
+                  event.startDate.day == DateTime.now().day,
+            )
+            .length;
 
     return Row(
       children: [
-        _buildStatCard('Upcoming', upcomingCount, AppConstants.successColor),
+        Expanded(
+          child: _buildStatCard(
+            'Upcoming',
+            upcomingCount,
+            AppConstants.successColor,
+          ),
+        ),
         const SizedBox(width: 12),
-        _buildStatCard('Past', pastCount, AppConstants.textSecondaryColor),
+        Expanded(
+          child: _buildStatCard('Today', todayCount, AppConstants.primaryColor),
+        ),
         const SizedBox(width: 12),
+        Expanded(
+          child: _buildStatCard(
+            'Past',
+            pastCount,
+            AppConstants.textSecondaryColor,
+          ),
+        ),
       ],
     );
   }
 
   Widget _buildStatCard(String label, int count, Color color) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.2)),
-        ),
-        child: Column(
-          children: [
-            Text(
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FittedBox(
+            child: Text(
               count.toString(),
               style: TextStyle(
                 fontSize: 20,
@@ -349,17 +390,20 @@ class _EventsState extends State<Events> with TickerProviderStateMixin {
                 color: color,
               ),
             ),
-            const SizedBox(height: 4),
-            Text(
+          ),
+          const SizedBox(height: 4),
+          FittedBox(
+            child: Text(
               label,
               style: TextStyle(
                 fontSize: 12,
                 color: color,
                 fontWeight: FontWeight.w500,
               ),
+              textAlign: TextAlign.center,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -401,7 +445,11 @@ class _EventsState extends State<Events> with TickerProviderStateMixin {
                     controller: _searchController,
                     onChanged: (value) => setState(() => _searchQuery = value),
                     decoration: InputDecoration(
-                      hintText: 'Search events...',
+                      hintText: 'Search events, categories, locations...',
+                      hintStyle: TextStyle(
+                        color: AppConstants.textSecondaryColor,
+                        fontSize: 14,
+                      ),
                       prefixIcon: Icon(
                         Icons.search,
                         color: AppConstants.textSecondaryColor,
@@ -445,39 +493,45 @@ class _EventsState extends State<Events> with TickerProviderStateMixin {
             const SizedBox(height: 12),
             Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppConstants.primaryColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        _selectedCategory,
-                        style: TextStyle(
-                          color: AppConstants.primaryColor,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
+                Flexible(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppConstants.primaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            _selectedCategory,
+                            style: TextStyle(
+                              color: AppConstants.primaryColor,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 4),
-                      GestureDetector(
-                        onTap: () => setState(() => _selectedCategory = 'All'),
-                        child: Icon(
-                          Icons.close,
-                          size: 16,
-                          color: AppConstants.primaryColor,
+                        const SizedBox(width: 4),
+                        GestureDetector(
+                          onTap:
+                              () => setState(() => _selectedCategory = 'All'),
+                          child: Icon(
+                            Icons.close,
+                            size: 16,
+                            color: AppConstants.primaryColor,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-                const Spacer(),
+                const SizedBox(width: 8),
                 Text(
                   '${_filteredEvents.length} results',
                   style: AppConstants.bodySmall.copyWith(
@@ -509,14 +563,15 @@ class _EventsState extends State<Events> with TickerProviderStateMixin {
           itemBuilder: (context, index) {
             return Padding(
               padding: const EdgeInsets.only(bottom: 16),
-              child: EventCard(
+              child: AttendeeEventCard(
                 event: filteredEvents[index],
                 onTap: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
                       builder:
-                          (context) =>
-                              EventsDetails(event: filteredEvents[index]),
+                          (context) => AttendeeEventsDetails(
+                            event: filteredEvents[index],
+                          ),
                     ),
                   );
                 },
@@ -532,62 +587,62 @@ class _EventsState extends State<Events> with TickerProviderStateMixin {
     return Container(
       color: AppConstants.backgroundColor,
       child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                color: AppConstants.primaryColor.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.event_busy,
-                size: 60,
-                color: AppConstants.primaryColor,
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'No events found',
-              style: AppConstants.titleLarge.copyWith(
-                color: AppConstants.textSecondaryColor,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _searchQuery.isNotEmpty
-                  ? 'Try adjusting your search criteria'
-                  : 'Start by creating your first event',
-              style: AppConstants.bodyMedium.copyWith(
-                color: AppConstants.textSecondaryColor,
-              ),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: () async {
-                final result = await Navigator.of(context).push(
-                  MaterialPageRoute(builder: (context) => const CreateEvents()),
-                );
-
-                // Refresh events if a new event was created
-                if (result != null) {
-                  _refreshEvents();
-                }
-              },
-              icon: const Icon(Icons.add),
-              label: const Text('Create Event'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppConstants.primaryColor,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 12,
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  color: AppConstants.primaryColor.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.event_busy,
+                  size: 60,
+                  color: AppConstants.primaryColor,
                 ),
               ),
-            ),
-          ],
+              const SizedBox(height: 24),
+              Text(
+                'No events found',
+                style: AppConstants.titleLarge.copyWith(
+                  color: AppConstants.textSecondaryColor,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _searchQuery.isNotEmpty || _selectedCategory != 'All'
+                    ? 'Try adjusting your search or filter criteria'
+                    : 'No events are available at the moment',
+                textAlign: TextAlign.center,
+                style: AppConstants.bodyMedium.copyWith(
+                  color: AppConstants.textSecondaryColor,
+                ),
+              ),
+              if (_searchQuery.isNotEmpty || _selectedCategory != 'All') ...[
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() {
+                      _searchQuery = '';
+                      _selectedCategory = 'All';
+                    });
+                  },
+                  icon: const Icon(Icons.clear_all),
+                  label: const Text('Clear Filters'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppConstants.primaryColor,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );
@@ -597,9 +652,9 @@ class _EventsState extends State<Events> with TickerProviderStateMixin {
     showDialog(
       context: context,
       builder:
-          (context) => EventFilters(
+          (context) => AttendeeEventFilters(
             selectedCategory: _selectedCategory,
-            categories: _categories, // Pass categories list
+            categories: _categories,
             onCategoryChanged: (category) {
               setState(() => _selectedCategory = category);
               Navigator.pop(context);

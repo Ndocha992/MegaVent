@@ -217,43 +217,11 @@ class DatabaseService extends ChangeNotifier {
 
   Future<int> getTotalStaffCount() => _statsService.getTotalStaffCount();
 
-  /**
- * ====== ATTENDEE-SPECIFIC METHODS (for logged-in attendee) ======
- */
 
-  // Get attendee records for a specific user (current logged-in attendee)
-  Future<List<Attendee>> getAttendeeRecords(String userId) =>
-      _attendeeService.getAttendeeRecords(userId);
 
-  // Stream attendee records for real-time updates
-  Stream<List<Attendee>> streamAttendeeRecords(String userId) =>
-      _attendeeService.streamAttendeeRecords(userId);
-
-  // Get events that the current attendee is registered for
-  Future<List<Event>> getMyRegisteredEvents(String userId) =>
-      _attendeeService.getMyRegisteredEvents(userId);
-
-  // Stream registered events for real-time updates
-  Stream<List<Event>> streamMyRegisteredEvents(String userId) =>
-      _attendeeService.streamMyRegisteredEvents(userId);
-
-  // Get attendee dashboard stats
-  Future<Map<String, dynamic>> getAttendeeDashboardStats(String userId) =>
-      _dashboardService.getAttendeeDashboardStats(userId);
-
-  // Get attendee's recent activities
-  Future<List<Map<String, dynamic>>> getAttendeeRecentActivities(
-    String userId,
-  ) => _dashboardService.getAttendeeRecentActivities(userId);
-
-  // Check if user is registered for a specific event
-  Future<bool> isRegisteredForEvent(String userId, String eventId) =>
-      _registrationService.isUserRegisteredForEvent(userId, eventId);
-
-  // Get all available events (for browsing)
-  Future<List<Event>> getAllAvailableEvents() => _eventService.getEvents();
-
-  // Stream all available events
-  Stream<List<Event>> streamAllAvailableEvents() =>
-      _eventService.streamAllEvents();
+// DONT TOUCH METHODS BELOW OR WRITE ANYTHING BELOW THEM, LEAVE THEM AS THEY ARE
+  getAllAvailableEvents() {}
+  getAttendeeRecords(String s) {}
+  getMyRegisteredEvents(String s) {}
+  getAttendeeDashboardStats(String s) {}
 }
