@@ -82,7 +82,7 @@ class _QRScannerState extends State<QRScanner> {
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: AppConstants.backgroundColor,
-      appBar: OrganizerAppBar(
+      appBar: CustomAppBar(
         title: 'QR Code Scanner',
         onMenuPressed: () => _scaffoldKey.currentState?.openDrawer(),
       ),

@@ -279,7 +279,7 @@ class _AttendeesState extends State<Attendees> with TickerProviderStateMixin {
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: AppConstants.backgroundColor,
-      appBar: OrganizerAppBar(
+      appBar: CustomAppBar(
         title: 'MegaVent',
         onMenuPressed: () => _scaffoldKey.currentState?.openDrawer(),
       ),

@@ -140,7 +140,7 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: AppConstants.backgroundColor,
-      appBar: OrganizerAppBar(
+      appBar: CustomAppBar(
         title: 'MegaVent',
         onMenuPressed: () => _scaffoldKey.currentState?.openDrawer(),
       ),
