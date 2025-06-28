@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:qr_code_scanner/qr_code_scanner.dart';
 import 'package:megavent/utils/constants.dart';
 
@@ -59,8 +60,11 @@ class QRScannerView extends StatelessWidget {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        CircularProgressIndicator(
-                          color: AppConstants.primaryColor,
+                        Center(
+                          child: SpinKitThreeBounce(
+                            color: AppConstants.primaryColor,
+                            size: 20.0,
+                          ),
                         ),
                         const SizedBox(height: 16),
                         Text(
