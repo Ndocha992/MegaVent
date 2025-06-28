@@ -1,10 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:megavent/widgets/organizer/qrcode/manual_entry_dialog.dart';
+import 'package:megavent/widgets/organizer/qrcode/qr_scanner_action_buttons.dart';
+import 'package:megavent/widgets/organizer/qrcode/qr_scanner_header.dart';
+import 'package:megavent/widgets/organizer/qrcode/qr_scanner_instructions.dart';
+import 'package:megavent/widgets/organizer/qrcode/qr_scanner_result.dart';
+import 'package:megavent/widgets/organizer/qrcode/qr_scanner_view.dart';
 import 'package:qr_code_scanner/qr_code_scanner.dart';
 import 'package:provider/provider.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/services/database_service.dart';
 import 'package:megavent/models/event.dart';
+import 'package:megavent/widgets/organizer/app_bar.dart';
+import 'package:megavent/widgets/organizer/sidebar.dart';
 
 class QRScanner extends StatefulWidget {
   const QRScanner({super.key});
@@ -14,14 +22,15 @@ class QRScanner extends StatefulWidget {
 }
 
 class _QRScannerState extends State<QRScanner> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
   QRViewController? controller;
-  bool _isFlashOn = false;
   bool _isProcessing = false;
   String _scanResult = '';
   List<Event> _availableEvents = [];
   Event? _selectedEvent;
   late DatabaseService _databaseService;
+  String currentRoute = '/organizer-scanqr';
 
   @override
   void initState() {
@@ -65,218 +74,72 @@ class _QRScannerState extends State<QRScanner> {
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final availableHeight =
+        screenHeight - MediaQuery.of(context).padding.top - kToolbarHeight;
+
     return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        title: const Text('QR Code Scanner'),
-        backgroundColor: Colors.black,
-        foregroundColor: Colors.white,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(_isFlashOn ? Icons.flash_on : Icons.flash_off),
-            onPressed: _toggleFlash,
-          ),
-        ],
+      key: _scaffoldKey,
+      backgroundColor: AppConstants.backgroundColor,
+      appBar: OrganizerAppBar(
+        title: 'QR Code Scanner',
+        onMenuPressed: () => _scaffoldKey.currentState?.openDrawer(),
       ),
-      body: Column(
-        children: [
-          // Event Selection Dropdown
-          if (_availableEvents.isNotEmpty)
-            Container(
-              padding: const EdgeInsets.all(16),
-              color: Colors.black87,
-              child: Row(
-                children: [
-                  const Icon(Icons.event, color: Colors.white, size: 20),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'Event: ',
-                    style: TextStyle(color: Colors.white, fontSize: 16),
-                  ),
-                  Expanded(
-                    child: DropdownButton<Event>(
-                      value: _selectedEvent,
-                      dropdownColor: Colors.grey[800],
-                      style: const TextStyle(color: Colors.white),
-                      underline: Container(),
-                      isExpanded: true,
-                      items:
-                          _availableEvents.map((event) {
-                            return DropdownMenuItem<Event>(
-                              value: event,
-                              child: Text(
-                                event.name,
-                                style: const TextStyle(color: Colors.white),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            );
-                          }).toList(),
-                      onChanged: (Event? newValue) {
-                        setState(() {
-                          _selectedEvent = newValue;
-                        });
-                      },
-                    ),
-                  ),
-                ],
+      drawer: OrganizerSidebar(currentRoute: currentRoute),
+      body: SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: availableHeight),
+          child: Column(
+            children: [
+              // Header Section with Event Selection
+              QRScannerHeader(
+                availableEvents: _availableEvents,
+                selectedEvent: _selectedEvent,
+                onEventChanged: (Event? newEvent) {
+                  setState(() {
+                    _selectedEvent = newEvent;
+                    _scanResult = ''; // Reset scan result when changing event
+                  });
+                },
               ),
-            ),
 
-          // QR Scanner View
-          Expanded(
-            flex: 4,
-            child: Stack(
-              children: [
-                QRView(
-                  key: qrKey,
-                  onQRViewCreated: _onQRViewCreated,
-                  overlay: QrScannerOverlayShape(
-                    borderColor: AppConstants.primaryColor,
-                    borderRadius: 10,
-                    borderLength: 30,
-                    borderWidth: 10,
-                    cutOutSize: 250,
-                  ),
-                ),
-                if (_isProcessing)
-                  Container(
-                    color: Colors.black54,
-                    child: const Center(
-                      child: CircularProgressIndicator(
-                        color: AppConstants.primaryColor,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
+              // QR Scanner View - Fixed height based on screen size
+              QRScannerView(
+                qrKey: qrKey,
+                isProcessing: _isProcessing,
+                screenWidth: screenWidth,
+                onQRViewCreated: _onQRViewCreated,
+              ),
 
-          // Instructions and Result Section
-          Expanded(
-            flex: 2,
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              color: Colors.black87,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (_scanResult.isEmpty) ...[
-                    const Icon(
-                      Icons.qr_code_scanner,
-                      color: Colors.white70,
-                      size: 48,
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Position the QR code within the frame',
-                      style: TextStyle(color: Colors.white70, fontSize: 16),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      _selectedEvent != null
-                          ? 'Scanning for: ${_selectedEvent!.name}'
-                          : 'Please select an event first',
-                      style: TextStyle(
-                        color:
-                            _selectedEvent != null
-                                ? AppConstants.primaryColor
-                                : Colors.orange,
-                        fontSize: 14,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ] else ...[
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color:
-                            _scanResult.contains('Error')
-                                ? Colors.red.withOpacity(0.1)
-                                : Colors.green.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color:
-                              _scanResult.contains('Error')
-                                  ? Colors.red
-                                  : Colors.green,
-                        ),
-                      ),
-                      child: Column(
-                        children: [
-                          Icon(
-                            _scanResult.contains('Error')
-                                ? Icons.error
-                                : Icons.check_circle,
-                            color:
-                                _scanResult.contains('Error')
-                                    ? Colors.red
-                                    : Colors.green,
-                            size: 32,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            _scanResult.contains('Error')
-                                ? 'Scan Failed'
-                                : 'Scan Successful!',
-                            style: TextStyle(
-                              color:
-                                  _scanResult.contains('Error')
-                                      ? Colors.red
-                                      : Colors.green,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            _scanResult,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+              const SizedBox(height: 16),
 
-                  const SizedBox(height: 16),
-
-                  // Action Buttons
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      ElevatedButton.icon(
-                        onPressed: _resetScanner,
-                        icon: const Icon(Icons.refresh),
-                        label: const Text('Reset'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.grey[700],
-                          foregroundColor: Colors.white,
-                        ),
-                      ),
-                      ElevatedButton.icon(
-                        onPressed: _selectedEvent != null ? _manualEntry : null,
-                        icon: const Icon(Icons.keyboard),
-                        label: const Text('Manual Entry'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppConstants.primaryColor,
-                          foregroundColor: Colors.white,
-                        ),
-                      ),
+              // Instructions and Result Section
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  children: [
+                    if (_scanResult.isEmpty) ...[
+                      QRScannerInstructions(selectedEvent: _selectedEvent),
+                    ] else ...[
+                      QRScannerResult(scanResult: _scanResult),
                     ],
-                  ),
-                ],
+                    const SizedBox(height: 16),
+
+                    // Action Buttons
+                    QRScannerActionButtons(
+                      selectedEvent: _selectedEvent,
+                      onResetScanner: _resetScanner,
+                      onManualEntry: _manualEntry,
+                    ),
+
+                    const SizedBox(height: 16), // Bottom padding
+                  ],
+                ),
               ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -317,7 +180,7 @@ class _QRScannerState extends State<QRScanner> {
       });
 
       // Resume camera after a short delay
-      await Future.delayed(const Duration(seconds: 2));
+      await Future.delayed(const Duration(seconds: 3));
       await controller?.resumeCamera();
     }
   }
@@ -373,70 +236,14 @@ class _QRScannerState extends State<QRScanner> {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        final TextEditingController attendeeIdController =
-            TextEditingController();
-
-        return AlertDialog(
-          title: const Text('Manual Check-in'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Event: ${_selectedEvent?.name ?? 'None selected'}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: attendeeIdController,
-                  decoration: const InputDecoration(
-                    labelText: 'Attendee ID *',
-                    hintText: 'Enter attendee ID from QR code',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Enter the attendee ID to manually check them in',
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final attendeeId = attendeeIdController.text.trim();
-                if (attendeeId.isNotEmpty) {
-                  Navigator.of(context).pop();
-                  _processQRCode(attendeeId);
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppConstants.primaryColor,
-              ),
-              child: const Text('Check In'),
-            ),
-          ],
+        return ManualEntryDialog(
+          selectedEvent: _selectedEvent,
+          onCheckIn: (String attendeeId) {
+            _processQRCode(attendeeId);
+          },
         );
       },
     );
-  }
-
-  void _toggleFlash() async {
-    if (controller != null) {
-      await controller!.toggleFlash();
-      setState(() {
-        _isFlashOn = !_isFlashOn;
-      });
-    }
   }
 
   void _resetScanner() {
@@ -451,8 +258,10 @@ class _QRScannerState extends State<QRScanner> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.red,
+        backgroundColor: AppConstants.errorColor,
         behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
       ),
     );
   }
