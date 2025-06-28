@@ -65,7 +65,7 @@ class AttendeesCountBadge extends StatelessWidget {
       listen: false,
     );
 
-    return StreamBuilder<AttendeeStats>(
+    return StreamBuilder<OrganizerAttendeeStats>(
       stream: databaseService.streamAttendeeStats(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -86,7 +86,7 @@ class AttendeesCountBadge extends StatelessWidget {
           );
         }
 
-        final attendeeStats = snapshot.data ?? AttendeeStats.empty();
+        final attendeeStats = snapshot.data ?? OrganizerAttendeeStats.empty();
 
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -126,7 +126,7 @@ class AttendeesStatsRow extends StatelessWidget {
       listen: false,
     );
 
-    return StreamBuilder<AttendeeStats>(
+    return StreamBuilder<OrganizerAttendeeStats>(
       stream: databaseService.streamAttendeeStats(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -153,7 +153,7 @@ class AttendeesStatsRow extends StatelessWidget {
           );
         }
 
-        final attendeeStats = snapshot.data ?? AttendeeStats.empty();
+        final attendeeStats = snapshot.data ?? OrganizerAttendeeStats.empty();
 
         return Row(
           children: [

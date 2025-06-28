@@ -1,6 +1,6 @@
 import 'package:megavent/models/attendee.dart';
 
-class AttendeeStats {
+class OrganizerAttendeeStats {
   final int total;
   final int registered;
   final int attended;
@@ -12,7 +12,7 @@ class AttendeeStats {
   final Map<String, int> attendeesByMonth;
   final DateTime lastUpdated;
 
-  AttendeeStats({
+  OrganizerAttendeeStats({
     required this.total,
     required this.registered,
     required this.attended,
@@ -25,8 +25,8 @@ class AttendeeStats {
     required this.lastUpdated,
   });
 
-  factory AttendeeStats.empty() {
-    return AttendeeStats(
+  factory OrganizerAttendeeStats.empty() {
+    return OrganizerAttendeeStats(
       total: 0,
       registered: 0,
       attended: 0,
@@ -41,7 +41,7 @@ class AttendeeStats {
   }
 
   // Create from a list of attendees (for real-time calculations)
-  factory AttendeeStats.fromAttendeesList(List<Attendee> attendees) {
+  factory OrganizerAttendeeStats.fromAttendeesList(List<Attendee> attendees) {
     final total = attendees.length;
     final attended = attendees.where((a) => a.hasAttended).length;
     final registered = total;
@@ -77,7 +77,7 @@ class AttendeeStats {
       attendeesByMonth[monthKey] = (attendeesByMonth[monthKey] ?? 0) + 1;
     }
 
-    return AttendeeStats(
+    return OrganizerAttendeeStats(
       total: total,
       registered: registered,
       attended: attended,
