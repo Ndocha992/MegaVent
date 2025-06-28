@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:megavent/screens/loading_screen.dart';
 import 'package:megavent/utils/constants.dart';
-import 'package:megavent/widgets/organizer/app_bar.dart';
+import 'package:megavent/widgets/app_bar.dart';
 import 'package:megavent/widgets/organizer/profile/action_buttons.dart';
 import 'package:megavent/widgets/organizer/profile/contact_info_section.dart';
 import 'package:megavent/widgets/organizer/profile/personal_info_section.dart';

@@ -5,7 +5,7 @@ import 'package:megavent/models/attendee.dart';
 import 'package:megavent/services/database_service.dart';
 import 'package:megavent/screens/organizer/attendees_details.dart';
 import 'package:megavent/utils/constants.dart';
-import 'package:megavent/widgets/organizer/app_bar.dart';
+import 'package:megavent/widgets/app_bar.dart';
 import 'package:megavent/widgets/organizer/attendees/attendees_filters_dialog.dart';
 import 'package:megavent/widgets/organizer/sidebar.dart';
 import 'package:megavent/widgets/organizer/attendees/attendees_header.dart';

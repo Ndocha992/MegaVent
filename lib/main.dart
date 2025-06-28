@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:megavent/screens/attendee/attendee_dashboard.dart';
+import 'package:megavent/screens/attendee/events.dart';
+import 'package:megavent/screens/attendee/profile.dart';
 import 'package:megavent/screens/authentication/forgot_password_screen.dart';
 import 'package:megavent/screens/authentication/login_screen.dart';
 import 'package:megavent/screens/authentication/register_screen.dart';
@@ -102,10 +104,11 @@ class _MyAppState extends State<MyApp> {
         '/organizer-event-details': (context) => const EventsDetails(),
         // Attendee routes
         '/attendee-dashboard': (context) => const AttendeeDashboard(),
+        '/attendee-all-events': (context) => const AttendeeAllEvents(),
         // '/attendee-my-events': (context) => const AttendeeMyEvents(),
         // '/attendee-event-registration':
         //     (context) => const AttendeeEventRegistration(),
-        // '/attendee-event-details': (context) => const AttendeeEventDetails(),
+        '/attendee-profile': (context) => const AttendeeProfile(),
         // Admin routes
         // '/admin-event-details': (context) => const AdminEventDetails(),
         // Staff routes

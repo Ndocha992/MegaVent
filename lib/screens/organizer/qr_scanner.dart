@@ -11,7 +11,7 @@ import 'package:provider/provider.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/services/database_service.dart';
 import 'package:megavent/models/event.dart';
-import 'package:megavent/widgets/organizer/app_bar.dart';
+import 'package:megavent/widgets/app_bar.dart';
 import 'package:megavent/widgets/organizer/sidebar.dart';
 
 class QRScanner extends StatefulWidget {

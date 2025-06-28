@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Attendee {
-  final String id; // User ID
+  final String id;
   final String fullName;
   final String email;
   final String phone;
@@ -11,12 +11,11 @@ class Attendee {
   final String qrCode;
   final bool hasAttended;
   final bool isApproved;
-  final DateTime createdAt; // User account creation date
-  final DateTime updatedAt; // Last profile update
-  final DateTime registeredAt; // Event registration date
-  final bool isCheckedIn; // Check-in status for the event
-  final DateTime? checkedInAt; // Check-in timestamp
-  final String? userId; // For backward compatibility with registration data
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final DateTime registeredAt;
+  final bool isCheckedIn; // Added for check-in status
+  final DateTime? checkedInAt; // Added for check-in timestamp
 
   Attendee({
     required this.id,
@@ -34,7 +33,6 @@ class Attendee {
     required this.registeredAt,
     bool? isCheckedIn,
     this.checkedInAt,
-    this.userId,
   }) : isCheckedIn = isCheckedIn ?? hasAttended;
 
   // Convert to Map for Firestore
@@ -56,17 +54,16 @@ class Attendee {
       'isCheckedIn': isCheckedIn,
       'checkedInAt':
           checkedInAt != null ? Timestamp.fromDate(checkedInAt!) : null,
-      'userId': userId ?? id,
     };
   }
 
-  // Create from Firestore DocumentSnapshot (for attendees collection)
+  // Create from Firestore DocumentSnapshot
   factory Attendee.fromFirestore(DocumentSnapshot doc) {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
 
     return Attendee(
       id: doc.id,
-      fullName: data['fullName'] ?? data['name'] ?? '',
+      fullName: data['fullName'] ?? '',
       email: data['email'] ?? '',
       phone: data['phone'] ?? '',
       profileImage: data['profileImage'],
@@ -81,42 +78,6 @@ class Attendee {
           (data['registeredAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       isCheckedIn: data['isCheckedIn'] ?? data['hasAttended'] ?? false,
       checkedInAt: (data['checkedInAt'] as Timestamp?)?.toDate(),
-      userId: data['userId'],
-    );
-  }
-
-  // Create from registration data (when combining registration + user data)
-  factory Attendee.fromRegistrationData({
-    required Map<String, dynamic> registrationData,
-    required Map<String, dynamic> userData,
-    required Map<String, dynamic> eventData,
-    required String userId,
-    required String eventId,
-  }) {
-    return Attendee(
-      id: userId,
-      fullName: userData['fullName'] ?? userData['name'] ?? 'Unknown',
-      email: userData['email'] ?? '',
-      phone: userData['phone'] ?? '',
-      profileImage: userData['profileImage'],
-      eventId: eventId,
-      eventName: eventData['name'] ?? '',
-      qrCode: registrationData['qrCode'] ?? '',
-      hasAttended: registrationData['attended'] ?? false,
-      isApproved: registrationData['isApproved'] ?? true,
-      createdAt:
-          (userData['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      updatedAt:
-          (userData['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      registeredAt:
-          (registrationData['registeredAt'] as Timestamp?)?.toDate() ??
-          DateTime.now(),
-      isCheckedIn: registrationData['attended'] ?? false,
-      checkedInAt:
-          registrationData['attendedAt'] != null
-              ? (registrationData['attendedAt'] as Timestamp?)?.toDate()
-              : null,
-      userId: userId,
     );
   }
 
@@ -124,14 +85,14 @@ class Attendee {
   factory Attendee.fromMap(Map<String, dynamic> map) {
     return Attendee(
       id: map['id'] ?? '',
-      fullName: map['fullName'] ?? map['name'] ?? '',
+      fullName: map['fullName'] ?? '',
       email: map['email'] ?? '',
       phone: map['phone'] ?? '',
       profileImage: map['profileImage'],
       eventId: map['eventId'] ?? '',
       eventName: map['eventName'] ?? '',
       qrCode: map['qrCode'] ?? '',
-      hasAttended: map['hasAttended'] ?? map['attended'] ?? false,
+      hasAttended: map['hasAttended'] ?? false,
       isApproved: map['isApproved'] ?? true,
       createdAt:
           map['createdAt'] is Timestamp
@@ -151,19 +112,13 @@ class Attendee {
               : map['registeredAt'] is DateTime
               ? map['registeredAt']
               : DateTime.now(),
-      isCheckedIn:
-          map['isCheckedIn'] ?? map['hasAttended'] ?? map['attended'] ?? false,
+      isCheckedIn: map['isCheckedIn'] ?? map['hasAttended'] ?? false,
       checkedInAt:
           map['checkedInAt'] is Timestamp
               ? (map['checkedInAt'] as Timestamp).toDate()
               : map['checkedInAt'] is DateTime
               ? map['checkedInAt']
-              : map['attendedAt'] is Timestamp
-              ? (map['attendedAt'] as Timestamp).toDate()
-              : map['attendedAt'] is DateTime
-              ? map['attendedAt']
               : null,
-      userId: map['userId'],
     );
   }
 
@@ -184,7 +139,6 @@ class Attendee {
     DateTime? registeredAt,
     bool? isCheckedIn,
     DateTime? checkedInAt,
-    String? userId,
   }) {
     return Attendee(
       id: id ?? this.id,
@@ -202,11 +156,10 @@ class Attendee {
       registeredAt: registeredAt ?? this.registeredAt,
       isCheckedIn: isCheckedIn ?? this.isCheckedIn,
       checkedInAt: checkedInAt ?? this.checkedInAt,
-      userId: userId ?? this.userId,
     );
   }
 
-  // Get display name (for compatibility with existing code)
+  // Get display name (for compatibility with fake data)
   String get name => fullName;
 
   // Get attendance status display
@@ -233,98 +186,20 @@ class Attendee {
   bool get isNew {
     final now = DateTime.now();
     final sixHoursAgo = now.subtract(const Duration(hours: 6));
-    return registeredAt.isAfter(sixHoursAgo);
-  }
-
-  // Check if the event is upcoming based on registration data
-  bool get isUpcoming {
-    final now = DateTime.now();
-    return registeredAt.isAfter(now);
-  }
-
-  // Get formatted registration date
-  String get formattedRegistrationDate {
-    final now = DateTime.now();
-    final difference = now.difference(registeredAt);
-
-    if (difference.inDays > 0) {
-      return '${difference.inDays} days ago';
-    } else if (difference.inHours > 0) {
-      return '${difference.inHours} hours ago';
-    } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes} minutes ago';
-    } else {
-      return 'Just now';
-    }
-  }
-
-  // Convert to legacy map format for backward compatibility
-  Map<String, dynamic> toLegacyMap() {
-    return {
-      'id': id,
-      'name': fullName,
-      'email': email,
-      'phone': phone,
-      'profileImage': profileImage,
-      'eventName': eventName,
-      'eventId': eventId,
-      'registeredAt': registeredAt,
-      'attended': hasAttended,
-      'attendedAt': checkedInAt,
-    };
+    return createdAt.isAfter(sixHoursAgo);
   }
 
   @override
   String toString() {
-    return 'Attendee(id: $id, fullName: $fullName, email: $email, phone: $phone, eventId: $eventId, eventName: $eventName, hasAttended: $hasAttended, isApproved: $isApproved, registeredAt: $registeredAt)';
+    return 'Attendee(id: $id, fullName: $fullName, email: $email, phone: $phone, eventId: $eventId, hasAttended: $hasAttended, isApproved: $isApproved)';
   }
 
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is Attendee &&
-        other.id == id &&
-        other.eventId == eventId; // Compare both ID and eventId for uniqueness
+    return other is Attendee && other.id == id;
   }
 
   @override
-  int get hashCode => Object.hash(id, eventId);
-}
-
-// Helper class for attendee statistics
-class AttendeeStats {
-  final int registeredEvents;
-  final int attendedEvents;
-  final int notAttendedEvents;
-  final int upcomingEvents;
-
-  AttendeeStats({
-    required this.registeredEvents,
-    required this.attendedEvents,
-    required this.notAttendedEvents,
-    required this.upcomingEvents,
-  });
-
-  factory AttendeeStats.fromMap(Map<String, dynamic> map) {
-    return AttendeeStats(
-      registeredEvents: map['registeredEvents'] ?? 0,
-      attendedEvents: map['attendedEvents'] ?? 0,
-      notAttendedEvents: map['notAttendedEvents'] ?? 0,
-      upcomingEvents: map['upcomingEvents'] ?? 0,
-    );
-  }
-
-  Map<String, dynamic> toMap() {
-    return {
-      'registeredEvents': registeredEvents,
-      'attendedEvents': attendedEvents,
-      'notAttendedEvents': notAttendedEvents,
-      'upcomingEvents': upcomingEvents,
-    };
-  }
-
-  @override
-  String toString() {
-    return 'AttendeeStats(registeredEvents: $registeredEvents, attendedEvents: $attendedEvents, notAttendedEvents: $notAttendedEvents, upcomingEvents: $upcomingEvents)';
-  }
+  int get hashCode => id.hashCode;
 }

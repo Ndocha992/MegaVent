@@ -5,7 +5,7 @@ import 'package:megavent/screens/organizer/edit_staff.dart';
 import 'package:megavent/services/auth_service.dart';
 import 'package:megavent/services/database_service.dart';
 import 'package:megavent/utils/constants.dart';
-import 'package:megavent/widgets/organizer/nested_app_bar.dart';
+import 'package:megavent/widgets/nested_app_bar.dart';
 import 'package:megavent/widgets/organizer/sidebar.dart';
 import 'package:megavent/widgets/organizer/staff/staff_details/staff_actions_section.dart';
 import 'package:megavent/widgets/organizer/staff/staff_details/staff_contact_section.dart';

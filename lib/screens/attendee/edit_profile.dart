@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:megavent/screens/loading_screen.dart';
 import 'package:megavent/utils/constants.dart';
-import 'package:megavent/widgets/organizer/nested_app_bar.dart';
+import 'package:megavent/widgets/nested_app_bar.dart';
 import 'package:megavent/widgets/organizer/profile/edit_profile/action_buttons_section.dart';
 import 'package:megavent/widgets/organizer/profile/edit_profile/contact_information_section.dart';
 import 'package:megavent/widgets/organizer/profile/edit_profile/location_info_section.dart';

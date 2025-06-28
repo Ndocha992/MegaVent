@@ -3,11 +3,11 @@ import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:megavent/models/attendee.dart';
 import 'package:megavent/models/event.dart';
 import 'package:megavent/screens/organizer/events_details.dart';
-import 'package:megavent/widgets/student/sidebar.dart';
+import 'package:megavent/widgets/attendee/sidebar.dart';
 import 'package:provider/provider.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/services/database_service.dart';
-import 'package:megavent/widgets/organizer/app_bar.dart';
+import 'package:megavent/widgets/app_bar.dart';
 import 'package:megavent/widgets/organizer/dashboard/welcome_card.dart';
 
 // Custom stats model for attendee dashboard
@@ -83,7 +83,7 @@ class _AttendeeDashboardState extends State<AttendeeDashboard> {
           _currentUserId!,
         ), // My registered events
         _databaseService.getAttendeeDashboardStats(_currentUserId!), // My stats
-      ]);
+      ] as Iterable<Future>);
 
       final allEvents = results[0] as List<Event>;
       final myAttendeeRecords = results[1] as List<Attendee>;
