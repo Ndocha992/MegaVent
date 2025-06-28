@@ -31,7 +31,7 @@ class OrganizerService {
     });
   }
 
-  // Update organizer profile data
+  // Update organizer profile data (existing method)
   Future<void> updateOrganizerProfile(Organizer organizer) async {
     try {
       await _firestore
@@ -42,5 +42,56 @@ class OrganizerService {
     } catch (e) {
       throw Exception('Failed to update organizer profile: $e');
     }
+  }
+
+  // New method to update only specific fields
+  Future<void> updateOrganizerProfileFields(String organizerId, Map<String, dynamic> fields) async {
+    try {
+      // Validate that the fields map is not empty
+      if (fields.isEmpty) {
+        throw Exception('No fields provided for update');
+      }
+
+      // Clean the fields map to ensure no invalid values
+      final cleanFields = <String, dynamic>{};
+      
+      fields.forEach((key, value) {
+        // Skip null values for optional fields, but allow them for clearing fields
+        if (value != null || _isOptionalField(key)) {
+          cleanFields[key] = value;
+        }
+      });
+
+      if (cleanFields.isEmpty) {
+        throw Exception('No valid fields to update');
+      }
+
+      print('Updating organizer $organizerId with fields: $cleanFields');
+
+      await _firestore
+          .collection('organizers')
+          .doc(organizerId)
+          .update(cleanFields);
+      
+      _notifier.notifyListeners();
+    } catch (e) {
+      print('Error updating organizer profile fields: $e');
+      throw Exception('Failed to update organizer profile: $e');
+    }
+  }
+
+  // Helper method to determine if a field is optional (can be null)
+  bool _isOptionalField(String fieldName) {
+    const optionalFields = [
+      'organization',
+      'jobTitle',
+      'bio',
+      'website',
+      'address',
+      'city',
+      'country',
+      'profileImage',
+    ];
+    return optionalFields.contains(fieldName);
   }
 }

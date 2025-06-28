@@ -90,44 +90,47 @@ class StatsOverview extends StatelessWidget {
     Color color,
   ) {
     return Container(
-      height: 90,
-      padding: const EdgeInsets.all(12),
+      height: 130, // Increased to 130 to accommodate all content
+      padding: const EdgeInsets.all(14), // Slightly reduced padding
       decoration: AppConstants.cardDecoration,
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween, // Changed to spaceBetween
         children: [
           Container(
-            padding: const EdgeInsets.all(6),
+            padding: const EdgeInsets.all(6), // Reduced back to 6
             decoration: BoxDecoration(
               color: color.withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(icon, color: color, size: 18),
+            child: Icon(icon, color: color, size: 18), // Reduced back to 18
           ),
-          const SizedBox(height: 6),
-          Flexible(
-            child: Text(
-              value,
-              style: AppConstants.titleLarge.copyWith(
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-              ),
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Flexible(
-            child: Text(
-              title,
-              style: AppConstants.bodySmall.copyWith(
-                color: AppConstants.textSecondaryColor,
-                fontSize: 10,
-              ),
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+          const SizedBox(height: 8), // Reduced spacing
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  value,
+                  style: AppConstants.titleLarge.copyWith(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15, // Slightly reduced
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  title,
+                  style: AppConstants.bodySmall.copyWith(
+                    color: AppConstants.textSecondaryColor,
+                    fontSize: 11,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
           ),
         ],

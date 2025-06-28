@@ -56,6 +56,10 @@ class DatabaseService extends ChangeNotifier {
   Future<void> updateOrganizerProfile(Organizer organizer) =>
       _organizerService.updateOrganizerProfile(organizer);
 
+  // New method to update only specific fields
+  Future<void> updateOrganizerProfileFields(String organizerId, Map<String, dynamic> fields) =>
+      _organizerService.updateOrganizerProfileFields(organizerId, fields);
+
   /**
    * ====== EVENT METHODS ======
    */
