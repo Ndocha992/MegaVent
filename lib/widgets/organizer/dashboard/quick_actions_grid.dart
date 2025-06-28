@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:megavent/utils/constants.dart';
 
 class QuickActionsGrid extends StatelessWidget {
-  const QuickActionsGrid({super.key, required Null Function(dynamic route) onNavigate});
+  final Function(String) onNavigate;
+
+  const QuickActionsGrid({super.key, required this.onNavigate});
 
   @override
   Widget build(BuildContext context) {
@@ -24,27 +26,21 @@ class QuickActionsGrid extends StatelessWidget {
               description: 'Start planning a new event',
               icon: Icons.add_circle_outline,
               color: AppConstants.primaryColor,
-              onTap: () {
-                // Navigate to create event page
-              },
+              onTap: () => onNavigate('create_event'),
             ),
             _buildActionCard(
               title: 'Add Staff',
               description: 'Invite new team members',
               icon: Icons.person_add_outlined,
               color: AppConstants.secondaryColor,
-              onTap: () {
-                // Navigate to add staff page
-              },
+              onTap: () => onNavigate('add_staff'),
             ),
             _buildActionCard(
               title: 'Scan QR Code',
               description: 'Check-in attendees',
               icon: Icons.qr_code_scanner,
               color: AppConstants.accentColor,
-              onTap: () {
-                // Open QR scanner
-              },
+              onTap: () => onNavigate('scan_qr'),
             ),
           ],
         ),

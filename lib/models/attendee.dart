@@ -14,6 +14,8 @@ class Attendee {
   final DateTime createdAt;
   final DateTime updatedAt;
   final DateTime registeredAt;
+  final bool isCheckedIn; // Added for check-in status
+  final DateTime? checkedInAt; // Added for check-in timestamp
 
   Attendee({
     required this.id,
@@ -29,7 +31,9 @@ class Attendee {
     required this.createdAt,
     required this.updatedAt,
     required this.registeredAt,
-  });
+    bool? isCheckedIn,
+    this.checkedInAt,
+  }) : isCheckedIn = isCheckedIn ?? hasAttended;
 
   // Convert to Map for Firestore
   Map<String, dynamic> toMap() {
@@ -47,6 +51,9 @@ class Attendee {
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
       'registeredAt': Timestamp.fromDate(registeredAt),
+      'isCheckedIn': isCheckedIn,
+      'checkedInAt':
+          checkedInAt != null ? Timestamp.fromDate(checkedInAt!) : null,
     };
   }
 
@@ -69,6 +76,8 @@ class Attendee {
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       registeredAt:
           (data['registeredAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      isCheckedIn: data['isCheckedIn'] ?? data['hasAttended'] ?? false,
+      checkedInAt: (data['checkedInAt'] as Timestamp?)?.toDate(),
     );
   }
 
@@ -103,6 +112,13 @@ class Attendee {
               : map['registeredAt'] is DateTime
               ? map['registeredAt']
               : DateTime.now(),
+      isCheckedIn: map['isCheckedIn'] ?? map['hasAttended'] ?? false,
+      checkedInAt:
+          map['checkedInAt'] is Timestamp
+              ? (map['checkedInAt'] as Timestamp).toDate()
+              : map['checkedInAt'] is DateTime
+              ? map['checkedInAt']
+              : null,
     );
   }
 
@@ -121,6 +137,8 @@ class Attendee {
     DateTime? createdAt,
     DateTime? updatedAt,
     DateTime? registeredAt,
+    bool? isCheckedIn,
+    DateTime? checkedInAt,
   }) {
     return Attendee(
       id: id ?? this.id,
@@ -136,6 +154,8 @@ class Attendee {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       registeredAt: registeredAt ?? this.registeredAt,
+      isCheckedIn: isCheckedIn ?? this.isCheckedIn,
+      checkedInAt: checkedInAt ?? this.checkedInAt,
     );
   }
 
@@ -144,7 +164,22 @@ class Attendee {
 
   // Get attendance status display
   String get attendanceStatus {
-    return hasAttended ? 'Attended' : 'Registered';
+    if (isCheckedIn) {
+      return 'Checked In';
+    } else if (hasAttended) {
+      return 'Attended';
+    } else {
+      return 'Registered';
+    }
+  }
+
+  // Get check-in status with emoji
+  String get checkInStatusWithIcon {
+    if (isCheckedIn) {
+      return '✅ Checked In';
+    } else {
+      return '⏳ Not Checked In';
+    }
   }
 
   // Calculate if attendee registration is "new" (registered within the last 6 hours)

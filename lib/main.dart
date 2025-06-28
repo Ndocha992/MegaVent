@@ -6,6 +6,7 @@ import 'package:megavent/screens/authentication/login_screen.dart';
 import 'package:megavent/screens/authentication/register_screen.dart';
 import 'package:megavent/screens/authentication/verification_screen.dart';
 import 'package:megavent/screens/organizer/events_details.dart';
+import 'package:megavent/screens/organizer/qr_scanner.dart';
 import 'package:megavent/screens/splash_screen.dart';
 import 'package:megavent/screens/organizer/organizer_dashboard.dart';
 import 'package:megavent/screens/organizer/events.dart';
@@ -94,6 +95,7 @@ class _MyAppState extends State<MyApp> {
         // Organizer routes
         '/organizer-dashboard': (context) => const OrganizerDashboard(),
         '/organizer-events': (context) => const Events(),
+        '/organizer-scanqr': (context) => const QRScanner(),
         '/organizer-staff': (context) => const StaffScreen(),
         '/organizer-attendees': (context) => const Attendees(),
         '/organizer-profile': (context) => const Profile(),

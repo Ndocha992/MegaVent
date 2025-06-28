@@ -14,6 +14,7 @@ import 'package:megavent/services/modules/database_service/registration_service.
 import 'package:megavent/services/modules/database_service/staff_service.dart';
 import 'package:megavent/services/modules/database_service/dashboard_service.dart';
 import 'package:megavent/services/modules/database_service/stats_service.dart';
+import 'package:megavent/services/modules/database_service/checkin_service.dart';
 
 class DatabaseService extends ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -28,6 +29,7 @@ class DatabaseService extends ChangeNotifier {
   late final RegistrationService _registrationService;
   late final DashboardService _dashboardService;
   late final StatsService _statsService;
+  late final CheckinService _checkinService;
 
   DatabaseService() {
     // Initialize service modules with shared dependencies
@@ -39,6 +41,7 @@ class DatabaseService extends ChangeNotifier {
     _registrationService = RegistrationService(_firestore, _auth, this);
     _dashboardService = DashboardService(_firestore, _auth, this);
     _statsService = StatsService(_firestore, _auth, this);
+    _checkinService = CheckinService(_firestore, _auth, this);
   }
 
   /**
@@ -57,8 +60,10 @@ class DatabaseService extends ChangeNotifier {
       _organizerService.updateOrganizerProfile(organizer);
 
   // New method to update only specific fields
-  Future<void> updateOrganizerProfileFields(String organizerId, Map<String, dynamic> fields) =>
-      _organizerService.updateOrganizerProfileFields(organizerId, fields);
+  Future<void> updateOrganizerProfileFields(
+    String organizerId,
+    Map<String, dynamic> fields,
+  ) => _organizerService.updateOrganizerProfileFields(organizerId, fields);
 
   /**
    * ====== EVENT METHODS ======
@@ -157,6 +162,23 @@ class DatabaseService extends ChangeNotifier {
 
   Future<Map<String, dynamic>> getAttendanceTrends() =>
       _attendeeStatsService.getAttendanceTrends();
+
+  /**
+   * ====== ATTENDEE CHECK-IN METHODS ======
+   */
+  Future<Attendee?> getAttendeeByIdAndEvent(
+    String attendeeId,
+    String eventId,
+  ) => _checkinService.getAttendeeByIdAndEvent(attendeeId, eventId);
+
+  Future<void> checkInAttendee(String attendeeId, String eventId) =>
+      _checkinService.checkInAttendee(attendeeId, eventId);
+
+  Future<void> registerAttendee(Attendee attendee) =>
+      _checkinService.registerAttendee(attendee);
+
+  Future<Map<String, int>> getEventCheckInStats(String eventId) =>
+      _checkinService.getEventCheckInStats(eventId);
 
   /**
    * ====== REGISTRATION & QR CODE METHODS ======

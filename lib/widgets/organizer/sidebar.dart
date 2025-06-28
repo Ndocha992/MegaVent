@@ -117,6 +117,14 @@ class OrganizerSidebar extends StatelessWidget {
                         ),
                         _buildMenuItem(
                           context: context,
+                          icon: Icons.qr_code,
+                          activeIcon: Icons.qr_code_2,
+                          title: 'QR Code',
+                          route: '/organizer-scanqr',
+                          isActive: currentRoute == '/organizer-scanqr',
+                        ),
+                        _buildMenuItem(
+                          context: context,
                           icon: Icons.people_outline,
                           activeIcon: Icons.people,
                           title: 'Staff',
