@@ -1,154 +1,529 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
-import 'package:megavent/utils/constants.dart';
-import 'package:megavent/services/auth_service.dart';
+import 'package:megavent/models/dashboard_stats.dart';
+import 'package:megavent/models/staff.dart';
+import 'package:megavent/models/attendee.dart';
+import 'package:megavent/screens/organizer/create_events.dart';
+import 'package:megavent/screens/organizer/create_staff.dart';
+import 'package:megavent/screens/organizer/qr_scanner.dart';
+import 'package:megavent/widgets/student/sidebar.dart';
 import 'package:provider/provider.dart';
+import 'package:megavent/screens/organizer/events_details.dart';
+import 'package:megavent/utils/constants.dart';
+import 'package:megavent/models/event.dart';
+import 'package:megavent/services/database_service.dart';
+import 'package:megavent/widgets/organizer/app_bar.dart';
+import 'package:megavent/widgets/organizer/dashboard/latest_attendees_card.dart';
+import 'package:megavent/widgets/organizer/dashboard/latest_events_card.dart';
+import 'package:megavent/widgets/organizer/dashboard/latest_staff_card.dart';
+import 'package:megavent/widgets/organizer/dashboard/quick_actions_grid.dart';
+import 'package:megavent/widgets/organizer/dashboard/stats_overview.dart';
+import 'package:megavent/widgets/organizer/dashboard/welcome_card.dart';
 
-class AttendeeDashboard extends StatelessWidget {
+class AttendeeDashboard extends StatefulWidget {
   const AttendeeDashboard({super.key});
+
+  @override
+  State<AttendeeDashboard> createState() => _AttendeeDashboardState();
+}
+
+class _AttendeeDashboardState extends State<AttendeeDashboard> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  late DatabaseService _databaseService;
+  List<Event> _events = [];
+  List<Attendee> _attendees = [];
+  List<Staff> _staff =
+      []; // This will now contain properly converted Staff objects
+  DashboardStats _dashboardStats = DashboardStats(
+    totalEvents: 0,
+    totalAttendees: 0,
+    totalStaff: 0,
+    activeEvents: 0,
+    upcomingEvents: 0,
+    completedEvents: 0,
+  );
+  bool _isLoading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _databaseService = Provider.of<DatabaseService>(context, listen: false);
+    _loadDashboardData();
+  }
+
+  Future<void> _loadDashboardData() async {
+    try {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+
+      // Load all required data in parallel - FIXED: Use direct database calls
+      final results = await Future.wait([
+        _databaseService.getEvents(),
+        _databaseService.getLatestAttendees(),
+        _databaseService
+            .getAllStaff(), // CHANGED: Use getAllStaff() instead of getLatestStaff()
+        _databaseService.getOrganizerDashboardStats(),
+      ]);
+
+      setState(() {
+        _events = results[0] as List<Event>;
+        _attendees = results[1] as List<Attendee>;
+
+        // FIXED: Direct assignment since getAllStaff() returns List<Staff>
+        final allStaff = results[2] as List<Staff>;
+
+        // Get only the latest 5 staff members, sorted by hire date
+        _staff =
+            allStaff
+              ..sort(
+                (a, b) => b.hiredAt.compareTo(a.hiredAt),
+              ) // Sort by newest first
+              ..take(5).toList(); // Take only the latest 5
+
+        // Debug print to verify data integrity
+        for (final staff in _staff) {
+          debugPrint(
+            'Staff: ${staff.name}, Hired: ${staff.hiredAt}, IsNew: ${staff.isNew}',
+          );
+        }
+
+        // Convert Map data to DashboardStats object
+        final statsData = results[3] as Map<String, dynamic>;
+        _dashboardStats = DashboardStats(
+          totalEvents: statsData['totalEvents'] ?? 0,
+          totalAttendees: statsData['totalAttendees'] ?? 0,
+          totalStaff: statsData['totalStaff'] ?? 0,
+          activeEvents: statsData['activeEvents'] ?? 0,
+          upcomingEvents: statsData['upcomingEvents'] ?? 0,
+          completedEvents: statsData['completedEvents'] ?? 0,
+        );
+
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = 'Failed to load dashboard data: ${e.toString()}';
+        _isLoading = false;
+      });
+
+      // Additional debug info
+      debugPrint('Dashboard loading error: $e');
+    }
+  }
+
+  void _handleQuickAction(String action) {
+    switch (action) {
+      case 'create_event':
+        Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (context) => const CreateEvents()));
+        break;
+      case 'add_staff':
+        Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (context) => const CreateStaff()));
+        break;
+      case 'scan_qr':
+        Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (context) => const QRScanner()));
+        break;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: _scaffoldKey,
       backgroundColor: AppConstants.backgroundColor,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: AppConstants.primaryGradient,
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
+      appBar: CustomAppBar(
+        title: 'MegaVent',
+        onMenuPressed: () => _scaffoldKey.currentState?.openDrawer(),
+      ),
+      drawer: AttendeeSidebar(currentRoute: '/attendee-dashboard'),
+      body:
+          _isLoading
+              ? _buildLoadingState()
+              : _error != null
+              ? _buildErrorState()
+              : _buildDashboardContent(),
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return Container(
+      color: AppConstants.primaryColor.withOpacity(0.1),
+      child: const Center(
+        child: SpinKitThreeBounce(color: AppConstants.primaryColor, size: 20.0),
+      ),
+    );
+  }
+
+  Widget _buildErrorState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline, size: 64, color: AppConstants.errorColor),
+          const SizedBox(height: 16),
+          Text(
+            'Error Loading Dashboard',
+            style: AppConstants.titleLarge.copyWith(
+              color: AppConstants.errorColor,
             ),
           ),
-        ),
-        title: Row(
-          children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(
-                Icons.event,
-                color: AppConstants.primaryColor,
-                size: 20,
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Text(
+              _error ?? 'An unexpected error occurred',
+              textAlign: TextAlign.center,
+              style: AppConstants.bodyMedium.copyWith(
+                color: AppConstants.textSecondaryColor,
               ),
             ),
-            const SizedBox(width: 12),
-            const Text(
-              'MegaVent',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.notifications_outlined, color: Colors.white),
           ),
-          IconButton(
-            onPressed: () => _logout(context),
-            icon: const Icon(Icons.logout, color: Colors.white),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: _loadDashboardData,
+            icon: const Icon(Icons.refresh),
+            label: const Text('Retry'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppConstants.primaryColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
           ),
         ],
       ),
-      body: Padding(
+    );
+  }
+
+  Widget _buildDashboardContent() {
+    return RefreshIndicator(
+      onRefresh: _loadDashboardData,
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Welcome Section
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: AppConstants.gradientContainerDecoration,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Welcome Back!',
-                          style: AppConstants.headlineMedium.copyWith(
-                            color: Colors.white,
+            const WelcomeCard(),
+            const SizedBox(height: 24),
+            StatsOverview(stats: _dashboardStats),
+            const SizedBox(height: 24),
+            LatestEventsCard(limit: 5),
+            const SizedBox(height: 24),
+            LatestAttendeesCard(attendees: _attendees),
+            const SizedBox(height: 24),
+            LatestStaffCard(
+              staff: _staff,
+            ), // Now passing properly converted List<Staff>
+            const SizedBox(height: 24),
+            QuickActionsGrid(onNavigate: _handleQuickAction),
+            const SizedBox(height: 24),
+            _buildRecentActivity(),
+            const SizedBox(height: 24),
+            _buildUpcomingEvents(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRecentActivity() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Recent Activity', style: AppConstants.headlineSmall),
+        const SizedBox(height: 16),
+        Container(
+          decoration: AppConstants.cardDecoration,
+          child:
+              _events.isEmpty
+                  ? _buildEmptyActivityState()
+                  : ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: _getRecentActivities().length,
+                    separatorBuilder:
+                        (context, index) => const Divider(height: 1),
+                    itemBuilder: (context, index) {
+                      final activities = _getRecentActivities();
+                      final activity = activities[index];
+
+                      return ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: activity['color'].withOpacity(0.1),
+                          child: Icon(
+                            activity['icon'],
+                            color: activity['color'],
+                            size: 20,
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Ready to create amazing events?',
-                          style: AppConstants.bodyMedium.copyWith(
-                            color: Colors.white.withOpacity(0.9),
+                        title: Text(
+                          activity['title'],
+                          style: AppConstants.titleMedium,
+                        ),
+                        subtitle: Text(
+                          activity['time'],
+                          style: AppConstants.bodySmall,
+                        ),
+                        trailing:
+                            activity['isNew']
+                                ? Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: const BoxDecoration(
+                                    color: AppConstants.successColor,
+                                    shape: BoxShape.circle,
+                                  ),
+                                )
+                                : null,
+                      );
+                    },
+                  ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmptyActivityState() {
+    return Container(
+      padding: const EdgeInsets.all(32),
+      decoration: AppConstants.cardDecoration,
+      child: Center(
+        child: Column(
+          children: [
+            Icon(Icons.history, size: 48, color: AppConstants.primaryColor),
+            const SizedBox(height: 16),
+            Text(
+              'No Recent Activity',
+              style: AppConstants.titleMedium.copyWith(
+                color: AppConstants.textSecondaryColor,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Activity will appear here as you manage your events',
+              textAlign: TextAlign.center,
+              style: AppConstants.bodySmall.copyWith(
+                color: AppConstants.textSecondaryColor,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.of(context).pushReplacementNamed('/attendee-events');
+              },
+              icon: const Icon(Icons.event),
+              label: const Text('View Events'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppConstants.primaryColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 10,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUpcomingEvents() {
+    final upcomingEvents =
+        _events
+            .where((event) => event.startDate.isAfter(DateTime.now()))
+            .toList()
+          ..sort(
+            (a, b) => a.startDate.compareTo(b.startDate),
+          ) // Sort by nearest date first
+          ..take(3).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('Upcoming Events', style: AppConstants.headlineSmall),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pushReplacementNamed('/attendee-events');
+              },
+              child: const Text('View All Events'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        upcomingEvents.isEmpty
+            ? _buildEmptyUpcomingEventsState()
+            : ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: upcomingEvents.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                final event = upcomingEvents[index];
+                return GestureDetector(
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => EventsDetails(event: event),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: AppConstants.cardDecoration,
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 60,
+                          height: 60,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: AppConstants.primaryGradient,
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                event.startDate.day.toString(),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                _getMonthName(event.startDate.month),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                event.name,
+                                style: AppConstants.titleMedium,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${event.startTime} - ${event.endTime}',
+                                style: AppConstants.bodySmall.copyWith(
+                                  color: AppConstants.primaryColor,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.location_on,
+                                    size: 14,
+                                    color: AppConstants.textSecondaryColor,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      event.location,
+                                      style: AppConstants.bodySmall,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppConstants.secondaryColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Text(
+                            '${event.registeredCount}/${event.capacity}',
+                            style: AppConstants.bodySmall.copyWith(
+                              color: AppConstants.secondaryColor,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const Icon(Icons.celebration, color: Colors.white, size: 40),
-                ],
+                );
+              },
+            ),
+      ],
+    );
+  }
+
+  Widget _buildEmptyUpcomingEventsState() {
+    return Container(
+      padding: const EdgeInsets.all(32),
+      decoration: AppConstants.cardDecoration,
+      child: Center(
+        child: Column(
+          children: [
+            Icon(
+              Icons.event_available,
+              size: 48,
+              color: AppConstants.primaryColor,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No Upcoming Events',
+              style: AppConstants.titleMedium.copyWith(
+                color: AppConstants.textSecondaryColor,
               ),
             ),
-            const SizedBox(height: 24),
-            // Quick Stats
-            Row(
-              children: [
-                Expanded(
-                  child: _buildStatCard(
-                    'Events',
-                    '12',
-                    Icons.event,
-                    AppConstants.primaryColor,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _buildStatCard(
-                    'Attendees',
-                    '248',
-                    Icons.people,
-                    AppConstants.secondaryColor,
-                  ),
-                ),
-              ],
+            const SizedBox(height: 8),
+            Text(
+              'Create your first event to get started',
+              textAlign: TextAlign.center,
+              style: AppConstants.bodySmall.copyWith(
+                color: AppConstants.textSecondaryColor,
+              ),
             ),
-            const SizedBox(height: 24),
-            // Quick Actions
-            Text('Quick Actions', style: AppConstants.headlineSmall),
             const SizedBox(height: 16),
-            Expanded(
-              child: GridView.count(
-                crossAxisCount: 2,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                children: [
-                  _buildActionCard(
-                    'Create Event',
-                    Icons.add_circle_outline,
-                    AppConstants.primaryColor,
-                  ),
-                  _buildActionCard(
-                    'View Events',
-                    Icons.event_note,
-                    AppConstants.secondaryColor,
-                  ),
-                  _buildActionCard(
-                    'Analytics',
-                    Icons.analytics,
-                    AppConstants.accentColor,
-                  ),
-                  _buildActionCard(
-                    'Settings',
-                    Icons.settings,
-                    AppConstants.textSecondaryColor,
-                  ),
-                ],
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => const CreateEvents()),
+                );
+              },
+              icon: const Icon(Icons.add),
+              label: const Text('Create Event'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppConstants.primaryColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 10,
+                ),
               ),
             ),
           ],
@@ -157,87 +532,98 @@ class AttendeeDashboard extends StatelessWidget {
     );
   }
 
-  void _logout(BuildContext context) async {
-    final authService = Provider.of<AuthService>(context, listen: false);
+  List<Map<String, dynamic>> _getRecentActivities() {
+    if (_events.isEmpty && _attendees.isEmpty && _staff.isEmpty) {
+      return [];
+    }
 
-    // Show loading dialog
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder:
-          (context) => Container(
-            color: AppConstants.primaryColor.withOpacity(0.1),
-            child: const Center(
-              child: SpinKitThreeBounce(
-                color: AppConstants.primaryColor,
-                size: 20.0,
-              ),
-            ),
-          ),
-    );
+    List<Map<String, dynamic>> activities = [];
 
-    final result = await authService.signOut();
+    // Add recent event-related activities
+    for (final event in _events.take(2)) {
+      activities.add({
+        'title': 'Event "${event.name}" created',
+        'time': _getTimeAgo(event.createdAt),
+        'icon': Icons.event,
+        'color': AppConstants.primaryColor,
+        'isNew': _isRecent(event.createdAt),
+        'dateTime': event.createdAt, // Add actual DateTime for sorting
+      });
+    }
 
-    // Close loading dialog
-    Navigator.of(context).pop();
+    // Add recent attendee activities
+    for (final attendee in _attendees.take(2)) {
+      activities.add({
+        'title': 'New attendee ${attendee.fullName} registered',
+        'time': _getTimeAgo(attendee.registeredAt),
+        'icon': Icons.person_add,
+        'color': AppConstants.successColor,
+        'isNew': _isRecent(attendee.registeredAt),
+        'dateTime': attendee.registeredAt, // Add actual DateTime for sorting
+      });
+    }
 
-    if (result['success']) {
-      // Navigate to login screen or wherever you want after logout
-      Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+    // Add recent staff activities
+    for (final staff in _staff.take(2)) {
+      activities.add({
+        'title': 'Staff member ${staff.name} joined',
+        'time': _getTimeAgo(staff.hiredAt),
+        'icon': Icons.badge,
+        'color': AppConstants.accentColor,
+        'isNew': _isRecent(staff.hiredAt),
+        'dateTime': staff.hiredAt, // Add actual DateTime for sorting
+      });
+    }
+
+    // Sort by most recent using actual DateTime objects
+    activities.sort((a, b) => b['dateTime'].compareTo(a['dateTime']));
+
+    // Remove the dateTime field after sorting (optional, for cleaner data)
+    for (var activity in activities) {
+      activity.remove('dateTime');
+    }
+
+    return activities.take(6).toList();
+  }
+
+  String _getTimeAgo(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+
+    if (difference.inMinutes < 1) {
+      return 'Just now';
+    } else if (difference.inMinutes < 60) {
+      return '${difference.inMinutes} minutes ago';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours} hours ago';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays} days ago';
     } else {
-      // Show error message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result['message']), backgroundColor: Colors.red),
-      );
+      return '${(difference.inDays / 7).floor()} weeks ago';
     }
   }
 
-  Widget _buildStatCard(
-    String title,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: AppConstants.cardDecoration,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(height: 8),
-          Text(value, style: AppConstants.headlineLarge.copyWith(color: color)),
-          Text(title, style: AppConstants.bodySmall),
-        ],
-      ),
-    );
+  bool _isRecent(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+    return difference.inHours < 6;
   }
 
-  Widget _buildActionCard(String title, IconData icon, Color color) {
-    return Container(
-      decoration: AppConstants.cardDecoration,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(20),
-          onTap: () {},
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, color: color, size: 32),
-                const SizedBox(height: 12),
-                Text(
-                  title,
-                  style: AppConstants.titleMedium,
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+  String _getMonthName(int month) {
+    const months = [
+      'JAN',
+      'FEB',
+      'MAR',
+      'APR',
+      'MAY',
+      'JUN',
+      'JUL',
+      'AUG',
+      'SEP',
+      'OCT',
+      'NOV',
+      'DEC',
+    ];
+    return months[month - 1];
   }
 }

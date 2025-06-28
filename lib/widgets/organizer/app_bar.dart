@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:megavent/utils/constants.dart';
 
-class OrganizerAppBar extends StatelessWidget implements PreferredSizeWidget {
+class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
   final VoidCallback? onMenuPressed;
   final List<Widget>? actions;
 
-  const OrganizerAppBar({
+  const CustomAppBar({
     super.key,
     required this.title,
     this.onMenuPressed,
