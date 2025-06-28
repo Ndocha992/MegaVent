@@ -4,6 +4,8 @@ import 'package:megavent/models/dashboard_stats.dart';
 import 'package:megavent/models/staff.dart';
 import 'package:megavent/models/attendee.dart';
 import 'package:megavent/screens/organizer/create_events.dart';
+import 'package:megavent/screens/organizer/create_staff.dart';
+import 'package:megavent/screens/organizer/qr_scanner.dart';
 import 'package:provider/provider.dart';
 import 'package:megavent/screens/organizer/events_details.dart';
 import 'package:megavent/utils/constants.dart';
@@ -113,6 +115,26 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
     }
   }
 
+  void _handleQuickAction(String action) {
+    switch (action) {
+      case 'create_event':
+        Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (context) => const CreateEvents()));
+        break;
+      case 'add_staff':
+        Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (context) => const CreateStaff()));
+        break;
+      case 'scan_qr':
+        Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (context) => const QRScanner()));
+        break;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -201,11 +223,7 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
               staff: _staff,
             ), // Now passing properly converted List<Staff>
             const SizedBox(height: 24),
-            QuickActionsGrid(
-              onNavigate: (route) {
-                Navigator.of(context).pushReplacementNamed(route);
-              },
-            ),
+            QuickActionsGrid(onNavigate: _handleQuickAction),
             const SizedBox(height: 24),
             _buildRecentActivity(),
             const SizedBox(height: 24),

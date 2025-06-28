@@ -222,19 +222,10 @@ class _EditEventPosterState extends State<EditEventPoster> {
                 height: double.infinity,
                 loadingBuilder: (context, child, loadingProgress) {
                   if (loadingProgress == null) return child;
-                  return Container(
-                    color: AppConstants.backgroundColor,
-                    child: Center(
-                      child: CircularProgressIndicator(
-                        value:
-                            loadingProgress.expectedTotalBytes != null
-                                ? loadingProgress.cumulativeBytesLoaded /
-                                    loadingProgress.expectedTotalBytes!
-                                : null,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          AppConstants.primaryColor,
-                        ),
-                      ),
+                  return Center(
+                    child: SpinKitThreeBounce(
+                      color: AppConstants.primaryColor,
+                      size: 20.0,
                     ),
                   );
                 },
