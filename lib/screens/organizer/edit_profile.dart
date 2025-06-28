@@ -43,6 +43,9 @@ class _EditProfileState extends State<EditProfile> {
   bool _isInitialized = false;
   String? _selectedImageBase64;
   Organizer? _currentOrganizer;
+  
+  // Store original values for comparison
+  Map<String, dynamic> _originalValues = {};
 
   @override
   void dispose() {
@@ -62,6 +65,22 @@ class _EditProfileState extends State<EditProfile> {
   void _populateFields(Organizer organizer) {
     if (_currentOrganizer?.id != organizer.id) {
       _currentOrganizer = organizer;
+      
+      // Store original values
+      _originalValues = {
+        'fullName': organizer.fullName,
+        'email': organizer.email,
+        'phone': organizer.phone,
+        'organization': organizer.organization,
+        'jobTitle': organizer.jobTitle,
+        'bio': organizer.bio,
+        'website': organizer.website,
+        'address': organizer.address,
+        'city': organizer.city,
+        'country': organizer.country,
+        'profileImage': organizer.profileImage,
+      };
+      
       _fullNameController.text = organizer.fullName;
       _emailController.text = organizer.email;
       _phoneController.text = organizer.phone;
@@ -94,8 +113,100 @@ class _EditProfileState extends State<EditProfile> {
     });
   }
 
+  // Helper method to get safe string value
+  String? _getSafeStringValue(String value) {
+    final trimmed = value.trim();
+    return trimmed.isEmpty ? null : trimmed;
+  }
+
+  // Helper method to check if a field has changed
+  bool _hasFieldChanged(String fieldName, dynamic newValue) {
+    return _originalValues[fieldName] != newValue;
+  }
+
+  // Build update map with only changed fields
+  Map<String, dynamic> _buildUpdateMap() {
+    final Map<String, dynamic> updateMap = {};
+    
+    // Check each field for changes
+    final String fullName = _fullNameController.text.trim();
+    if (_hasFieldChanged('fullName', fullName) && fullName.isNotEmpty) {
+      updateMap['fullName'] = fullName;
+    }
+    
+    final String email = _emailController.text.trim();
+    if (_hasFieldChanged('email', email) && email.isNotEmpty) {
+      updateMap['email'] = email;
+    }
+    
+    final String phone = _phoneController.text.trim();
+    if (_hasFieldChanged('phone', phone) && phone.isNotEmpty) {
+      updateMap['phone'] = phone;
+    }
+    
+    final String? organization = _getSafeStringValue(_organizationController.text);
+    if (_hasFieldChanged('organization', organization)) {
+      updateMap['organization'] = organization;
+    }
+    
+    final String? jobTitle = _getSafeStringValue(_jobTitleController.text);
+    if (_hasFieldChanged('jobTitle', jobTitle)) {
+      updateMap['jobTitle'] = jobTitle;
+    }
+    
+    final String? bio = _getSafeStringValue(_bioController.text);
+    if (_hasFieldChanged('bio', bio)) {
+      updateMap['bio'] = bio;
+    }
+    
+    final String? website = _getSafeStringValue(_websiteController.text);
+    if (_hasFieldChanged('website', website)) {
+      updateMap['website'] = website;
+    }
+    
+    final String? address = _getSafeStringValue(_addressController.text);
+    if (_hasFieldChanged('address', address)) {
+      updateMap['address'] = address;
+    }
+    
+    final String? city = _getSafeStringValue(_cityController.text);
+    if (_hasFieldChanged('city', city)) {
+      updateMap['city'] = city;
+    }
+    
+    final String? country = _getSafeStringValue(_countryController.text);
+    if (_hasFieldChanged('country', country)) {
+      updateMap['country'] = country;
+    }
+    
+    // Check profile image
+    if (_hasFieldChanged('profileImage', _selectedImageBase64)) {
+      updateMap['profileImage'] = _selectedImageBase64;
+    }
+    
+    // Always update the timestamp if there are changes
+    if (updateMap.isNotEmpty) {
+      updateMap['updatedAt'] = DateTime.now();
+    }
+    
+    return updateMap;
+  }
+
   Future<void> _saveProfile() async {
     if (!_formKey.currentState!.validate() || _currentOrganizer == null) {
+      return;
+    }
+
+    // Build update map with only changed fields
+    final updateMap = _buildUpdateMap();
+    
+    if (updateMap.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No changes detected'),
+          backgroundColor: Colors.orange,
+        ),
+      );
       return;
     }
 
@@ -111,43 +222,11 @@ class _EditProfileState extends State<EditProfile> {
         listen: false,
       );
 
-      final updatedOrganizer = _currentOrganizer!.copyWith(
-        fullName: _fullNameController.text.trim(),
-        email: _emailController.text.trim(),
-        phone: _phoneController.text.trim(),
-        organization:
-            _organizationController.text.trim().isEmpty
-                ? null
-                : _organizationController.text.trim(),
-        jobTitle:
-            _jobTitleController.text.trim().isEmpty
-                ? null
-                : _jobTitleController.text.trim(),
-        bio:
-            _bioController.text.trim().isEmpty
-                ? null
-                : _bioController.text.trim(),
-        website:
-            _websiteController.text.trim().isEmpty
-                ? null
-                : _websiteController.text.trim(),
-        address:
-            _addressController.text.trim().isEmpty
-                ? null
-                : _addressController.text.trim(),
-        city:
-            _cityController.text.trim().isEmpty
-                ? null
-                : _cityController.text.trim(),
-        country:
-            _countryController.text.trim().isEmpty
-                ? null
-                : _countryController.text.trim(),
-        profileImage: _selectedImageBase64 ?? _currentOrganizer!.profileImage,
-        updatedAt: DateTime.now(),
+      // Use the new update method that only updates changed fields
+      await databaseService.updateOrganizerProfileFields(
+        _currentOrganizer!.id,
+        updateMap,
       );
-
-      await databaseService.updateOrganizerProfile(updatedOrganizer);
 
       LoadingOverlay.hide();
 
@@ -219,23 +298,22 @@ class _EditProfileState extends State<EditProfile> {
 
     final result = await showDialog<bool>(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Unsaved Changes'),
-            content: const Text(
-              'You have unsaved changes. Are you sure you want to leave?',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Stay'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('Leave'),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: const Text('Unsaved Changes'),
+        content: const Text(
+          'You have unsaved changes. Are you sure you want to leave?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Stay'),
           ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Leave'),
+          ),
+        ],
+      ),
     );
 
     return result ?? false;
@@ -246,11 +324,10 @@ class _EditProfileState extends State<EditProfile> {
     return WillPopScope(
       onWillPop: _onWillPop,
       child: StreamBuilder<Organizer?>(
-        stream:
-            Provider.of<DatabaseService>(
-              context,
-              listen: false,
-            ).streamCurrentOrganizerData(),
+        stream: Provider.of<DatabaseService>(
+          context,
+          listen: false,
+        ).streamCurrentOrganizerData(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting &&
               !_isInitialized) {
@@ -258,7 +335,7 @@ class _EditProfileState extends State<EditProfile> {
               key: _scaffoldKey,
               backgroundColor: AppConstants.backgroundColor,
               appBar: NestedScreenAppBar(
-                screenTitle: 'Edit Profile', // Default title while loading
+                screenTitle: 'Edit Profile',
               ),
               drawer: OrganizerSidebar(currentRoute: currentRoute),
               body: Container(
@@ -291,10 +368,9 @@ class _EditProfileState extends State<EditProfile> {
                     ),
                     const SizedBox(height: 16),
                     ElevatedButton(
-                      onPressed:
-                          () => setState(() {
-                            _isInitialized = false;
-                          }),
+                      onPressed: () => setState(() {
+                        _isInitialized = false;
+                      }),
                       child: const Text('Retry'),
                     ),
                   ],
@@ -325,7 +401,7 @@ class _EditProfileState extends State<EditProfile> {
             key: _scaffoldKey,
             backgroundColor: AppConstants.backgroundColor,
             appBar: NestedScreenAppBar(
-              screenTitle: organizer.fullName, // ✅ Now gets the actual name
+              screenTitle: organizer.fullName,
             ),
             drawer: OrganizerSidebar(currentRoute: currentRoute),
             body: Form(
@@ -339,9 +415,7 @@ class _EditProfileState extends State<EditProfile> {
                     ProfileImageSection(
                       selectedImageBase64:
                           _selectedImageBase64 ?? organizer.profileImage,
-                      fullName:
-                          organizer
-                              .fullName, // ✅ Use actual name from organizer
+                      fullName: organizer.fullName,
                       onImageChanged: _onImageChanged,
                     ),
                     const SizedBox(height: 32),
