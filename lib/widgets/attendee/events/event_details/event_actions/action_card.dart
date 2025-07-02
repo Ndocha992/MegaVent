@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:megavent/utils/constants.dart';
 
-class ActionCardWidget extends StatelessWidget {
+class AttendeeActionCardWidget extends StatelessWidget {
   final IconData icon;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
   final Color color;
 
-  const ActionCardWidget({
+  const AttendeeActionCardWidget({
     super.key,
     required this.icon,
     required this.title,

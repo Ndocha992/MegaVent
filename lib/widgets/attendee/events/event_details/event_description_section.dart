@@ -2,17 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:megavent/models/event.dart';
 import 'package:megavent/utils/constants.dart';
 
-class EventDescriptionSection extends StatefulWidget {
+class AttendeeEventDescriptionSection extends StatefulWidget {
   final Event event;
 
-  const EventDescriptionSection({super.key, required this.event});
+  const AttendeeEventDescriptionSection({super.key, required this.event});
 
   @override
-  State<EventDescriptionSection> createState() =>
-      _EventDescriptionSectionState();
+  State<AttendeeEventDescriptionSection> createState() =>
+      _AttendeeEventDescriptionSectionState();
 }
 
-class _EventDescriptionSectionState extends State<EventDescriptionSection> {
+class _AttendeeEventDescriptionSectionState extends State<AttendeeEventDescriptionSection> {
   bool isExpanded = false;
 
   @override

@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:megavent/utils/constants.dart';
 
-class QRCodeWidget extends StatelessWidget {
+class AttendeeQRCodeWidget extends StatelessWidget {
   final GlobalKey qrKey;
   final String data;
 
-  const QRCodeWidget({
+  const AttendeeQRCodeWidget({
     super.key,
     required this.qrKey,
     required this.data,
