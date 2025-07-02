@@ -415,173 +415,181 @@ class EventCard extends StatelessWidget {
   // Updated _getCategoryColor method for both EventCard and EventHeader
   Color _getCategoryColor(String category) {
     switch (category.toLowerCase()) {
+      case 'all':
+        return AppConstants.textSecondaryColor;
+
       // Business & Professional
       case 'technology':
-        return AppConstants.primaryColor;
+        return const Color(0xFF2196F3); // Blue
       case 'business':
-        return AppConstants.secondaryColor;
+        return const Color(0xFF4CAF50); // Green
       case 'conference':
-        return AppConstants.primaryDarkColor;
+        return const Color(0xFF9C27B0); // Purple
       case 'seminar':
-        return AppConstants.primaryLightColor;
+        return const Color(0xFF795548); // Brown
       case 'workshop':
-        return AppConstants.accentColor;
+        return const Color(0xFFFF9800); // Orange
       case 'networking':
-        return AppConstants.secondaryDarkColor;
+        return const Color(0xFF607D8B); // Blue Grey
       case 'trade show':
+        return const Color(0xFF00BCD4); // Cyan
       case 'expo':
-        return AppConstants.successColor;
+        return const Color(0xFF3F51B5); // Indigo
 
       // Entertainment & Arts
       case 'music':
-        return AppConstants.accentColor;
+        return const Color(0xFFE91E63); // Pink
       case 'arts & culture':
-        return AppConstants.warningColor;
+        return const Color(0xFF9C27B0); // Purple
       case 'theater & performing arts':
-        return AppConstants.primaryLightColor;
+        return const Color(0xFF673AB7); // Deep Purple
       case 'comedy shows':
-        return AppConstants.successColor;
+        return const Color(0xFFFFC107); // Amber
       case 'film & cinema':
-        return AppConstants.primaryColor;
+        return const Color(0xFF424242); // Grey
       case 'fashion':
-        return AppConstants.secondaryColor;
+        return const Color(0xFFE91E63); // Pink
       case 'entertainment':
-        return AppConstants.accentColor;
+        return const Color(0xFFFF5722); // Deep Orange
 
       // Community & Cultural
       case 'cultural festival':
-        return AppConstants.warningColor;
+        return const Color(0xFF8BC34A); // Light Green
       case 'community event':
-        return AppConstants.successColor;
+        return const Color(0xFF4CAF50); // Green
       case 'religious event':
-        return AppConstants.primaryDarkColor;
+        return const Color(0xFF795548); // Brown
       case 'traditional ceremony':
-        return AppConstants.secondaryDarkColor;
+        return const Color(0xFF607D8B); // Blue Grey
       case 'charity & fundraising':
-        return AppConstants.accentColor;
+        return const Color(0xFF4CAF50); // Green
       case 'cultural exhibition':
-        return AppConstants.primaryLightColor;
+        return const Color(0xFF9C27B0); // Purple
 
       // Sports & Recreation
       case 'sports & recreation':
-      case 'sports':
-        return AppConstants.successColor;
+        return const Color(0xFF2196F3); // Blue
       case 'football (soccer)':
-        return AppConstants.accentColor;
+        return const Color(0xFF4CAF50); // Green
       case 'rugby':
-        return AppConstants.primaryColor;
+        return const Color(0xFF795548); // Brown
       case 'athletics':
-        return AppConstants.successColor;
+        return const Color(0xFFFF9800); // Orange
       case 'marathon & running':
-        return AppConstants.secondaryColor;
+        return const Color(0xFFF44336); // Red
       case 'outdoor adventure':
-        return AppConstants.primaryLightColor;
+        return const Color(0xFF8BC34A); // Light Green
       case 'safari rally':
-        return AppConstants.warningColor;
+        return const Color(0xFF795548); // Brown
       case 'water sports':
-        return AppConstants.secondaryDarkColor;
+        return const Color(0xFF2196F3); // Blue
 
       // Education & Development
       case 'education':
-        return AppConstants.warningColor;
+        return const Color(0xFF3F51B5); // Indigo
       case 'training & development':
-        return AppConstants.primaryColor;
+        return const Color(0xFF009688); // Teal
       case 'youth programs':
-        return AppConstants.successColor;
+        return const Color(0xFFFF9800); // Orange
       case 'academic conference':
-        return AppConstants.primaryDarkColor;
+        return const Color(0xFF673AB7); // Deep Purple
       case 'skill development':
-        return AppConstants.accentColor;
+        return const Color(0xFF00BCD4); // Cyan
 
       // Health & Wellness
       case 'health & wellness':
-        return AppConstants.successColor;
+        return const Color(0xFF4CAF50); // Green
       case 'medical conference':
-        return AppConstants.primaryColor;
+        return const Color(0xFFF44336); // Red
       case 'fitness & yoga':
-        return AppConstants.accentColor;
+        return const Color(0xFF8BC34A); // Light Green
       case 'mental health':
-        return AppConstants.secondaryColor;
+        return const Color(0xFF9C27B0); // Purple
 
       // Food & Agriculture
       case 'food & drink':
-        return AppConstants.warningColor;
+        return const Color(0xFFFF9800); // Orange
       case 'agricultural show':
-        return AppConstants.successColor;
+        return const Color(0xFF8BC34A); // Light Green
       case 'food festival':
-        return AppConstants.accentColor;
+        return const Color(0xFFFF5722); // Deep Orange
       case 'cooking workshop':
-        return AppConstants.secondaryColor;
+        return const Color(0xFFFFC107); // Amber
       case 'wine tasting':
-        return AppConstants.primaryLightColor;
+        return const Color(0xFF9C27B0); // Purple
 
       // Travel & Tourism
       case 'travel':
-        return AppConstants.secondaryColor;
+        return const Color(0xFF2196F3); // Blue
       case 'tourism promotion':
-        return AppConstants.accentColor;
+        return const Color(0xFF00BCD4); // Cyan
       case 'adventure tourism':
-        return AppConstants.primaryLightColor;
+        return const Color(0xFF4CAF50); // Green
       case 'wildlife conservation':
-        return AppConstants.successColor;
+        return const Color(0xFF8BC34A); // Light Green
 
       // Government & Politics
       case 'government event':
-        return AppConstants.primaryDarkColor;
+        return const Color(0xFF3F51B5); // Indigo
       case 'political rally':
-        return AppConstants.primaryColor;
+        return const Color(0xFFF44336); // Red
       case 'public forum':
-        return AppConstants.secondaryDarkColor;
+        return const Color(0xFF607D8B); // Blue Grey
       case 'civic engagement':
-        return AppConstants.accentColor;
+        return const Color(0xFF009688); // Teal
 
       // Special Occasions
       case 'wedding':
-        return AppConstants.primaryLightColor;
+        return const Color(0xFFE91E63); // Pink
       case 'birthday party':
-        return AppConstants.successColor;
+        return const Color(0xFFFFC107); // Amber
       case 'anniversary':
-        return AppConstants.accentColor;
+        return const Color(0xFF9C27B0); // Purple
       case 'graduation':
-        return AppConstants.warningColor;
+        return const Color(0xFF3F51B5); // Indigo
       case 'baby shower':
-        return AppConstants.secondaryColor;
+        return const Color(0xFFFFEB3B); // Yellow
       case 'corporate party':
-        return AppConstants.primaryColor;
+        return const Color(0xFF607D8B); // Blue Grey
 
       // Seasonal & Holiday
       case 'christmas event':
-        return AppConstants.successColor;
+        return const Color(0xFFF44336); // Red
       case 'new year celebration':
-        return AppConstants.warningColor;
+        return const Color(0xFFFFC107); // Amber
       case 'independence day':
-        return AppConstants.primaryColor;
+        return const Color(0xFF4CAF50); // Green
       case 'eid celebration':
-        return AppConstants.accentColor;
+        return const Color(0xFF9C27B0); // Purple
       case 'diwali':
-        return AppConstants.warningColor;
+        return const Color(0xFFFF9800); // Orange
       case 'easter event':
-        return AppConstants.primaryLightColor;
+        return const Color(0xFF8BC34A); // Light Green
 
       // Markets & Shopping
       case 'market event':
-        return AppConstants.successColor;
+        return const Color(0xFF795548); // Brown
       case 'craft fair':
-        return AppConstants.warningColor;
+        return const Color(0xFFFF9800); // Orange
       case 'farmers market':
-        return AppConstants.accentColor;
+        return const Color(0xFF8BC34A); // Light Green
       case 'pop-up shop':
-        return AppConstants.secondaryColor;
+        return const Color(0xFFE91E63); // Pink
 
       // Other
       case 'other':
-      default:
         return AppConstants.textSecondaryColor;
+
+      default:
+        return AppConstants.primaryColor;
     }
   }
 
   IconData _getCategoryIcon(String category) {
     switch (category.toLowerCase()) {
+      case 'all':
+        return Icons.all_inclusive;
+
       // Business & Professional
       case 'technology':
         return Icons.computer;
@@ -598,7 +606,7 @@ class EventCard extends StatelessWidget {
       case 'trade show':
         return Icons.store;
       case 'expo':
-        return Icons.store;
+        return Icons.business_center;
 
       // Entertainment & Arts
       case 'music':
@@ -612,7 +620,7 @@ class EventCard extends StatelessWidget {
       case 'film & cinema':
         return Icons.movie;
       case 'fashion':
-        return Icons.checkroom;
+        return Icons.style;
       case 'entertainment':
         return Icons.celebration;
 
@@ -620,11 +628,11 @@ class EventCard extends StatelessWidget {
       case 'cultural festival':
         return Icons.festival;
       case 'community event':
-        return Icons.groups;
+        return Icons.people;
       case 'religious event':
         return Icons.place;
       case 'traditional ceremony':
-        return Icons.local_florist;
+        return Icons.castle;
       case 'charity & fundraising':
         return Icons.volunteer_activism;
       case 'cultural exhibition':
@@ -632,7 +640,6 @@ class EventCard extends StatelessWidget {
 
       // Sports & Recreation
       case 'sports & recreation':
-      case 'sports':
         return Icons.sports;
       case 'football (soccer)':
         return Icons.sports_soccer;
@@ -655,11 +662,11 @@ class EventCard extends StatelessWidget {
       case 'training & development':
         return Icons.psychology;
       case 'youth programs':
-        return Icons.child_care;
+        return Icons.groups;
       case 'academic conference':
-        return Icons.menu_book;
+        return Icons.library_books;
       case 'skill development':
-        return Icons.emoji_objects;
+        return Icons.trending_up;
 
       // Health & Wellness
       case 'health & wellness':
@@ -669,7 +676,7 @@ class EventCard extends StatelessWidget {
       case 'fitness & yoga':
         return Icons.fitness_center;
       case 'mental health':
-        return Icons.psychology_alt;
+        return Icons.psychology;
 
       // Food & Agriculture
       case 'food & drink':
@@ -687,7 +694,7 @@ class EventCard extends StatelessWidget {
       case 'travel':
         return Icons.travel_explore;
       case 'tourism promotion':
-        return Icons.tour;
+        return Icons.map;
       case 'adventure tourism':
         return Icons.hiking;
       case 'wildlife conservation':
@@ -709,40 +716,42 @@ class EventCard extends StatelessWidget {
       case 'birthday party':
         return Icons.cake;
       case 'anniversary':
-        return Icons.celebration;
+        return Icons.card_giftcard;
       case 'graduation':
         return Icons.school;
       case 'baby shower':
-        return Icons.child_friendly;
+        return Icons.child_care;
       case 'corporate party':
         return Icons.business_center;
 
       // Seasonal & Holiday
       case 'christmas event':
-        return Icons.card_giftcard;
-      case 'new year celebration':
         return Icons.celebration;
+      case 'new year celebration':
+        return Icons.star;
       case 'independence day':
         return Icons.flag;
       case 'eid celebration':
-        return Icons.mosque;
+        return Icons.celebration;
       case 'diwali':
-        return Icons.lightbulb;
+        return Icons.brightness_7;
       case 'easter event':
-        return Icons.egg;
+        return Icons.celebration;
 
       // Markets & Shopping
       case 'market event':
-        return Icons.store;
+        return Icons.shopping_bag;
       case 'craft fair':
         return Icons.handyman;
       case 'farmers market':
-        return Icons.local_grocery_store;
+        return Icons.storefront;
       case 'pop-up shop':
-        return Icons.shopping_bag;
+        return Icons.store;
 
       // Other
       case 'other':
+        return Icons.event;
+
       default:
         return Icons.event;
     }

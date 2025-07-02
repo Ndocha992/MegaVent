@@ -61,7 +61,7 @@ dependencies:
   latlong2: ^0.9.1
   geolocator: ^14.0.1
   geocoding: ^4.0.0
-  qr_code_scanner: ^1.0.1
+  mobile_scanner: ^7.0.1
 
 flutter_launcher_icons:
   android: true

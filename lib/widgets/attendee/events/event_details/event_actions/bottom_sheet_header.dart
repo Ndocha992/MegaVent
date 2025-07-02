@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:megavent/utils/constants.dart';
 
-class BottomSheetHeader extends StatelessWidget {
+class AttendeeBottomSheetHeader extends StatelessWidget {
   final IconData icon;
   final String title;
   final String subtitle;
   final Color iconColor;
   final VoidCallback onClose;
 
-  const BottomSheetHeader({
+  const AttendeeBottomSheetHeader({
     super.key,
     required this.icon,
     required this.title,
@@ -43,11 +43,7 @@ class BottomSheetHeader extends StatelessWidget {
                   color: iconColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(
-                  icon,
-                  color: iconColor,
-                  size: 24,
-                ),
+                child: Icon(icon, color: iconColor, size: 24),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -56,17 +52,11 @@ class BottomSheetHeader extends StatelessWidget {
                   children: [
                     Text(title, style: AppConstants.titleLarge),
                     const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: AppConstants.bodySmallSecondary,
-                    ),
+                    Text(subtitle, style: AppConstants.bodySmallSecondary),
                   ],
                 ),
               ),
-              IconButton(
-                onPressed: onClose,
-                icon: const Icon(Icons.close),
-              ),
+              IconButton(onPressed: onClose, icon: const Icon(Icons.close)),
             ],
           ),
         ),

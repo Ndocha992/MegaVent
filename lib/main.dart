@@ -18,6 +18,7 @@ import 'package:megavent/screens/organizer/profile.dart';
 import 'package:megavent/services/auth_service.dart';
 import 'package:megavent/services/database_service.dart';
 import 'package:megavent/services/deep_link_service.dart';
+import 'package:megavent/services/permission_service.dart'; // Add this import
 import 'package:megavent/utils/constants.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
@@ -57,15 +58,29 @@ class _MyAppState extends State<MyApp> {
     super.initState();
     // Initialize deep link service after the app is built
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initializeDeepLinks();
+      _initializeApp();
     });
   }
 
-  void _initializeDeepLinks() {
+  void _initializeApp() {
     final context = navigatorKey.currentContext;
     if (context != null) {
+      // Initialize deep links
       DeepLinkService().initialize(context);
       DeepLinkService().handleInitialLink();
+
+      // Request permissions on app start (like other apps)
+      _requestInitialPermissions(context);
+    }
+  }
+
+  void _requestInitialPermissions(BuildContext context) async {
+    // Wait a bit for the app to fully load
+    await Future.delayed(const Duration(seconds: 1));
+
+    if (mounted) {
+      // Request all necessary permissions
+      await PermissionService().requestAllPermissions(context);
     }
   }
 

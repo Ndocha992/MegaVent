@@ -20,10 +20,15 @@ class AttendeeAllEvents extends StatefulWidget {
 class _AttendeeAllEventsState extends State<AttendeeAllEvents>
     with TickerProviderStateMixin {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  String currentRoute = 'attendee-all-events'; // Fixed route name
+  String currentRoute = '/attendee-all-events';
 
   late TabController _tabController;
+  
+  // Enhanced filter state
   String _selectedCategory = 'All';
+  String _selectedAvailability = 'All';
+  String _selectedDateRange = 'All Time';
+  String _selectedLocation = 'All Locations';
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
 
@@ -55,10 +60,7 @@ class _AttendeeAllEventsState extends State<AttendeeAllEvents>
         _error = null;
       });
 
-      // Load categories
       _categories = ['All', ..._databaseService.getEventCategories()];
-
-      // Load events
       await _loadEvents();
     } catch (e) {
       setState(() {
@@ -70,7 +72,6 @@ class _AttendeeAllEventsState extends State<AttendeeAllEvents>
 
   Future<void> _loadEvents() async {
     try {
-      // Listen to ALL events stream (not just organizer events)
       _databaseService.streamAllEvents().listen(
         (events) {
           if (mounted) {
@@ -103,30 +104,80 @@ class _AttendeeAllEventsState extends State<AttendeeAllEvents>
 
     // Filter by search query
     if (_searchQuery.isNotEmpty) {
-      events =
-          events
-              .where(
-                (event) =>
-                    event.name.toLowerCase().contains(
-                      _searchQuery.toLowerCase(),
-                    ) ||
-                    event.category.toLowerCase().contains(
-                      _searchQuery.toLowerCase(),
-                    ) ||
-                    event.location.toLowerCase().contains(
-                      _searchQuery.toLowerCase(),
-                    ) ||
-                    event.description.toLowerCase().contains(
-                      _searchQuery.toLowerCase(),
-                    ),
-              )
-              .toList();
+      events = events.where((event) =>
+          event.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          event.category.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          event.location.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+          event.description.toLowerCase().contains(_searchQuery.toLowerCase())
+      ).toList();
     }
 
     // Filter by category
     if (_selectedCategory != 'All') {
-      events =
-          events.where((event) => event.category == _selectedCategory).toList();
+      events = events.where((event) => event.category == _selectedCategory).toList();
+    }
+
+    // Filter by availability
+    if (_selectedAvailability != 'All') {
+      events = events.where((event) {
+        int availableSpots = event.capacity - event.registeredCount;
+        double occupancyRate = event.registeredCount / event.capacity;
+        
+        switch (_selectedAvailability) {
+          case 'Available Spots':
+            return availableSpots > 0 && occupancyRate < 0.8;
+          case 'Limited Spots':
+            return availableSpots > 0 && occupancyRate >= 0.8 && occupancyRate < 0.95;
+          case 'Almost Full':
+            return availableSpots > 0 && occupancyRate >= 0.95;
+          case 'Full':
+            return availableSpots <= 0;
+          default:
+            return true;
+        }
+      }).toList();
+    }
+
+    // Filter by date range
+    if (_selectedDateRange != 'All Time') {
+      DateTime now = DateTime.now();
+      events = events.where((event) {
+        switch (_selectedDateRange) {
+          case 'Today':
+            return _isSameDay(event.startDate, now);
+          case 'This Week':
+            DateTime startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+            DateTime endOfWeek = startOfWeek.add(const Duration(days: 6));
+            return event.startDate.isAfter(startOfWeek.subtract(const Duration(days: 1))) &&
+                   event.startDate.isBefore(endOfWeek.add(const Duration(days: 1)));
+          case 'This Month':
+            return event.startDate.year == now.year && event.startDate.month == now.month;
+          case 'Next Month':
+            DateTime nextMonth = DateTime(now.year, now.month + 1);
+            return event.startDate.year == nextMonth.year && event.startDate.month == nextMonth.month;
+          case 'Custom Range':
+            // For now, show all events - in a real app, you'd implement date picker
+            return true;
+          default:
+            return true;
+        }
+      }).toList();
+    }
+
+    // Filter by location
+    if (_selectedLocation != 'All Locations') {
+      if (_selectedLocation == 'Online Events') {
+        events = events.where((event) => 
+            event.location.toLowerCase().contains('online') ||
+            event.location.toLowerCase().contains('virtual') ||
+            event.location.toLowerCase().contains('zoom') ||
+            event.location.toLowerCase().contains('meet')
+        ).toList();
+      } else {
+        events = events.where((event) => 
+            event.location.toLowerCase().contains(_selectedLocation.toLowerCase())
+        ).toList();
+      }
     }
 
     // Filter by tab
@@ -138,29 +189,30 @@ class _AttendeeAllEventsState extends State<AttendeeAllEvents>
         events = events.where((event) => event.startDate.isAfter(now)).toList();
         break;
       case 2: // Past
-        events =
-            events.where((event) => event.startDate.isBefore(now)).toList();
+        events = events.where((event) => event.startDate.isBefore(now)).toList();
         break;
     }
 
-    // Sort events by start date (upcoming first, then past events in reverse)
+    // Sort events by start date
     events.sort((a, b) {
       if (a.startDate.isAfter(now) && b.startDate.isAfter(now)) {
-        // Both upcoming - earliest first
         return a.startDate.compareTo(b.startDate);
       } else if (a.startDate.isBefore(now) && b.startDate.isBefore(now)) {
-        // Both past - latest first
         return b.startDate.compareTo(a.startDate);
       } else if (a.startDate.isAfter(now)) {
-        // a is upcoming, b is past - a comes first
         return -1;
       } else {
-        // a is past, b is upcoming - b comes first
         return 1;
       }
     });
 
     return events;
+  }
+
+  bool _isSameDay(DateTime date1, DateTime date2) {
+    return date1.year == date2.year &&
+           date1.month == date2.month &&
+           date1.day == date2.day;
   }
 
   Future<void> _refreshEvents() async {
@@ -173,23 +225,22 @@ class _AttendeeAllEventsState extends State<AttendeeAllEvents>
       key: _scaffoldKey,
       backgroundColor: AppConstants.backgroundColor,
       appBar: CustomAppBar(
-        title: 'Browse Events',
+        title: 'MegaVent',
         onMenuPressed: () => _scaffoldKey.currentState?.openDrawer(),
       ),
       drawer: AttendeeSidebar(currentRoute: currentRoute),
-      body:
-          _isLoading
-              ? _buildLoadingState()
-              : _error != null
+      body: _isLoading
+          ? _buildLoadingState()
+          : _error != null
               ? _buildErrorState()
               : Column(
-                children: [
-                  _buildHeader(),
-                  _buildTabBar(),
-                  _buildSearchAndFilters(),
-                  Expanded(child: _buildEventsList()),
-                ],
-              ),
+                  children: [
+                    _buildHeader(),
+                    _buildTabBar(),
+                    _buildSearchAndFilters(),
+                    Expanded(child: _buildEventsList()),
+                  ],
+                ),
     );
   }
 
@@ -267,7 +318,6 @@ class _AttendeeAllEventsState extends State<AttendeeAllEvents>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Title and event count - now stacked vertically for better space management
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -287,7 +337,6 @@ class _AttendeeAllEventsState extends State<AttendeeAllEvents>
                 maxLines: 2,
               ),
               const SizedBox(height: 12),
-              // Event count badge
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
@@ -306,7 +355,7 @@ class _AttendeeAllEventsState extends State<AttendeeAllEvents>
                     const SizedBox(width: 8),
                     Flexible(
                       child: Text(
-                        '${_events.length} Events',
+                        '${_filteredEvents.length} Events',
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.w600,
@@ -327,23 +376,15 @@ class _AttendeeAllEventsState extends State<AttendeeAllEvents>
   }
 
   Widget _buildStatsRow() {
-    final upcomingCount =
-        _events
-            .where((event) => event.startDate.isAfter(DateTime.now()))
-            .length;
-    final pastCount =
-        _events
-            .where((event) => event.startDate.isBefore(DateTime.now()))
-            .length;
-    final todayCount =
-        _events
-            .where(
-              (event) =>
-                  event.startDate.year == DateTime.now().year &&
-                  event.startDate.month == DateTime.now().month &&
-                  event.startDate.day == DateTime.now().day,
-            )
-            .length;
+    final upcomingCount = _events
+        .where((event) => event.startDate.isAfter(DateTime.now()))
+        .length;
+    final pastCount = _events
+        .where((event) => event.startDate.isBefore(DateTime.now()))
+        .length;
+    final todayCount = _events
+        .where((event) => _isSameDay(event.startDate, DateTime.now()))
+        .length;
 
     return Row(
       children: [
@@ -454,16 +495,15 @@ class _AttendeeAllEventsState extends State<AttendeeAllEvents>
                         Icons.search,
                         color: AppConstants.textSecondaryColor,
                       ),
-                      suffixIcon:
-                          _searchQuery.isNotEmpty
-                              ? IconButton(
-                                icon: const Icon(Icons.clear),
-                                onPressed: () {
-                                  _searchController.clear();
-                                  setState(() => _searchQuery = '');
-                                },
-                              )
-                              : null,
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() => _searchQuery = '');
+                              },
+                            )
+                          : null,
                       border: InputBorder.none,
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16,
@@ -480,70 +520,168 @@ class _AttendeeAllEventsState extends State<AttendeeAllEvents>
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: IconButton(
-                  icon: Icon(
-                    Icons.filter_list,
-                    color: AppConstants.primaryColor,
+                  icon: Stack(
+                    children: [
+                      Icon(
+                        Icons.filter_list,
+                        color: AppConstants.primaryColor,
+                      ),
+                      if (_hasActiveFilters())
+                        Positioned(
+                          right: 0,
+                          top: 0,
+                          child: Container(
+                            width: 8,
+                            height: 8,
+                            decoration: const BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                   onPressed: _showFilterDialog,
                 ),
               ),
             ],
           ),
-          if (_selectedCategory != 'All') ...[
+          if (_hasActiveFilters()) ...[
             const SizedBox(height: 12),
-            Row(
-              children: [
-                Flexible(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppConstants.primaryColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Flexible(
-                          child: Text(
-                            _selectedCategory,
-                            style: TextStyle(
-                              color: AppConstants.primaryColor,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        GestureDetector(
-                          onTap:
-                              () => setState(() => _selectedCategory = 'All'),
-                          child: Icon(
-                            Icons.close,
-                            size: 16,
-                            color: AppConstants.primaryColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  '${_filteredEvents.length} results',
-                  style: AppConstants.bodySmall.copyWith(
-                    color: AppConstants.textSecondaryColor,
-                  ),
-                ),
-              ],
-            ),
+            _buildActiveFilters(),
           ],
         ],
       ),
     );
+  }
+
+  bool _hasActiveFilters() {
+    return _selectedCategory != 'All' ||
+           _selectedAvailability != 'All' ||
+           _selectedDateRange != 'All Time' ||
+           _selectedLocation != 'All Locations';
+  }
+
+  Widget _buildActiveFilters() {
+    List<Widget> filterChips = [];
+
+    if (_selectedCategory != 'All') {
+      filterChips.add(_buildFilterChip(
+        _selectedCategory,
+        () => setState(() => _selectedCategory = 'All'),
+        AppConstants.primaryColor,
+      ));
+    }
+
+    if (_selectedAvailability != 'All') {
+      filterChips.add(_buildFilterChip(
+        _selectedAvailability,
+        () => setState(() => _selectedAvailability = 'All'),
+        AppConstants.successColor,
+      ));
+    }
+
+    if (_selectedDateRange != 'All Time') {
+      filterChips.add(_buildFilterChip(
+        _selectedDateRange,
+        () => setState(() => _selectedDateRange = 'All Time'),
+        AppConstants.primaryColor,
+      ));
+    }
+
+    if (_selectedLocation != 'All Locations') {
+      filterChips.add(_buildFilterChip(
+        _selectedLocation,
+        () => setState(() => _selectedLocation = 'All Locations'),
+        AppConstants.secondaryColor,
+      ));
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              'Active Filters',
+              style: AppConstants.bodySmall.copyWith(
+                color: AppConstants.textSecondaryColor,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const Spacer(),
+            GestureDetector(
+              onTap: _clearAllFilters,
+              child: Text(
+                'Clear All',
+                style: AppConstants.bodySmall.copyWith(
+                  color: AppConstants.primaryColor,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: filterChips,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          '${_filteredEvents.length} results',
+          style: AppConstants.bodySmall.copyWith(
+            color: AppConstants.textSecondaryColor,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFilterChip(String label, VoidCallback onRemove, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Flexible(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 4),
+          GestureDetector(
+            onTap: onRemove,
+            child: Icon(
+              Icons.close,
+              size: 16,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _clearAllFilters() {
+    setState(() {
+      _selectedCategory = 'All';
+      _selectedAvailability = 'All';
+      _selectedDateRange = 'All Time';
+      _selectedLocation = 'All Locations';
+    });
   }
 
   Widget _buildEventsList() {
@@ -568,10 +706,9 @@ class _AttendeeAllEventsState extends State<AttendeeAllEvents>
                 onTap: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder:
-                          (context) => AttendeeEventsDetails(
-                            event: filteredEvents[index],
-                          ),
+                      builder: (context) => AttendeeEventsDetails(
+                        event: filteredEvents[index],
+                      ),
                     ),
                   );
                 },
@@ -615,7 +752,7 @@ class _AttendeeAllEventsState extends State<AttendeeAllEvents>
               ),
               const SizedBox(height: 8),
               Text(
-                _searchQuery.isNotEmpty || _selectedCategory != 'All'
+                _searchQuery.isNotEmpty || _hasActiveFilters()
                     ? 'Try adjusting your search or filter criteria'
                     : 'No events are available at the moment',
                 textAlign: TextAlign.center,
@@ -623,7 +760,7 @@ class _AttendeeAllEventsState extends State<AttendeeAllEvents>
                   color: AppConstants.textSecondaryColor,
                 ),
               ),
-              if (_searchQuery.isNotEmpty || _selectedCategory != 'All') ...[
+              if (_searchQuery.isNotEmpty || _hasActiveFilters()) ...[
                 const SizedBox(height: 16),
                 ElevatedButton.icon(
                   onPressed: () {
@@ -631,10 +768,13 @@ class _AttendeeAllEventsState extends State<AttendeeAllEvents>
                     setState(() {
                       _searchQuery = '';
                       _selectedCategory = 'All';
+                      _selectedAvailability = 'All';
+                      _selectedDateRange = 'All Time';
+                      _selectedLocation = 'All Locations';
                     });
                   },
                   icon: const Icon(Icons.clear_all),
-                  label: const Text('Clear Filters'),
+                  label: const Text('Clear All Filters'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppConstants.primaryColor,
                     foregroundColor: Colors.white,
@@ -651,15 +791,21 @@ class _AttendeeAllEventsState extends State<AttendeeAllEvents>
   void _showFilterDialog() {
     showDialog(
       context: context,
-      builder:
-          (context) => AttendeeEventFilters(
-            selectedCategory: _selectedCategory,
-            categories: _categories,
-            onCategoryChanged: (category) {
-              setState(() => _selectedCategory = category);
-              Navigator.pop(context);
-            },
-          ),
+      builder: (context) => AttendeeEventFilters(
+        selectedCategory: _selectedCategory,
+        selectedAvailability: _selectedAvailability,
+        selectedDateRange: _selectedDateRange,
+        selectedLocation: _selectedLocation,
+        categories: _categories,
+        onFiltersChanged: (category, availability, dateRange, location) {
+          setState(() {
+            _selectedCategory = category;
+            _selectedAvailability = availability;
+            _selectedDateRange = dateRange;
+            _selectedLocation = location;
+          });
+        },
+      ),
     );
   }
 }
