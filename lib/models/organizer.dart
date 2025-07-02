@@ -16,8 +16,6 @@ class Organizer {
   final bool isApproved;
   final DateTime createdAt;
   final DateTime updatedAt;
-  final int totalEvents;
-  final int totalAttendees;
 
   Organizer({
     required this.id,
@@ -35,8 +33,6 @@ class Organizer {
     required this.isApproved,
     required this.createdAt,
     required this.updatedAt,
-    this.totalEvents = 0,
-    this.totalAttendees = 0,
   });
 
   // Convert to Map for Firestore
@@ -57,8 +53,6 @@ class Organizer {
       'isApproved': isApproved,
       'createdAt': createdAt,
       'updatedAt': updatedAt,
-      'totalEvents': totalEvents,
-      'totalAttendees': totalAttendees,
     };
   }
 
@@ -82,8 +76,6 @@ class Organizer {
       isApproved: data['isApproved'] ?? false,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      totalEvents: data['totalEvents'] ?? 0,
-      totalAttendees: data['totalAttendees'] ?? 0,
     );
   }
 
@@ -111,8 +103,6 @@ class Organizer {
           map['updatedAt'] is Timestamp
               ? (map['updatedAt'] as Timestamp).toDate()
               : map['updatedAt'] ?? DateTime.now(),
-      totalEvents: map['totalEvents'] ?? 0,
-      totalAttendees: map['totalAttendees'] ?? 0,
     );
   }
 
@@ -133,8 +123,6 @@ class Organizer {
     bool? isApproved,
     DateTime? createdAt,
     DateTime? updatedAt,
-    int? totalEvents,
-    int? totalAttendees,
   }) {
     return Organizer(
       id: id ?? this.id,
