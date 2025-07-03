@@ -156,7 +156,7 @@ class LatestAttendeeCard extends StatelessWidget {
     required this.onTap,
   });
 
-  // Getters that use registration data when available (similar to AttendeeQRDialog)
+  // Getters that use registration data when available
   bool get hasAttended {
     return registration?.hasAttended ?? false;
   }

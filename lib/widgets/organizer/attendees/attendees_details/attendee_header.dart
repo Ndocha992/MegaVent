@@ -8,14 +8,12 @@ class AttendeeHeaderWidget extends StatelessWidget {
   final Attendee attendee;
   final Registration? registration;
   final String eventName;
-  final VoidCallback? onToggleAttendance;
 
   const AttendeeHeaderWidget({
     super.key,
     required this.attendee,
     this.registration,
     required this.eventName,
-    this.onToggleAttendance,
   });
 
   // Getters that use registration data when available

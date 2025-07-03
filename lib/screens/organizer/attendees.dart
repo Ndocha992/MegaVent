@@ -166,8 +166,11 @@ class _AttendeesState extends State<Attendees> with TickerProviderStateMixin {
       context,
       MaterialPageRoute(
         builder:
-            (context) =>
-                AttendeesDetails(attendee: attendee, eventName: eventName),
+            (context) => AttendeesDetails(
+              attendee: attendee,
+              registration: registration,
+              eventName: eventName,
+            ),
       ),
     );
   }
