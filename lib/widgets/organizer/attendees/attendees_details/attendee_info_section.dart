@@ -1,15 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:megavent/models/attendee.dart';
+import 'package:megavent/models/registration.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/widgets/organizer/attendees/attendees_details/info_row.dart';
 
 class AttendeeInfoSectionWidget extends StatelessWidget {
   final Attendee attendee;
+  final Registration? registration;
 
   const AttendeeInfoSectionWidget({
     super.key,
     required this.attendee,
+    this.registration,
   });
+
+  // Getters that use registration data when available
+  bool get hasAttended {
+    return registration?.hasAttended ?? false;
+  }
+
+  String get attendanceStatus {
+    if (!attendee.isApproved) return 'Pending Approval';
+    return hasAttended ? 'Attended' : 'Registered';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -55,10 +68,13 @@ class AttendeeInfoSectionWidget extends StatelessWidget {
           ),
           const SizedBox(height: 20),
 
-          InfoRowWidget(label: 'Full Name', value: attendee.name),
+          InfoRowWidget(label: 'Full Name', value: attendee.fullName),
+          InfoRowWidget(label: 'Email', value: attendee.email),
+          InfoRowWidget(label: 'Phone', value: attendee.phone),
+          InfoRowWidget(label: 'Registration Status', value: attendanceStatus),
           InfoRowWidget(
-            label: 'Registration Status',
-            value: attendee.hasAttended ? 'Attended' : 'Registered',
+            label: 'Approved',
+            value: attendee.isApproved ? 'Yes' : 'No',
           ),
         ],
       ),

@@ -6,16 +6,9 @@ class Attendee {
   final String email;
   final String phone;
   final String? profileImage;
-  final String eventId;
-  final String eventName;
-  final String qrCode;
-  final bool hasAttended;
   final bool isApproved;
   final DateTime createdAt;
   final DateTime updatedAt;
-  final DateTime registeredAt;
-  final bool isCheckedIn; // Added for check-in status
-  final DateTime? checkedInAt; // Added for check-in timestamp
 
   Attendee({
     required this.id,
@@ -23,17 +16,10 @@ class Attendee {
     required this.email,
     required this.phone,
     this.profileImage,
-    required this.eventId,
-    required this.eventName,
-    required this.qrCode,
-    required this.hasAttended,
     required this.isApproved,
     required this.createdAt,
     required this.updatedAt,
-    required this.registeredAt,
-    bool? isCheckedIn,
-    this.checkedInAt,
-  }) : isCheckedIn = isCheckedIn ?? hasAttended;
+  });
 
   // Convert to Map for Firestore
   Map<String, dynamic> toMap() {
@@ -43,17 +29,9 @@ class Attendee {
       'email': email,
       'phone': phone,
       'profileImage': profileImage,
-      'eventId': eventId,
-      'eventName': eventName,
-      'qrCode': qrCode,
-      'hasAttended': hasAttended,
       'isApproved': isApproved,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
-      'registeredAt': Timestamp.fromDate(registeredAt),
-      'isCheckedIn': isCheckedIn,
-      'checkedInAt':
-          checkedInAt != null ? Timestamp.fromDate(checkedInAt!) : null,
     };
   }
 
@@ -67,17 +45,9 @@ class Attendee {
       email: data['email'] ?? '',
       phone: data['phone'] ?? '',
       profileImage: data['profileImage'],
-      eventId: data['eventId'] ?? '',
-      eventName: data['eventName'] ?? '',
-      qrCode: data['qrCode'] ?? '',
-      hasAttended: data['hasAttended'] ?? false,
       isApproved: data['isApproved'] ?? true,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      registeredAt:
-          (data['registeredAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      isCheckedIn: data['isCheckedIn'] ?? data['hasAttended'] ?? false,
-      checkedInAt: (data['checkedInAt'] as Timestamp?)?.toDate(),
     );
   }
 
@@ -89,10 +59,6 @@ class Attendee {
       email: map['email'] ?? '',
       phone: map['phone'] ?? '',
       profileImage: map['profileImage'],
-      eventId: map['eventId'] ?? '',
-      eventName: map['eventName'] ?? '',
-      qrCode: map['qrCode'] ?? '',
-      hasAttended: map['hasAttended'] ?? false,
       isApproved: map['isApproved'] ?? true,
       createdAt:
           map['createdAt'] is Timestamp
@@ -106,19 +72,6 @@ class Attendee {
               : map['updatedAt'] is DateTime
               ? map['updatedAt']
               : DateTime.now(),
-      registeredAt:
-          map['registeredAt'] is Timestamp
-              ? (map['registeredAt'] as Timestamp).toDate()
-              : map['registeredAt'] is DateTime
-              ? map['registeredAt']
-              : DateTime.now(),
-      isCheckedIn: map['isCheckedIn'] ?? map['hasAttended'] ?? false,
-      checkedInAt:
-          map['checkedInAt'] is Timestamp
-              ? (map['checkedInAt'] as Timestamp).toDate()
-              : map['checkedInAt'] is DateTime
-              ? map['checkedInAt']
-              : null,
     );
   }
 
@@ -129,16 +82,9 @@ class Attendee {
     String? email,
     String? phone,
     String? profileImage,
-    String? eventId,
-    String? eventName,
-    String? qrCode,
-    bool? hasAttended,
     bool? isApproved,
     DateTime? createdAt,
     DateTime? updatedAt,
-    DateTime? registeredAt,
-    bool? isCheckedIn,
-    DateTime? checkedInAt,
   }) {
     return Attendee(
       id: id ?? this.id,
@@ -146,41 +92,14 @@ class Attendee {
       email: email ?? this.email,
       phone: phone ?? this.phone,
       profileImage: profileImage ?? this.profileImage,
-      eventId: eventId ?? this.eventId,
-      eventName: eventName ?? this.eventName,
-      qrCode: qrCode ?? this.qrCode,
-      hasAttended: hasAttended ?? this.hasAttended,
       isApproved: isApproved ?? this.isApproved,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
-      registeredAt: registeredAt ?? this.registeredAt,
-      isCheckedIn: isCheckedIn ?? this.isCheckedIn,
-      checkedInAt: checkedInAt ?? this.checkedInAt,
     );
   }
 
   // Get display name (for compatibility with fake data)
   String get name => fullName;
-
-  // Get attendance status display
-  String get attendanceStatus {
-    if (isCheckedIn) {
-      return 'Checked In';
-    } else if (hasAttended) {
-      return 'Attended';
-    } else {
-      return 'Registered';
-    }
-  }
-
-  // Get check-in status with emoji
-  String get checkInStatusWithIcon {
-    if (isCheckedIn) {
-      return '✅ Checked In';
-    } else {
-      return '⏳ Not Checked In';
-    }
-  }
 
   // Calculate if attendee registration is "new" (registered within the last 6 hours)
   bool get isNew {
@@ -191,7 +110,7 @@ class Attendee {
 
   @override
   String toString() {
-    return 'Attendee(id: $id, fullName: $fullName, email: $email, phone: $phone, eventId: $eventId, hasAttended: $hasAttended, isApproved: $isApproved)';
+    return 'Attendee(id: $id, fullName: $fullName, email: $email, phone: $phone, isApproved: $isApproved)';
   }
 
   @override

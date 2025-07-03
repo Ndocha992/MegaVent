@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:megavent/models/attendee.dart';
+import 'package:megavent/models/registration.dart';
 import 'package:megavent/models/attendee_stats.dart';
 
 class AttendeeStatsService {
@@ -36,6 +36,14 @@ class AttendeeStatsService {
 
       final eventIds = eventsSnapshot.docs.map((doc) => doc.id).toList();
 
+      // Create event ID to name mapping
+      final Map<String, String> eventIdToNameMap = {};
+      for (final eventDoc in eventsSnapshot.docs) {
+        final eventData = eventDoc.data();
+        eventIdToNameMap[eventDoc.id] =
+            eventData['title'] ?? eventData['name'] ?? 'Unknown Event';
+      }
+
       // Get all registrations for these events
       final registrationsSnapshot =
           await _firestore
@@ -43,60 +51,17 @@ class AttendeeStatsService {
               .where('eventId', whereIn: eventIds)
               .get();
 
-      List<Attendee> attendees = [];
+      // Convert Firestore documents to Registration objects
+      final List<Registration> registrations =
+          registrationsSnapshot.docs
+              .map((doc) => Registration.fromFirestore(doc))
+              .toList();
 
-      // Build attendee objects from registrations
-      for (final regDoc in registrationsSnapshot.docs) {
-        final regData = regDoc.data();
-        final userId = regData['userId'];
-        final eventId = regData['eventId'];
-
-        try {
-          // Get user details
-          final userDoc =
-              await _firestore.collection('attendees').doc(userId).get();
-          if (!userDoc.exists) continue;
-
-          final userData = userDoc.data() as Map<String, dynamic>;
-
-          // Get event details
-          final eventDoc =
-              await _firestore.collection('events').doc(eventId).get();
-          if (!eventDoc.exists) continue;
-
-          final eventData = eventDoc.data() as Map<String, dynamic>;
-
-          // Create Attendee object
-          final attendee = Attendee(
-            id: userId,
-            fullName: userData['fullName'] ?? userData['name'] ?? 'Unknown',
-            email: userData['email'] ?? '',
-            phone: userData['phone'] ?? '',
-            profileImage: userData['profileImage'],
-            eventId: eventId,
-            eventName: eventData['name'] ?? '',
-            qrCode: regData['qrCode'] ?? '',
-            hasAttended: regData['attended'] ?? false,
-            isApproved: regData['isApproved'] ?? true,
-            createdAt:
-                (userData['createdAt'] as Timestamp?)?.toDate() ??
-                DateTime.now(),
-            updatedAt:
-                (userData['updatedAt'] as Timestamp?)?.toDate() ??
-                DateTime.now(),
-            registeredAt:
-                (regData['registeredAt'] as Timestamp?)?.toDate() ??
-                DateTime.now(),
-          );
-
-          attendees.add(attendee);
-        } catch (e) {
-          continue;
-        }
-      }
-
-      // Generate stats from attendees list
-      return OrganizerAttendeeStats.fromAttendeesList(attendees);
+      // Generate stats from registrations list
+      return OrganizerAttendeeStats.fromRegistrationsList(
+        registrations,
+        eventIdToNameMap,
+      );
     } catch (e) {
       print('Error getting attendee stats: $e');
       return OrganizerAttendeeStats.empty();
@@ -131,50 +96,21 @@ class AttendeeStatsService {
               .where('eventId', isEqualTo: eventId)
               .get();
 
-      List<Attendee> attendees = [];
+      // Convert to Registration objects
+      final List<Registration> registrations =
+          registrationsSnapshot.docs
+              .map((doc) => Registration.fromFirestore(doc))
+              .toList();
 
-      for (final regDoc in registrationsSnapshot.docs) {
-        final regData = regDoc.data();
-        final userId = regData['userId'];
+      // Create event name map for this single event
+      final eventName =
+          eventData['title'] ?? eventData['name'] ?? 'Unknown Event';
+      final Map<String, String> eventIdToNameMap = {eventId: eventName};
 
-        try {
-          // Get user details
-          final userDoc =
-              await _firestore.collection('attendees').doc(userId).get();
-          if (!userDoc.exists) continue;
-
-          final userData = userDoc.data() as Map<String, dynamic>;
-
-          // Create Attendee object
-          final attendee = Attendee(
-            id: userId,
-            fullName: userData['fullName'] ?? userData['name'] ?? 'Unknown',
-            email: userData['email'] ?? '',
-            phone: userData['phone'] ?? '',
-            profileImage: userData['profileImage'],
-            eventId: eventId,
-            eventName: eventData['name'] ?? '',
-            qrCode: regData['qrCode'] ?? '',
-            hasAttended: regData['attended'] ?? false,
-            isApproved: regData['isApproved'] ?? true,
-            createdAt:
-                (userData['createdAt'] as Timestamp?)?.toDate() ??
-                DateTime.now(),
-            updatedAt:
-                (userData['updatedAt'] as Timestamp?)?.toDate() ??
-                DateTime.now(),
-            registeredAt:
-                (regData['registeredAt'] as Timestamp?)?.toDate() ??
-                DateTime.now(),
-          );
-
-          attendees.add(attendee);
-        } catch (e) {
-          continue;
-        }
-      }
-
-      return OrganizerAttendeeStats.fromAttendeesList(attendees);
+      return OrganizerAttendeeStats.fromRegistrationsList(
+        registrations,
+        eventIdToNameMap,
+      );
     } catch (e) {
       throw Exception('Failed to get event attendee stats: $e');
     }
@@ -198,6 +134,14 @@ class AttendeeStatsService {
 
           final eventIds = eventsSnapshot.docs.map((doc) => doc.id).toList();
 
+          // Create event ID to name mapping
+          final Map<String, String> eventIdToNameMap = {};
+          for (final eventDoc in eventsSnapshot.docs) {
+            final eventData = eventDoc.data();
+            eventIdToNameMap[eventDoc.id] =
+                eventData['title'] ?? eventData['name'] ?? 'Unknown Event';
+          }
+
           // Get all registrations for these events
           final registrationsSnapshot =
               await _firestore
@@ -205,57 +149,16 @@ class AttendeeStatsService {
                   .where('eventId', whereIn: eventIds)
                   .get();
 
-          List<Attendee> attendees = [];
+          // Convert to Registration objects
+          final List<Registration> registrations =
+              registrationsSnapshot.docs
+                  .map((doc) => Registration.fromFirestore(doc))
+                  .toList();
 
-          for (final regDoc in registrationsSnapshot.docs) {
-            final regData = regDoc.data();
-            final userId = regData['userId'];
-            final eventId = regData['eventId'];
-
-            try {
-              // Get user details
-              final userDoc =
-                  await _firestore.collection('attendees').doc(userId).get();
-              if (!userDoc.exists) continue;
-
-              final userData = userDoc.data() as Map<String, dynamic>;
-
-              // Get event details
-              final eventDoc =
-                  await _firestore.collection('events').doc(eventId).get();
-              if (!eventDoc.exists) continue;
-
-              final eventData = eventDoc.data() as Map<String, dynamic>;
-
-              final attendee = Attendee(
-                id: userId,
-                fullName: userData['fullName'] ?? userData['name'] ?? 'Unknown',
-                email: userData['email'] ?? '',
-                phone: userData['phone'] ?? '',
-                profileImage: userData['profileImage'],
-                eventId: eventId,
-                eventName: eventData['name'] ?? '',
-                qrCode: regData['qrCode'] ?? '',
-                hasAttended: regData['attended'] ?? false,
-                isApproved: regData['isApproved'] ?? true,
-                createdAt:
-                    (userData['createdAt'] as Timestamp?)?.toDate() ??
-                    DateTime.now(),
-                updatedAt:
-                    (userData['updatedAt'] as Timestamp?)?.toDate() ??
-                    DateTime.now(),
-                registeredAt:
-                    (regData['registeredAt'] as Timestamp?)?.toDate() ??
-                    DateTime.now(),
-              );
-
-              attendees.add(attendee);
-            } catch (e) {
-              continue;
-            }
-          }
-
-          return OrganizerAttendeeStats.fromAttendeesList(attendees);
+          return OrganizerAttendeeStats.fromRegistrationsList(
+            registrations,
+            eventIdToNameMap,
+          );
         });
   }
 
@@ -330,5 +233,120 @@ class AttendeeStatsService {
         'isGrowing': false,
       };
     }
+  }
+
+  // Helper method to get registrations for organizer's events
+  Future<List<Registration>> _getOrganizerRegistrations() async {
+    final user = _auth.currentUser;
+    if (user == null) return [];
+
+    try {
+      // Get organizer's events
+      final eventsSnapshot =
+          await _firestore
+              .collection('events')
+              .where('organizerId', isEqualTo: user.uid)
+              .get();
+
+      if (eventsSnapshot.docs.isEmpty) return [];
+
+      final eventIds = eventsSnapshot.docs.map((doc) => doc.id).toList();
+
+      // Get registrations for these events
+      final registrationsSnapshot =
+          await _firestore
+              .collection('registrations')
+              .where('eventId', whereIn: eventIds)
+              .get();
+
+      return registrationsSnapshot.docs
+          .map((doc) => Registration.fromFirestore(doc))
+          .toList();
+    } catch (e) {
+      print('Error getting organizer registrations: $e');
+      return [];
+    }
+  }
+
+  // Helper method to create event ID to name mapping
+  Future<Map<String, String>> getEventIdToNameMap() async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        throw Exception('User not authenticated');
+      }
+
+      // Get all events by this organizer
+      final eventsSnapshot =
+          await _firestore
+              .collection('events')
+              .where('organizerId', isEqualTo: user.uid)
+              .get();
+
+      final Map<String, String> eventIdToNameMap = {};
+      for (final eventDoc in eventsSnapshot.docs) {
+        final eventData = eventDoc.data();
+        eventIdToNameMap[eventDoc.id] =
+            eventData['title'] ?? eventData['name'] ?? 'Unknown Event';
+      }
+
+      return eventIdToNameMap;
+    } catch (e) {
+      print('Error getting event names: $e');
+      return {};
+    }
+  }
+
+  // Get detailed registration data for a specific event
+  Future<List<Registration>> getEventRegistrations(String eventId) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        throw Exception('User not authenticated');
+      }
+
+      // Verify event ownership
+      final eventDoc = await _firestore.collection('events').doc(eventId).get();
+      if (!eventDoc.exists) {
+        throw Exception('Event not found');
+      }
+
+      final eventData = eventDoc.data() as Map<String, dynamic>;
+      if (eventData['organizerId'] != user.uid) {
+        throw Exception('Unauthorized: You can only access your own events');
+      }
+
+      // Get registrations for this event
+      final registrationsSnapshot =
+          await _firestore
+              .collection('registrations')
+              .where('eventId', isEqualTo: eventId)
+              .get();
+
+      return registrationsSnapshot.docs
+          .map((doc) => Registration.fromFirestore(doc))
+          .toList();
+    } catch (e) {
+      throw Exception('Failed to get event registrations: $e');
+    }
+  }
+
+  // Stream registrations for a specific event
+  Stream<List<Registration>> streamEventRegistrations(String eventId) {
+    final user = _auth.currentUser;
+    if (user == null) {
+      return Stream.value([]);
+    }
+
+    return _firestore
+        .collection('registrations')
+        .where('eventId', isEqualTo: eventId)
+        .snapshots()
+        .map(
+          (snapshot) =>
+              snapshot.docs
+                  .map((doc) => Registration.fromFirestore(doc))
+                  .toList(),
+        );
   }
 }

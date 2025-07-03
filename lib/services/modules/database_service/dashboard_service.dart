@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:megavent/models/event.dart';
+import 'package:megavent/models/registration.dart';
 
 class DashboardService {
   final FirebaseFirestore _firestore;
@@ -23,24 +24,28 @@ class DashboardService {
       }
 
       // Get all events for current organizer
-      final eventsSnapshot = await _firestore
-          .collection('events')
-          .where('organizerId', isEqualTo: user.uid)
-          .get();
+      final eventsSnapshot =
+          await _firestore
+              .collection('events')
+              .where('organizerId', isEqualTo: user.uid)
+              .get();
 
       final events =
           eventsSnapshot.docs.map((doc) => Event.fromFirestore(doc)).toList();
 
       // Calculate stats
       final totalEvents = events.length;
-      
+
       // Calculate event status based on dates
       final now = DateTime.now();
-      final upcomingEvents = events.where((e) => e.startDate.isAfter(now)).length;
-      final activeEvents = events.where((e) => 
-        e.startDate.isBefore(now) && e.endDate.isAfter(now)
-      ).length;
-      final completedEvents = events.where((e) => e.endDate.isBefore(now)).length;
+      final upcomingEvents =
+          events.where((e) => e.startDate.isAfter(now)).length;
+      final activeEvents =
+          events
+              .where((e) => e.startDate.isBefore(now) && e.endDate.isAfter(now))
+              .length;
+      final completedEvents =
+          events.where((e) => e.endDate.isBefore(now)).length;
 
       // Calculate total attendees (registrations + attendances)
       final totalRegistrations = events.fold<int>(
@@ -57,24 +62,31 @@ class DashboardService {
       // Get staff count
       int totalStaff = 0;
       try {
-        final staffSnapshot = await _firestore
-            .collection('staff')
-            .where('organizerId', isEqualTo: user.uid)
-            .get();
+        final staffSnapshot =
+            await _firestore
+                .collection('staff')
+                .where('organizerId', isEqualTo: user.uid)
+                .get();
         totalStaff = staffSnapshot.docs.length;
       } catch (e) {
         totalStaff = 0;
       }
 
       // Calculate additional metrics
-      final averageAttendeesPerEvent = totalEvents > 0 ? 
-        (totalAttendees / totalEvents).toStringAsFixed(1) : '0.0';
-      
-      final eventCompletionRate = totalEvents > 0 ? 
-        (completedEvents / totalEvents * 100).toStringAsFixed(1) : '0.0';
-      
-      final attendanceRate = totalRegistrations > 0 ? 
-        (totalAttendances / totalRegistrations * 100).toStringAsFixed(1) : '0.0';
+      final averageAttendeesPerEvent =
+          totalEvents > 0
+              ? (totalAttendees / totalEvents).toStringAsFixed(1)
+              : '0.0';
+
+      final eventCompletionRate =
+          totalEvents > 0
+              ? (completedEvents / totalEvents * 100).toStringAsFixed(1)
+              : '0.0';
+
+      final attendanceRate =
+          totalRegistrations > 0
+              ? (totalAttendances / totalRegistrations * 100).toStringAsFixed(1)
+              : '0.0';
 
       return {
         'totalEvents': totalEvents,
@@ -107,13 +119,17 @@ class DashboardService {
       List<Map<String, dynamic>> activities = [];
 
       // Get recent events (last 7 days)
-      final recentEventsSnapshot = await _firestore
-          .collection('events')
-          .where('organizerId', isEqualTo: user.uid)
-          .where('createdAt', isGreaterThan: DateTime.now().subtract(const Duration(days: 7)))
-          .orderBy('createdAt', descending: true)
-          .limit(3)
-          .get();
+      final recentEventsSnapshot =
+          await _firestore
+              .collection('events')
+              .where('organizerId', isEqualTo: user.uid)
+              .where(
+                'createdAt',
+                isGreaterThan: DateTime.now().subtract(const Duration(days: 7)),
+              )
+              .orderBy('createdAt', descending: true)
+              .limit(3)
+              .get();
 
       for (var doc in recentEventsSnapshot.docs) {
         final event = Event.fromFirestore(doc);
@@ -127,12 +143,16 @@ class DashboardService {
       }
 
       // Get recent registrations (last 7 days)
-      final recentRegistrationsSnapshot = await _firestore
-          .collection('registrations')
-          .where('createdAt', isGreaterThan: DateTime.now().subtract(const Duration(days: 7)))
-          .orderBy('createdAt', descending: true)
-          .limit(3)
-          .get();
+      final recentRegistrationsSnapshot =
+          await _firestore
+              .collection('registrations')
+              .where(
+                'createdAt',
+                isGreaterThan: DateTime.now().subtract(const Duration(days: 7)),
+              )
+              .orderBy('createdAt', descending: true)
+              .limit(3)
+              .get();
 
       for (var doc in recentRegistrationsSnapshot.docs) {
         final data = doc.data();
@@ -141,18 +161,24 @@ class DashboardService {
           'time': (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
           'icon': 'person_add',
           'color': 'success',
-          'isNew': _isRecent((data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now()),
+          'isNew': _isRecent(
+            (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+          ),
         });
       }
 
       // Get recent staff additions (last 7 days)
-      final recentStaffSnapshot = await _firestore
-          .collection('staff')
-          .where('organizerId', isEqualTo: user.uid)
-          .where('hiredAt', isGreaterThan: DateTime.now().subtract(const Duration(days: 7)))
-          .orderBy('hiredAt', descending: true)
-          .limit(2)
-          .get();
+      final recentStaffSnapshot =
+          await _firestore
+              .collection('staff')
+              .where('organizerId', isEqualTo: user.uid)
+              .where(
+                'hiredAt',
+                isGreaterThan: DateTime.now().subtract(const Duration(days: 7)),
+              )
+              .orderBy('hiredAt', descending: true)
+              .limit(2)
+              .get();
 
       for (var doc in recentStaffSnapshot.docs) {
         final data = doc.data();
@@ -161,12 +187,16 @@ class DashboardService {
           'time': (data['hiredAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
           'icon': 'badge',
           'color': 'accent',
-          'isNew': _isRecent((data['hiredAt'] as Timestamp?)?.toDate() ?? DateTime.now()),
+          'isNew': _isRecent(
+            (data['hiredAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+          ),
         });
       }
 
       // Sort by most recent and return top 5
-      activities.sort((a, b) => (b['time'] as DateTime).compareTo(a['time'] as DateTime));
+      activities.sort(
+        (a, b) => (b['time'] as DateTime).compareTo(a['time'] as DateTime),
+      );
       return activities.take(5).toList();
     } catch (e) {
       print('Error getting recent activities: $e');
@@ -190,12 +220,14 @@ class DashboardService {
       }
 
       // Get events data for calculations
-      final eventsSnapshot = await _firestore
-          .collection('events')
-          .where('organizerId', isEqualTo: user.uid)
-          .get();
+      final eventsSnapshot =
+          await _firestore
+              .collection('events')
+              .where('organizerId', isEqualTo: user.uid)
+              .get();
 
-      final events = eventsSnapshot.docs.map((doc) => Event.fromFirestore(doc)).toList();
+      final events =
+          eventsSnapshot.docs.map((doc) => Event.fromFirestore(doc)).toList();
 
       if (events.isEmpty) {
         return {
@@ -207,31 +239,57 @@ class DashboardService {
       }
 
       // Calculate average event capacity utilization
-      final totalCapacity = events.fold<int>(0, (sum, event) => sum + event.capacity);
-      final totalRegistrations = events.fold<int>(0, (sum, event) => sum + event.registeredCount);
-      final averageCapacityUtilization = totalCapacity > 0 ? 
-        (totalRegistrations / totalCapacity * 100).toStringAsFixed(1) : '0.0';
+      final totalCapacity = events.fold<int>(
+        0,
+        (sum, event) => sum + event.capacity,
+      );
+      final totalRegistrations = events.fold<int>(
+        0,
+        (sum, event) => sum + event.registeredCount,
+      );
+      final averageCapacityUtilization =
+          totalCapacity > 0
+              ? (totalRegistrations / totalCapacity * 100).toStringAsFixed(1)
+              : '0.0';
 
       // Find most popular event category
       final categoryCount = <String, int>{};
       for (var event in events) {
-        categoryCount[event.category] = (categoryCount[event.category] ?? 0) + 1;
+        categoryCount[event.category] =
+            (categoryCount[event.category] ?? 0) + 1;
       }
-      final popularCategory = categoryCount.entries.isEmpty ? 'None' :
-        categoryCount.entries.reduce((a, b) => a.value > b.value ? a : b).key;
+      final popularCategory =
+          categoryCount.entries.isEmpty
+              ? 'None'
+              : categoryCount.entries
+                  .reduce((a, b) => a.value > b.value ? a : b)
+                  .key;
 
       // Calculate monthly growth (mock calculation based on recent events)
-      final recentEvents = events.where((e) => 
-        e.createdAt.isAfter(DateTime.now().subtract(const Duration(days: 30)))
-      ).length;
-      final eventGrowthRate = events.length > 0 ? 
-        (recentEvents / events.length * 100).toStringAsFixed(1) : '0.0';
+      final recentEvents =
+          events
+              .where(
+                (e) => e.createdAt.isAfter(
+                  DateTime.now().subtract(const Duration(days: 30)),
+                ),
+              )
+              .length;
+      final eventGrowthRate =
+          events.length > 0
+              ? (recentEvents / events.length * 100).toStringAsFixed(1)
+              : '0.0';
 
-      final recentAttendees = events.where((e) => 
-        e.createdAt.isAfter(DateTime.now().subtract(const Duration(days: 30)))
-      ).fold<int>(0, (sum, event) => sum + event.registeredCount);
-      final attendeeGrowthRate = totalRegistrations > 0 ? 
-        (recentAttendees / totalRegistrations * 100).toStringAsFixed(1) : '0.0';
+      final recentAttendees = events
+          .where(
+            (e) => e.createdAt.isAfter(
+              DateTime.now().subtract(const Duration(days: 30)),
+            ),
+          )
+          .fold<int>(0, (sum, event) => sum + event.registeredCount);
+      final attendeeGrowthRate =
+          totalRegistrations > 0
+              ? (recentAttendees / totalRegistrations * 100).toStringAsFixed(1)
+              : '0.0';
 
       return {
         'eventGrowthRate': eventGrowthRate,
@@ -247,6 +305,57 @@ class DashboardService {
         'averageEventCapacity': '0.0',
         'popularEventCategory': 'None',
       };
+    }
+  }
+
+  /**
+ * ====== ATTENDEE DASHBOARD STATS METHOD ======
+ */
+  Future<Map<String, dynamic>> getAttendeeDashboardStats(String userId) async {
+    try {
+      // Get user's registrations
+      final registrationsSnapshot =
+          await _firestore
+              .collection('registrations')
+              .where('userId', isEqualTo: userId)
+              .get();
+
+      final registrations =
+          registrationsSnapshot.docs
+              .map((doc) => Registration.fromFirestore(doc))
+              .toList();
+
+      // Calculate stats
+      final registeredEvents = registrations.length;
+      final attendedEvents = registrations.where((r) => r.hasAttended).length;
+      final notAttendedEvents =
+          registrations.where((r) => !r.hasAttended).length;
+
+      // Get upcoming events count
+      int upcomingEvents = 0;
+      for (final registration in registrations) {
+        final eventDoc =
+            await _firestore
+                .collection('events')
+                .doc(registration.eventId)
+                .get();
+
+        if (eventDoc.exists) {
+          final event = Event.fromFirestore(eventDoc);
+          if (event.startDate.isAfter(DateTime.now())) {
+            upcomingEvents++;
+          }
+        }
+      }
+
+      return {
+        'registeredEvents': registeredEvents,
+        'attendedEvents': attendedEvents,
+        'notAttendedEvents': notAttendedEvents,
+        'upcomingEvents': upcomingEvents,
+      };
+    } catch (e) {
+      throw Exception('Failed to get attendee dashboard stats: $e');
     }
   }
 }

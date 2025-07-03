@@ -1,17 +1,27 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:megavent/models/attendee.dart';
+import 'package:megavent/models/registration.dart';
 import 'package:megavent/utils/constants.dart';
 
 class AttendeeHeaderWidget extends StatelessWidget {
   final Attendee attendee;
+  final Registration? registration;
+  final String eventName;
   final VoidCallback? onToggleAttendance;
 
   const AttendeeHeaderWidget({
     super.key,
     required this.attendee,
+    this.registration,
+    required this.eventName,
     this.onToggleAttendance,
   });
+
+  // Getters that use registration data when available
+  bool get hasAttended {
+    return registration?.hasAttended ?? false;
+  }
 
   bool _isBase64(String? value) {
     if (value == null || value.isEmpty) return false;
@@ -106,7 +116,7 @@ class AttendeeHeaderWidget extends StatelessWidget {
       ),
       child: Center(
         child: Text(
-          _getInitials(attendee.name),
+          _getInitials(attendee.fullName),
           style: const TextStyle(
             fontSize: 36,
             fontWeight: FontWeight.bold,
@@ -141,7 +151,7 @@ class AttendeeHeaderWidget extends StatelessWidget {
 
             // Name
             Text(
-              attendee.name,
+              attendee.fullName,
               style: const TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -152,7 +162,7 @@ class AttendeeHeaderWidget extends StatelessWidget {
 
             // Event Name
             Text(
-              attendee.eventName,
+              eventName,
               style: TextStyle(
                 fontSize: 16,
                 color: Colors.white.withOpacity(0.9),
@@ -164,11 +174,11 @@ class AttendeeHeaderWidget extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               decoration: BoxDecoration(
-                color: _getStatusColor(attendee.hasAttended),
+                color: _getStatusColor(hasAttended),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
-                (attendee.hasAttended) ? 'ATTENDED' : 'REGISTERED',
+                hasAttended ? 'ATTENDED' : 'REGISTERED',
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 12,

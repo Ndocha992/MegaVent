@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:provider/provider.dart';
 import 'package:megavent/models/attendee.dart';
+import 'package:megavent/models/registration.dart';
 import 'package:megavent/services/database_service.dart';
 import 'package:megavent/screens/organizer/attendees_details.dart';
 import 'package:megavent/utils/constants.dart';
@@ -32,6 +33,8 @@ class _AttendeesState extends State<Attendees> with TickerProviderStateMixin {
 
   // State variables for data loading
   List<Attendee> _allAttendees = [];
+  List<Registration> _allRegistrations = [];
+  Map<String, String> _eventIdToNameMap = {};
   List<String> _availableEvents = [];
   bool _isLoading = true;
   String? _errorMessage;
@@ -66,11 +69,22 @@ class _AttendeesState extends State<Attendees> with TickerProviderStateMixin {
       // Get all attendees for current organizer's events
       final attendees = await databaseService.getAllAttendees();
 
+      // Get all registrations for current organizer's events
+      final registrations = await databaseService.getAllRegistrations();
+
+      // Get event ID to name mapping
+      final eventIdToNameMap = await databaseService.getEventIdToNameMap();
+
       // Extract unique event names for filtering
-      final eventNames = AttendeesUtils.getUniqueEvents(attendees);
+      final eventNames = AttendeesUtils.getUniqueEvents(
+        registrations,
+        eventIdToNameMap,
+      );
 
       setState(() {
         _allAttendees = attendees;
+        _allRegistrations = registrations;
+        _eventIdToNameMap = eventIdToNameMap;
         _availableEvents = eventNames;
         _isLoading = false;
       });
@@ -99,12 +113,15 @@ class _AttendeesState extends State<Attendees> with TickerProviderStateMixin {
     // Apply event filter
     attendeesList = AttendeesUtils.filterAttendeesByEvent(
       attendeesList,
+      _allRegistrations,
+      _eventIdToNameMap,
       _selectedEvent,
     );
 
     // Apply tab filter
     attendeesList = AttendeesUtils.filterAttendeesByTab(
       attendeesList,
+      _allRegistrations,
       _tabController.index,
     );
 
@@ -128,10 +145,29 @@ class _AttendeesState extends State<Attendees> with TickerProviderStateMixin {
   }
 
   void _onAttendeeTap(Attendee attendee) {
+    // Find the registration for this attendee to get event name
+    final registration = _allRegistrations.firstWhere(
+      (r) => r.userId == attendee.id,
+      orElse:
+          () => Registration(
+            id: '',
+            userId: attendee.id,
+            eventId: '',
+            registeredAt: DateTime.now(),
+            hasAttended: false,
+            qrCode: '',
+          ),
+    );
+
+    final eventName =
+        _eventIdToNameMap[registration.eventId] ?? 'Unknown Event';
+
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => AttendeesDetails(attendee: attendee),
+        builder:
+            (context) =>
+                AttendeesDetails(attendee: attendee, eventName: eventName),
       ),
     );
   }
@@ -407,6 +443,8 @@ class _AttendeesState extends State<Attendees> with TickerProviderStateMixin {
       attendeesList: _filteredAttendees,
       onAttendeeTap: _onAttendeeTap,
       searchQuery: _searchQuery,
+      registrations: _allRegistrations,
+      eventNames: _eventIdToNameMap,
     );
   }
 }

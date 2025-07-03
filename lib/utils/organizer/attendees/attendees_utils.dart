@@ -1,12 +1,18 @@
 import 'package:megavent/models/attendee.dart';
+import 'package:megavent/models/registration.dart';
 import 'package:megavent/models/attendee_stats.dart';
 
 class AttendeesUtils {
-  /// Get comprehensive attendance statistics using the new AttendeeStats model
+  /// Get comprehensive attendance statistics using both attendees and registrations
   static OrganizerAttendeeStats getComprehensiveStats(
     List<Attendee> attendees,
+    List<Registration> registrations,
+    Map<String, String> eventIdToNameMap,
   ) {
-    return OrganizerAttendeeStats.fromAttendeesList(attendees);
+    return OrganizerAttendeeStats.fromRegistrationsList(
+      registrations,
+      eventIdToNameMap,
+    );
   }
 
   /// Filter attendees by search query
@@ -24,31 +30,31 @@ class AttendeesUtils {
     }).toList();
   }
 
-  /// Filter attendees by event - properly filters by event name
-  static List<Attendee> filterAttendeesByEvent(
-    List<Attendee> attendees,
-    String eventName,
-  ) {
-    if (eventName == 'All') return attendees;
-
-    // Filter by the attendee's event name property
-    return attendees
-        .where((attendee) => attendee.eventName == eventName)
-        .toList();
-  }
-
-  /// Filter attendees by tab selection
+  /// Filter attendees by tab selection using registration data
   static List<Attendee> filterAttendeesByTab(
     List<Attendee> attendees,
+    List<Registration> registrations,
     int tabIndex,
   ) {
+    // Create a map of userId to registration for quick lookup
+    final userRegistrationMap = <String, Registration>{};
+    for (final registration in registrations) {
+      userRegistrationMap[registration.userId] = registration;
+    }
+
     switch (tabIndex) {
       case 0: // All Attendees
         return attendees;
       case 1: // Attended
-        return attendees.where((a) => a.hasAttended).toList();
+        return attendees.where((a) {
+          final registration = userRegistrationMap[a.id];
+          return registration?.hasAttended ?? false;
+        }).toList();
       case 2: // No Show (Not Attended)
-        return attendees.where((a) => !a.hasAttended).toList();
+        return attendees.where((a) {
+          final registration = userRegistrationMap[a.id];
+          return registration != null && !registration.hasAttended;
+        }).toList();
       default:
         return attendees;
     }
@@ -63,14 +69,24 @@ class AttendeesUtils {
     return attendees.where((a) => a.isApproved == isApproved).toList();
   }
 
-  /// Filter attendees by registration date range
+  /// Filter attendees by registration date range using registration data
   static List<Attendee> filterAttendeesByDateRange(
     List<Attendee> attendees,
+    List<Registration> registrations,
     DateTime? startDate,
     DateTime? endDate,
   ) {
+    // Create a map of userId to registration for quick lookup
+    final userRegistrationMap = <String, Registration>{};
+    for (final registration in registrations) {
+      userRegistrationMap[registration.userId] = registration;
+    }
+
     return attendees.where((attendee) {
-      final regDate = attendee.registeredAt;
+      final registration = userRegistrationMap[attendee.id];
+      if (registration == null) return false;
+
+      final regDate = registration.registeredAt;
 
       if (startDate != null && regDate.isBefore(startDate)) {
         return false;
@@ -84,34 +100,38 @@ class AttendeesUtils {
     }).toList();
   }
 
-  /// Get attendee status text
-  static String getAttendeeStatus(Attendee attendee) {
+  /// Get attendee status text using registration data
+  static String getAttendeeStatus(
+    Attendee attendee,
+    Registration? registration,
+  ) {
     if (!attendee.isApproved) return 'Pending Approval';
-    return attendee.hasAttended ? 'Attended' : 'Registered';
+    return registration?.hasAttended ?? false ? 'Attended' : 'Registered';
   }
 
-  /// Get attendee status color
-  static String getAttendeeStatusColor(Attendee attendee) {
+  /// Get attendee status color using registration data
+  static String getAttendeeStatusColor(
+    Attendee attendee,
+    Registration? registration,
+  ) {
     if (!attendee.isApproved) return 'warning';
-    return attendee.hasAttended ? 'success' : 'primary';
+    return registration?.hasAttended ?? false ? 'success' : 'primary';
   }
 
-  /// Check if attendee is recent (registered within last 24 hours)
-  static bool isRecentAttendee(Attendee attendee) {
+  /// Check if attendee is recent using registration data
+  static bool isRecentAttendee(Registration? registration) {
+    if (registration == null) return false;
     final now = DateTime.now();
-    final difference = now.difference(attendee.registeredAt);
+    final difference = now.difference(registration.registeredAt);
     return difference.inHours < 24;
   }
 
-  /// Check if attendee is new (uses the model's isNew property)
-  static bool isNewAttendee(Attendee attendee) {
-    return attendee.isNew;
-  }
+  /// Get formatted registration date from registration data
+  static String getFormattedRegistrationDate(Registration? registration) {
+    if (registration == null) return 'Unknown';
 
-  /// Get formatted registration date
-  static String getFormattedRegistrationDate(DateTime registrationDate) {
     final now = DateTime.now();
-    final difference = now.difference(registrationDate);
+    final difference = now.difference(registration.registeredAt);
 
     if (difference.inDays > 0) {
       return '${difference.inDays} day${difference.inDays == 1 ? '' : 's'} ago';
@@ -125,8 +145,21 @@ class AttendeesUtils {
   }
 
   /// Get relative time for any date
-  static String getRelativeTime(DateTime dateTime) {
-    return getFormattedRegistrationDate(dateTime);
+  static String getRelativeTime(DateTime? dateTime) {
+    if (dateTime == null) return 'Unknown';
+
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+
+    if (difference.inDays > 0) {
+      return '${difference.inDays} day${difference.inDays == 1 ? '' : 's'} ago';
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours} hour${difference.inHours == 1 ? '' : 's'} ago';
+    } else if (difference.inMinutes > 0) {
+      return '${difference.inMinutes} minute${difference.inMinutes == 1 ? '' : 's'} ago';
+    } else {
+      return 'Just now';
+    }
   }
 
   /// Get readable date format
@@ -134,8 +167,19 @@ class AttendeesUtils {
     return '${dateTime.day}/${dateTime.month}/${dateTime.year} ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
   }
 
-  /// Sort attendees by various criteria
-  static List<Attendee> sortAttendees(List<Attendee> attendees, String sortBy) {
+  /// Sort attendees by various criteria using registration data
+  static List<Attendee> sortAttendees(
+    List<Attendee> attendees,
+    List<Registration> registrations,
+    Map<String, String> eventIdToNameMap,
+    String sortBy,
+  ) {
+    // Create a map of userId to registration for quick lookup
+    final userRegistrationMap = <String, Registration>{};
+    for (final registration in registrations) {
+      userRegistrationMap[registration.userId] = registration;
+    }
+
     final sortedList = List<Attendee>.from(attendees);
 
     switch (sortBy) {
@@ -146,39 +190,91 @@ class AttendeesUtils {
         sortedList.sort((a, b) => a.email.compareTo(b.email));
         break;
       case 'registrationDate':
-        sortedList.sort((a, b) => b.registeredAt.compareTo(a.registeredAt));
+        sortedList.sort((a, b) {
+          final regA = userRegistrationMap[a.id];
+          final regB = userRegistrationMap[b.id];
+          if (regA == null && regB == null) return 0;
+          if (regA == null) return 1;
+          if (regB == null) return -1;
+          return regB.registeredAt.compareTo(regA.registeredAt);
+        });
         break;
       case 'registrationDateAsc':
-        sortedList.sort((a, b) => a.registeredAt.compareTo(b.registeredAt));
+        sortedList.sort((a, b) {
+          final regA = userRegistrationMap[a.id];
+          final regB = userRegistrationMap[b.id];
+          if (regA == null && regB == null) return 0;
+          if (regA == null) return 1;
+          if (regB == null) return -1;
+          return regA.registeredAt.compareTo(regB.registeredAt);
+        });
         break;
       case 'status':
         sortedList.sort((a, b) {
+          final regA = userRegistrationMap[a.id];
+          final regB = userRegistrationMap[b.id];
+
           // Sort by approval status first, then attendance
           if (a.isApproved != b.isApproved) {
             return a.isApproved ? -1 : 1;
           }
-          if (a.hasAttended && !b.hasAttended) return -1;
-          if (!a.hasAttended && b.hasAttended) return 1;
+
+          final attendedA = regA?.hasAttended ?? false;
+          final attendedB = regB?.hasAttended ?? false;
+
+          if (attendedA && !attendedB) return -1;
+          if (!attendedA && attendedB) return 1;
           return 0;
         });
         break;
       case 'event':
-        sortedList.sort((a, b) => a.eventName.compareTo(b.eventName));
+        sortedList.sort((a, b) {
+          final regA = userRegistrationMap[a.id];
+          final regB = userRegistrationMap[b.id];
+
+          final eventNameA =
+              regA != null
+                  ? eventIdToNameMap[regA.eventId] ?? 'Unknown'
+                  : 'Unknown';
+          final eventNameB =
+              regB != null
+                  ? eventIdToNameMap[regB.eventId] ?? 'Unknown'
+                  : 'Unknown';
+
+          return eventNameA.compareTo(eventNameB);
+        });
         break;
       default:
         // Default sort by registration date (newest first)
-        sortedList.sort((a, b) => b.registeredAt.compareTo(a.registeredAt));
+        sortedList.sort((a, b) {
+          final regA = userRegistrationMap[a.id];
+          final regB = userRegistrationMap[b.id];
+          if (regA == null && regB == null) return 0;
+          if (regA == null) return 1;
+          if (regB == null) return -1;
+          return regB.registeredAt.compareTo(regA.registeredAt);
+        });
     }
 
     return sortedList;
   }
 
-  /// Get attendance rate as percentage
-  static double getAttendanceRate(List<Attendee> attendees) {
-    if (attendees.isEmpty) return 0.0;
+  /// Get attendance rate as percentage using registration data
+  static double getAttendanceRate(
+    List<Attendee> attendees,
+    List<Registration> registrations,
+  ) {
+    if (attendees.isEmpty || registrations.isEmpty) return 0.0;
 
-    final attendedCount = attendees.where((a) => a.hasAttended).length;
-    return (attendedCount / attendees.length) * 100;
+    final attendeeIds = attendees.map((a) => a.id).toSet();
+    final relevantRegistrations =
+        registrations.where((r) => attendeeIds.contains(r.userId)).toList();
+
+    if (relevantRegistrations.isEmpty) return 0.0;
+
+    final attendedCount =
+        relevantRegistrations.where((r) => r.hasAttended).length;
+    return (attendedCount / relevantRegistrations.length) * 100;
   }
 
   /// Get approval rate as percentage
@@ -189,81 +285,29 @@ class AttendeesUtils {
     return (approvedCount / attendees.length) * 100;
   }
 
-  /// Generate QR code data for attendee
-  static String generateQRData(Attendee attendee) {
-    // In a real app, this would generate a secure token or reference
-    return 'ATTENDEE:${attendee.id}:${attendee.fullName}:${attendee.email}:${attendee.eventId}';
-  }
-
-  /// Validate attendee email
-  static bool isValidEmail(String email) {
-    return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
-  }
-
-  /// Validate attendee phone
-  static bool isValidPhone(String phone) {
-    // Enhanced phone validation for Kenyan numbers
-    return RegExp(
-      r'^\+?254[0-9]{9}$|^0[0-9]{9}$|^\+?[\d\s\-\(\)]{10,}$',
-    ).hasMatch(phone);
-  }
-
-  /// Format phone number for display
-  static String formatPhoneNumber(String phone) {
-    // Remove all non-digit characters
-    final digits = phone.replaceAll(RegExp(r'[^\d]'), '');
-
-    // Format Kenyan numbers
-    if (digits.startsWith('254') && digits.length == 12) {
-      return '+254 ${digits.substring(3, 6)} ${digits.substring(6, 9)} ${digits.substring(9)}';
-    } else if (digits.startsWith('0') && digits.length == 10) {
-      return '0${digits.substring(1, 4)} ${digits.substring(4, 7)} ${digits.substring(7)}';
-    }
-
-    return phone; // Return original if no formatting applied
-  }
-
-  /// Get attendee initials for avatar
-  static String getAttendeeInitials(String name) {
-    return name
-        .split(' ')
-        .map((n) => n.isNotEmpty ? n[0] : '')
-        .take(2)
-        .join()
-        .toUpperCase();
-  }
-
-  /// Get unique events from attendees list
-  static List<String> getUniqueEvents(List<Attendee> attendees) {
-    final events = attendees.map((a) => a.eventName).toSet().toList();
-    events.sort();
-    return ['All', ...events];
-  }
-
-  /// Get attendees count by event
-  static Map<String, int> getAttendeesCountByEvent(List<Attendee> attendees) {
-    final Map<String, int> eventCounts = {};
-
-    for (final attendee in attendees) {
-      eventCounts[attendee.eventName] =
-          (eventCounts[attendee.eventName] ?? 0) + 1;
-    }
-
-    return eventCounts;
-  }
-
-  /// Get attendees count by status
-  static Map<String, int> getAttendeesCountByStatus(List<Attendee> attendees) {
+  /// Get attendees count by status using registration data
+  static Map<String, int> getAttendeesCountByStatus(
+    List<Attendee> attendees,
+    List<Registration> registrations,
+  ) {
     final Map<String, int> statusCounts = {
       'Registered': 0,
       'Attended': 0,
       'Pending': 0,
     };
 
+    // Create a map of userId to registration for quick lookup
+    final userRegistrationMap = <String, Registration>{};
+    for (final registration in registrations) {
+      userRegistrationMap[registration.userId] = registration;
+    }
+
     for (final attendee in attendees) {
+      final registration = userRegistrationMap[attendee.id];
+
       if (!attendee.isApproved) {
         statusCounts['Pending'] = statusCounts['Pending']! + 1;
-      } else if (attendee.hasAttended) {
+      } else if (registration?.hasAttended ?? false) {
         statusCounts['Attended'] = statusCounts['Attended']! + 1;
       } else {
         statusCounts['Registered'] = statusCounts['Registered']! + 1;
@@ -273,24 +317,30 @@ class AttendeesUtils {
     return statusCounts;
   }
 
-  /// Get registration trends over time
+  /// Get registration trends over time using registration data
   static Map<String, int> getRegistrationTrends(
-    List<Attendee> attendees, {
+    List<Attendee> attendees,
+    List<Registration> registrations, {
     int days = 7,
   }) {
     final Map<String, int> trends = {};
     final now = DateTime.now();
 
+    // Create a map of userId to registration for quick lookup
+    final attendeeIds = attendees.map((a) => a.id).toSet();
+    final relevantRegistrations =
+        registrations.where((r) => attendeeIds.contains(r.userId)).toList();
+
     for (int i = days - 1; i >= 0; i--) {
       final date = now.subtract(Duration(days: i));
       final dateKey = '${date.day}/${date.month}';
       final count =
-          attendees
+          relevantRegistrations
               .where(
-                (a) =>
-                    a.registeredAt.year == date.year &&
-                    a.registeredAt.month == date.month &&
-                    a.registeredAt.day == date.day,
+                (r) =>
+                    r.registeredAt.year == date.year &&
+                    r.registeredAt.month == date.month &&
+                    r.registeredAt.day == date.day,
               )
               .length;
       trends[dateKey] = count;
@@ -299,9 +349,11 @@ class AttendeesUtils {
     return trends;
   }
 
-  /// Get attendees with specific filters applied
+  /// Get attendees with specific filters applied using registration data
   static List<Attendee> getFilteredAttendees(
-    List<Attendee> attendees, {
+    List<Attendee> attendees,
+    List<Registration> registrations,
+    Map<String, String> eventIdToNameMap, {
     String? searchQuery,
     String? eventName,
     int? tabIndex,
@@ -319,12 +371,17 @@ class AttendeesUtils {
 
     // Apply event filter
     if (eventName != null && eventName != 'All') {
-      filtered = filterAttendeesByEvent(filtered, eventName);
+      filtered = filterAttendeesByEvent(
+        filtered,
+        registrations,
+        eventIdToNameMap,
+        eventName,
+      );
     }
 
     // Apply tab filter
     if (tabIndex != null) {
-      filtered = filterAttendeesByTab(filtered, tabIndex);
+      filtered = filterAttendeesByTab(filtered, registrations, tabIndex);
     }
 
     // Apply approval filter
@@ -334,18 +391,72 @@ class AttendeesUtils {
 
     // Apply date range filter
     if (startDate != null || endDate != null) {
-      filtered = filterAttendeesByDateRange(filtered, startDate, endDate);
+      filtered = filterAttendeesByDateRange(
+        filtered,
+        registrations,
+        startDate,
+        endDate,
+      );
     }
 
     // Apply sorting
-    filtered = sortAttendees(filtered, sortBy);
+    filtered = sortAttendees(filtered, registrations, eventIdToNameMap, sortBy);
 
     return filtered;
   }
 
-  /// Export attendees data to CSV format
-  static String exportAttendeesToCSV(List<Attendee> attendees) {
+  /// Filter attendees by event using registration data
+  static List<Attendee> filterAttendeesByEvent(
+    List<Attendee> attendees,
+    List<Registration> registrations,
+    Map<String, String> eventIdToNameMap,
+    String eventName,
+  ) {
+    if (eventName == 'All') return attendees;
+
+    // Create a map of userId to registration for quick lookup
+    final userRegistrationMap = <String, Registration>{};
+    for (final registration in registrations) {
+      userRegistrationMap[registration.userId] = registration;
+    }
+
+    return attendees.where((attendee) {
+      final registration = userRegistrationMap[attendee.id];
+      if (registration == null) return false;
+
+      final attendeeEventName =
+          eventIdToNameMap[registration.eventId] ?? 'Unknown';
+      return attendeeEventName == eventName;
+    }).toList();
+  }
+
+  /// Get unique events from registrations
+  static List<String> getUniqueEvents(
+    List<Registration> registrations,
+    Map<String, String> eventIdToNameMap,
+  ) {
+    final events =
+        registrations
+            .map((r) => eventIdToNameMap[r.eventId] ?? 'Unknown')
+            .toSet()
+            .toList();
+    events.sort();
+    return ['All', ...events];
+  }
+
+  /// Export attendees data to CSV format using registration data
+  static String exportAttendeesToCSV(
+    List<Attendee> attendees,
+    List<Registration> registrations,
+    Map<String, String> eventIdToNameMap,
+  ) {
     final buffer = StringBuffer();
+
+    // Create a map of userId to registration for quick lookup
+    final userRegistrationMap = <String, Registration>{};
+    for (final registration in registrations) {
+      userRegistrationMap[registration.userId] = registration;
+    }
 
     // Header
     buffer.writeln(
@@ -354,14 +465,22 @@ class AttendeesUtils {
 
     // Data rows
     for (final attendee in attendees) {
+      final registration = userRegistrationMap[attendee.id];
+      final eventName =
+          registration != null
+              ? eventIdToNameMap[registration.eventId] ?? 'Unknown'
+              : 'Unknown';
+      final registeredAt = registration?.registeredAt ?? DateTime.now();
+      final hasAttended = registration?.hasAttended ?? false;
+
       buffer.writeln(
         '"${attendee.fullName}",'
         '"${attendee.email}",'
         '"${attendee.phone}",'
-        '"${attendee.eventName}",'
-        '"${getAttendeeStatus(attendee)}",'
-        '"${getReadableDate(attendee.registeredAt)}",'
-        '${attendee.hasAttended ? 'Yes' : 'No'},'
+        '"$eventName",'
+        '"${getAttendeeStatus(attendee, registration)}",'
+        '"${getReadableDate(registeredAt)}",'
+        '${hasAttended ? 'Yes' : 'No'},'
         '${attendee.isApproved ? 'Yes' : 'No'}',
       );
     }
@@ -369,9 +488,17 @@ class AttendeesUtils {
     return buffer.toString();
   }
 
-  /// Get summary statistics for display
-  static Map<String, dynamic> getSummaryStats(List<Attendee> attendees) {
-    final stats = getComprehensiveStats(attendees);
+  /// Get summary statistics for display using registration data
+  static Map<String, dynamic> getSummaryStats(
+    List<Attendee> attendees,
+    List<Registration> registrations,
+    Map<String, String> eventIdToNameMap,
+  ) {
+    final stats = getComprehensiveStats(
+      attendees,
+      registrations,
+      eventIdToNameMap,
+    );
 
     return {
       'total': stats.total,
@@ -382,75 +509,49 @@ class AttendeesUtils {
       'recentAttendees': stats.recentAttendees,
       'attendanceRate': stats.attendanceRate.toStringAsFixed(1),
       'approvalRate': getApprovalRate(attendees).toStringAsFixed(1),
-      'events': getUniqueEvents(attendees).length - 1, // Exclude 'All'
+      'events': getUniqueEvents(registrations, eventIdToNameMap).length - 1,
       'eventsByAttendees': stats.attendeesByEvent,
       'attendeesByMonth': stats.attendeesByMonth,
       'lastUpdated': stats.lastUpdated,
     };
   }
 
-  /// Get attendee analytics data
-  static Map<String, dynamic> getAttendeeAnalytics(List<Attendee> attendees) {
-    final stats = getComprehensiveStats(attendees);
+  /// Get quick stats for dashboard widgets using registration data
+  static Map<String, int> getQuickStats(
+    List<Attendee> attendees,
+    List<Registration> registrations,
+  ) {
+    // Create a map of userId to registration for quick lookup
+    final userRegistrationMap = <String, Registration>{};
+    for (final registration in registrations) {
+      userRegistrationMap[registration.userId] = registration;
+    }
 
-    return {
-      'totalAttendees': stats.total,
-      'attendanceRate': stats.attendanceRate,
-      'approvalRate': getApprovalRate(attendees),
-      'newAttendeesLast24h': stats.newAttendees,
-      'recentAttendeesLast7d': stats.recentAttendees,
-      'eventDistribution': stats.attendeesByEvent,
-      'monthlyTrends': stats.attendeesByMonth,
-      'statusBreakdown': getAttendeesCountByStatus(attendees),
-    };
-  }
+    final attendedCount =
+        attendees.where((a) {
+          final registration = userRegistrationMap[a.id];
+          return registration?.hasAttended ?? false;
+        }).length;
 
-  /// Get quick stats for dashboard widgets
-  static Map<String, int> getQuickStats(List<Attendee> attendees) {
+    final registeredCount =
+        attendees.where((a) {
+          final registration = userRegistrationMap[a.id];
+          return a.isApproved && !(registration?.hasAttended ?? false);
+        }).length;
+
+    final recentCount =
+        attendees.where((a) {
+          final registration = userRegistrationMap[a.id];
+          return isRecentAttendee(registration);
+        }).length;
+
     return {
       'total': attendees.length,
-      'attended': attendees.where((a) => a.hasAttended).length,
-      'registered':
-          attendees.where((a) => a.isApproved && !a.hasAttended).length,
+      'attended': attendedCount,
+      'registered': registeredCount,
       'pending': attendees.where((a) => !a.isApproved).length,
       'new': attendees.where((a) => a.isNew).length,
-      'recent': attendees.where((a) => isRecentAttendee(a)).length,
+      'recent': recentCount,
     };
-  }
-
-  /// Check if attendee list has changed significantly
-  static bool hasSignificantChange(
-    List<Attendee> oldList,
-    List<Attendee> newList, {
-    double threshold = 0.1, // 10% change threshold
-  }) {
-    if (oldList.isEmpty) return newList.isNotEmpty;
-    if (newList.isEmpty) return oldList.isNotEmpty;
-
-    final oldCount = oldList.length;
-    final newCount = newList.length;
-    final changeRate = (newCount - oldCount).abs() / oldCount;
-
-    return changeRate >= threshold;
-  }
-
-  /// Get attendee engagement score (based on registration time vs event time)
-  static double getEngagementScore(List<Attendee> attendees) {
-    if (attendees.isEmpty) return 0.0;
-
-    final attendedCount = attendees.where((a) => a.hasAttended).length;
-    final approvedCount = attendees.where((a) => a.isApproved).length;
-    final newAttendeesCount = attendees.where((a) => a.isNew).length;
-
-    // Calculate engagement based on attendance rate, approval rate, and new registrations
-    final attendanceScore = attendedCount / attendees.length;
-    final approvalScore = approvedCount / attendees.length;
-    final newAttendeesScore = newAttendeesCount / attendees.length;
-
-    // Weighted average (attendance is most important)
-    return (attendanceScore * 0.5 +
-            approvalScore * 0.3 +
-            newAttendeesScore * 0.2) *
-        100;
   }
 }

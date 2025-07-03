@@ -1,25 +1,57 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:megavent/models/attendee.dart';
+import 'package:megavent/models/registration.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/screens/organizer/attendees_details.dart';
 
 class LatestAttendeesCard extends StatelessWidget {
   final List<Attendee> attendees;
+  final List<Registration> registrations;
+  final Map<String, String> eventNames;
 
-  const LatestAttendeesCard({super.key, required this.attendees});
+  const LatestAttendeesCard({
+    super.key,
+    required this.attendees,
+    required this.registrations,
+    required this.eventNames,
+  });
 
   void _onAttendeeTap(BuildContext context, Attendee attendee) {
+    // Create registration map for quick lookup
+    final Map<String, Registration> userRegistrationMap = {};
+    for (final registration in registrations) {
+      userRegistrationMap[registration.userId] = registration;
+    }
+
+    // Get the registration for this attendee
+    final Registration? attendeeRegistration = userRegistrationMap[attendee.id];
+
+    // Get the event name for this attendee
+    final String eventName =
+        eventNames[attendeeRegistration?.eventId] ?? 'Unknown Event';
+
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => AttendeesDetails(attendee: attendee),
+        builder:
+            (context) => AttendeesDetails(
+              attendee: attendee,
+              registration: attendeeRegistration,
+              eventName: eventName,
+            ),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    // Create registration map for quick lookup
+    final Map<String, Registration> userRegistrationMap = {};
+    for (final registration in registrations) {
+      userRegistrationMap[registration.userId] = registration;
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -46,6 +78,11 @@ class LatestAttendeesCard extends StatelessWidget {
                       .map(
                         (attendee) => LatestAttendeeCard(
                           attendee: attendee,
+                          registration: userRegistrationMap[attendee.id],
+                          eventName:
+                              eventNames[userRegistrationMap[attendee.id]
+                                  ?.eventId] ??
+                              'Unknown Event',
                           onTap: () => _onAttendeeTap(context, attendee),
                         ),
                       )
@@ -109,13 +146,31 @@ class LatestAttendeesCard extends StatelessWidget {
 
 class LatestAttendeeCard extends StatelessWidget {
   final Attendee attendee;
+  final Registration? registration;
+  final String eventName;
   final VoidCallback onTap;
 
   const LatestAttendeeCard({
     super.key,
     required this.attendee,
+    required this.registration,
+    required this.eventName,
     required this.onTap,
   });
+
+  // Getters that use registration data when available (similar to AttendeeQRDialog)
+  bool get hasAttended {
+    return registration?.hasAttended ?? false;
+  }
+
+  DateTime get registeredAt {
+    return registration?.registeredAt ?? attendee.createdAt;
+  }
+
+  String get attendanceStatus {
+    if (!attendee.isApproved) return 'Pending Approval';
+    return hasAttended ? 'Attended' : 'Registered';
+  }
 
   bool _isBase64(String? value) {
     if (value == null || value.isEmpty) return false;
@@ -189,11 +244,9 @@ class LatestAttendeeCard extends StatelessWidget {
             ),
           );
         } catch (e) {
-          // If base64 decoding fails, fall back to initials
           return _buildInitialsAvatar();
         }
       } else {
-        // It's a regular URL
         return ClipOval(
           child: Image.network(
             attendee.profileImage!,
@@ -206,7 +259,6 @@ class LatestAttendeeCard extends StatelessWidget {
         );
       }
     } else {
-      // No image, show initials
       return _buildInitialsAvatar();
     }
   }
@@ -214,7 +266,7 @@ class LatestAttendeeCard extends StatelessWidget {
   Widget _buildInitialsAvatar() {
     return Center(
       child: Text(
-        _getInitials(attendee.name),
+        _getInitials(attendee.fullName),
         style: const TextStyle(
           color: Colors.white,
           fontWeight: FontWeight.bold,
@@ -256,7 +308,7 @@ class LatestAttendeeCard extends StatelessWidget {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color:
-                            attendee.hasAttended
+                            hasAttended
                                 ? AppConstants.successColor
                                 : AppConstants.primaryColor,
                       ),
@@ -289,7 +341,7 @@ class LatestAttendeeCard extends StatelessWidget {
                         children: [
                           Expanded(
                             child: Text(
-                              attendee.name,
+                              attendee.fullName,
                               style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
@@ -326,37 +378,37 @@ class LatestAttendeeCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        attendee.eventName,
+                        eventName,
                         style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                       ),
                       const SizedBox(height: 8),
                       Row(
                         children: [
                           Icon(
-                            attendee.hasAttended
+                            hasAttended
                                 ? Icons.check_circle
                                 : Icons.access_time,
                             size: 16,
                             color:
-                                attendee.hasAttended
+                                hasAttended
                                     ? AppConstants.successColor
                                     : Colors.orange,
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            attendee.hasAttended ? 'Attended' : 'Not Attended',
+                            hasAttended ? 'Attended' : 'Not Attended',
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
                               color:
-                                  attendee.hasAttended
+                                  hasAttended
                                       ? AppConstants.successColor
                                       : Colors.orange,
                             ),
                           ),
                           const Spacer(),
                           Text(
-                            'Registered ${_formatDate(attendee.registeredAt)}',
+                            'Registered ${_formatDate(registeredAt)}',
                             style: TextStyle(
                               fontSize: 12,
                               color: Colors.grey[500],

@@ -1,22 +1,33 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:megavent/models/attendee.dart';
+import 'package:megavent/models/registration.dart';
 import 'package:megavent/utils/constants.dart';
 
 class AttendeesList extends StatelessWidget {
   final List<Attendee> attendeesList;
+  final List<Registration> registrations;
+  final Map<String, String> eventNames;
   final Function(Attendee) onAttendeeTap;
   final String searchQuery;
 
   const AttendeesList({
     super.key,
     required this.attendeesList,
+    required this.registrations,
+    required this.eventNames,
     required this.onAttendeeTap,
     required this.searchQuery,
   });
 
   @override
   Widget build(BuildContext context) {
+    // Create registration map for quick lookup
+    final Map<String, Registration> userRegistrationMap = {};
+    for (final registration in registrations) {
+      userRegistrationMap[registration.userId] = registration;
+    }
+
     if (attendeesList.isEmpty) {
       return Center(
         child: Column(
@@ -45,8 +56,13 @@ class AttendeesList extends StatelessWidget {
       itemCount: attendeesList.length,
       itemBuilder: (context, index) {
         final attendee = attendeesList[index];
+        final registration = userRegistrationMap[attendee.id];
+        final eventName = eventNames[registration?.eventId] ?? 'Unknown Event';
+
         return AttendeeCard(
           attendee: attendee,
+          registration: registration,
+          eventName: eventName,
           onTap: () => onAttendeeTap(attendee),
         );
       },
@@ -56,11 +72,20 @@ class AttendeesList extends StatelessWidget {
 
 class AttendeeCard extends StatelessWidget {
   final Attendee attendee;
+  final Registration? registration;
+  final String eventName;
   final VoidCallback onTap;
 
-  const AttendeeCard({super.key, required this.attendee, required this.onTap});
+  const AttendeeCard({
+    super.key,
+    required this.attendee,
+    required this.registration,
+    required this.eventName,
+    required this.onTap,
+  });
 
-  bool _isBase64(String value) {
+  bool _isBase64(String? value) {
+    if (value == null || value.isEmpty) return false;
     try {
       base64Decode(value);
       return true;
@@ -69,9 +94,17 @@ class AttendeeCard extends StatelessWidget {
     }
   }
 
+  bool get hasAttended {
+    return registration?.hasAttended ?? false;
+  }
+
+  DateTime get registeredAt {
+    return registration?.registeredAt ?? attendee.createdAt;
+  }
+
   Widget _buildAttendeeAvatar() {
     // Handle different image sources
-    if (attendee.profileImage!.isNotEmpty) {
+    if (attendee.profileImage != null && attendee.profileImage!.isNotEmpty) {
       // Check if it's base64 data
       if (_isBase64(attendee.profileImage!)) {
         return ClipOval(
@@ -107,11 +140,9 @@ class AttendeeCard extends StatelessWidget {
     return CircleAvatar(
       radius: 24,
       backgroundColor:
-          attendee.hasAttended
-              ? AppConstants.successColor
-              : AppConstants.primaryColor,
+          hasAttended ? AppConstants.successColor : AppConstants.primaryColor,
       child: Text(
-        _getInitials(attendee.name),
+        _getInitials(attendee.fullName),
         style: const TextStyle(
           color: Colors.white,
           fontWeight: FontWeight.bold,
@@ -125,8 +156,10 @@ class AttendeeCard extends StatelessWidget {
     List<String> names = name.split(' ');
     if (names.length >= 2) {
       return '${names[0][0]}${names[1][0]}'.toUpperCase();
-    } else {
+    } else if (name.isNotEmpty) {
       return name[0].toUpperCase();
+    } else {
+      return 'U';
     }
   }
 
@@ -165,7 +198,7 @@ class AttendeeCard extends StatelessWidget {
                         children: [
                           Expanded(
                             child: Text(
-                              attendee.name,
+                              attendee.fullName,
                               style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
@@ -205,34 +238,39 @@ class AttendeeCard extends StatelessWidget {
                         attendee.phone,
                         style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                       ),
+                      const SizedBox(height: 2),
+                      Text(
+                        eventName,
+                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                      ),
                       const SizedBox(height: 8),
                       Row(
                         children: [
                           Icon(
-                            attendee.hasAttended
+                            hasAttended
                                 ? Icons.check_circle
                                 : Icons.access_time,
                             size: 16,
                             color:
-                                attendee.hasAttended
+                                hasAttended
                                     ? AppConstants.successColor
                                     : Colors.orange,
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            attendee.hasAttended ? 'Attended' : 'Not Attended',
+                            hasAttended ? 'Attended' : 'Not Attended',
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
                               color:
-                                  attendee.hasAttended
+                                  hasAttended
                                       ? AppConstants.successColor
                                       : Colors.orange,
                             ),
                           ),
                           const Spacer(),
                           Text(
-                            'Registered ${_formatDate(attendee.registeredAt)}',
+                            'Registered ${_formatDate(registeredAt)}',
                             style: TextStyle(
                               fontSize: 12,
                               color: Colors.grey[500],

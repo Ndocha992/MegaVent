@@ -191,6 +191,24 @@ class EventService {
         });
   }
 
+  /**
+ * ====== ALL AVAILABLE EVENTS METHOD ======
+ */
+  Future<List<Event>> getAllAvailableEvents() async {
+    try {
+      final snapshot =
+          await _firestore
+              .collection('events')
+              .where('isActive', isEqualTo: true)
+              .orderBy('createdAt', descending: true)
+              .get();
+
+      return snapshot.docs.map((doc) => Event.fromFirestore(doc)).toList();
+    } catch (e) {
+      throw Exception('Failed to get all available events: $e');
+    }
+  }
+
   // Get event categories
   List<String> getEventCategories() {
     return [

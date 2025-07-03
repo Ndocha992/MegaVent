@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:megavent/models/registration.dart';
 import 'package:provider/provider.dart';
 import 'package:megavent/models/attendee.dart';
 import 'package:megavent/models/event.dart';
@@ -23,6 +24,8 @@ class AttendeesBottomSheet extends StatefulWidget {
 class _AttendeesBottomSheetState extends State<AttendeesBottomSheet> {
   List<Attendee> _allAttendees = [];
   List<Attendee> _filteredAttendees = [];
+  List<Registration> _allRegistrations = [];
+  Map<String, Registration> _userRegistrationMap = {};
   final TextEditingController _searchController = TextEditingController();
   bool _isLoading = true;
   String? _error;
@@ -32,12 +35,6 @@ class _AttendeesBottomSheetState extends State<AttendeesBottomSheet> {
     super.initState();
     _searchController.addListener(_filterAttendees);
     _loadAttendees();
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
   }
 
   Future<void> _loadAttendees() async {
@@ -51,13 +48,26 @@ class _AttendeesBottomSheetState extends State<AttendeesBottomSheet> {
         context,
         listen: false,
       );
+
+      // Load both attendees and registrations
       final attendees = await databaseService.getEventAttendees(
         widget.event.id,
       );
+      final registrations = await databaseService.getEventRegistrations(
+        widget.event.id,
+      );
+
+      // Create a map for quick lookup
+      final userRegistrationMap = <String, Registration>{};
+      for (final registration in registrations) {
+        userRegistrationMap[registration.userId] = registration;
+      }
 
       setState(() {
         _allAttendees = attendees;
         _filteredAttendees = attendees;
+        _allRegistrations = registrations;
+        _userRegistrationMap = userRegistrationMap;
         _isLoading = false;
       });
     } catch (e) {
@@ -81,11 +91,11 @@ class _AttendeesBottomSheetState extends State<AttendeesBottomSheet> {
   }
 
   int get attendedCount {
-    return _allAttendees.where((attendee) => attendee.hasAttended).length;
+    return _allRegistrations.where((reg) => reg.hasAttended).length;
   }
 
   int get noShowCount {
-    return _allAttendees.length - attendedCount;
+    return _allRegistrations.length - attendedCount;
   }
 
   @override
@@ -248,7 +258,12 @@ class _AttendeesBottomSheetState extends State<AttendeesBottomSheet> {
         itemCount: _filteredAttendees.length,
         itemBuilder: (context, index) {
           final attendee = _filteredAttendees[index];
-          return AttendeeCard(attendee: attendee);
+          final registration = _userRegistrationMap[attendee.id];
+          return AttendeeCard(
+            attendee: attendee,
+            registration: registration,
+            eventName: widget.event.name,
+          );
         },
       ),
     );
@@ -258,8 +273,15 @@ class _AttendeesBottomSheetState extends State<AttendeesBottomSheet> {
 // Updated AttendeeCard to work with Attendee objects and profile images
 class AttendeeCard extends StatelessWidget {
   final Attendee attendee;
+  final Registration? registration;
+  final String eventName;
 
-  const AttendeeCard({super.key, required this.attendee});
+  const AttendeeCard({
+    super.key,
+    required this.attendee,
+    this.registration,
+    required this.eventName,
+  });
 
   bool _isBase64(String value) {
     try {
@@ -305,12 +327,12 @@ class AttendeeCard extends StatelessWidget {
   }
 
   Widget _buildInitialsAvatar() {
+    final hasAttended = registration?.hasAttended ?? false;
+
     return CircleAvatar(
       radius: 24,
       backgroundColor:
-          attendee.hasAttended
-              ? AppConstants.successColor
-              : AppConstants.primaryColor,
+          hasAttended ? AppConstants.successColor : AppConstants.primaryColor,
       child: Text(
         _getInitials(attendee.fullName),
         style: const TextStyle(
@@ -330,6 +352,19 @@ class AttendeeCard extends StatelessWidget {
     } else {
       return 'U';
     }
+  }
+
+  String get attendanceStatus {
+    if (!attendee.isApproved) return 'Pending Approval';
+    return registration?.hasAttended ?? false ? 'Attended' : 'Registered';
+  }
+
+  DateTime get registeredAt {
+    return registration?.registeredAt ?? attendee.createdAt;
+  }
+
+  bool get hasAttended {
+    return registration?.hasAttended ?? false;
   }
 
   @override
@@ -413,30 +448,28 @@ class AttendeeCard extends StatelessWidget {
                 Row(
                   children: [
                     Icon(
-                      attendee.hasAttended
-                          ? Icons.check_circle
-                          : Icons.access_time,
+                      hasAttended ? Icons.check_circle : Icons.access_time,
                       size: 16,
                       color:
-                          attendee.hasAttended
+                          hasAttended
                               ? AppConstants.successColor
                               : Colors.orange,
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      attendee.attendanceStatus,
+                      attendanceStatus,
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                         color:
-                            attendee.hasAttended
+                            hasAttended
                                 ? AppConstants.successColor
                                 : Colors.orange,
                       ),
                     ),
                     const Spacer(),
                     Text(
-                      'Registered ${_formatDate(attendee.registeredAt)}',
+                      'Registered ${_formatDate(registeredAt)}',
                       style: TextStyle(fontSize: 12, color: Colors.grey[500]),
                     ),
                   ],
@@ -451,7 +484,7 @@ class AttendeeCard extends StatelessWidget {
           IconButton(
             onPressed: () {
               // Handle QR code or more details
-              _showAttendeeDetails(context, attendee);
+              _showAttendeeDetails(context, attendee, registration, eventName);
             },
             icon: const Icon(Icons.qr_code),
             color: AppConstants.primaryColor,
@@ -476,10 +509,20 @@ class AttendeeCard extends StatelessWidget {
     }
   }
 
-  void _showAttendeeDetails(BuildContext context, Attendee attendee) {
+  void _showAttendeeDetails(
+    BuildContext context,
+    Attendee attendee,
+    Registration? registration,
+    String eventName,
+  ) {
     showDialog(
       context: context,
-      builder: (context) => AttendeeQRDialog(attendee: attendee),
+      builder:
+          (context) => AttendeeQRDialog(
+            attendee: attendee,
+            registration: registration,
+            eventName: eventName,
+          ),
     );
   }
 }
