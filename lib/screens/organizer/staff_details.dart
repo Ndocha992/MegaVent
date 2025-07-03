@@ -13,6 +13,7 @@ import 'package:megavent/widgets/organizer/staff/staff_details/staff_department_
 import 'package:megavent/widgets/organizer/staff/staff_details/staff_header.dart';
 import 'package:megavent/widgets/organizer/staff/staff_details/staff_hire_date_status_section.dart';
 import 'package:megavent/widgets/organizer/staff/staff_details/staff_info_section.dart';
+import 'package:megavent/widgets/organizer/staff/staff_details/staff_password_section.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -322,6 +323,11 @@ class _StaffDetailsState extends State<StaffDetails> {
 
               // Staff Info Section
               StaffInfoSectionWidget(staff: currentStaff!),
+
+              // Default Password
+              StaffPasswordSection(),
+
+              const SizedBox(height: 20),
 
               // Contact Information
               StaffContactSectionWidget(

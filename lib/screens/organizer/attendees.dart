@@ -145,32 +145,42 @@ class _AttendeesState extends State<Attendees> with TickerProviderStateMixin {
   }
 
   void _onAttendeeTap(Attendee attendee) {
-    // Find the registration for this attendee to get event name
+    // FIXED: Extract userId and eventId from the composite attendee.id
+    final compositeId = attendee.id; // This is in format "userId_eventId"
+    final parts = compositeId.split('_');
+    
+    if (parts.length < 2) {
+      // Fallback if composite ID is malformed
+      print('Warning: Malformed attendee ID: $compositeId');
+      return;
+    }
+    
+    final userId = parts[0];
+    final eventId = parts.sublist(1).join('_'); // In case eventId contains underscores
+    
+    // Find the registration for this specific attendee-event combination
     final registration = _allRegistrations.firstWhere(
-      (r) => r.userId == attendee.id,
-      orElse:
-          () => Registration(
-            id: '',
-            userId: attendee.id,
-            eventId: '',
-            registeredAt: DateTime.now(),
-            hasAttended: false,
-            qrCode: '',
-          ),
+      (r) => r.userId == userId && r.eventId == eventId,
+      orElse: () => Registration(
+        id: '',
+        userId: userId,
+        eventId: eventId,
+        registeredAt: DateTime.now(),
+        hasAttended: false,
+        qrCode: '',
+      ),
     );
 
-    final eventName =
-        _eventIdToNameMap[registration.eventId] ?? 'Unknown Event';
+    final eventName = _eventIdToNameMap[eventId] ?? 'Unknown Event';
 
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder:
-            (context) => AttendeesDetails(
-              attendee: attendee,
-              registration: registration,
-              eventName: eventName,
-            ),
+        builder: (context) => AttendeesDetails(
+          attendee: attendee,
+          registration: registration,
+          eventName: eventName,
+        ),
       ),
     );
   }

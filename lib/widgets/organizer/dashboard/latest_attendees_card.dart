@@ -18,18 +18,20 @@ class LatestAttendeesCard extends StatelessWidget {
   });
 
   void _onAttendeeTap(BuildContext context, Attendee attendee) {
-    // Create registration map for quick lookup
+    // FIXED: Create registration map using the composite ID
     final Map<String, Registration> userRegistrationMap = {};
     for (final registration in registrations) {
-      userRegistrationMap[registration.userId] = registration;
+      // Use composite key to match with attendee.id
+      final compositeId = '${registration.userId}_${registration.eventId}';
+      userRegistrationMap[compositeId] = registration;
     }
 
-    // Get the registration for this attendee
+    // Get the registration for this attendee using composite ID
     final Registration? attendeeRegistration = userRegistrationMap[attendee.id];
 
-    // Get the event name for this attendee
-    final String eventName =
-        eventNames[attendeeRegistration?.eventId] ?? 'Unknown Event';
+    // Extract the actual eventId from the composite ID
+    final eventId = attendee.id.split('_').last;
+    final eventName = eventNames[eventId] ?? 'Unknown Event';
 
     Navigator.push(
       context,
@@ -46,10 +48,12 @@ class LatestAttendeesCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Create registration map for quick lookup
+    // FIXED: Create registration map using the composite ID
     final Map<String, Registration> userRegistrationMap = {};
     for (final registration in registrations) {
-      userRegistrationMap[registration.userId] = registration;
+      // Use composite key to match with attendee.id
+      final compositeId = '${registration.userId}_${registration.eventId}';
+      userRegistrationMap[compositeId] = registration;
     }
 
     return Column(
@@ -78,10 +82,11 @@ class LatestAttendeesCard extends StatelessWidget {
                       .map(
                         (attendee) => LatestAttendeeCard(
                           attendee: attendee,
+                          // FIXED: Use the composite ID to get the correct registration
                           registration: userRegistrationMap[attendee.id],
+                          // FIXED: Extract eventId from composite ID and get event name
                           eventName:
-                              eventNames[userRegistrationMap[attendee.id]
-                                  ?.eventId] ??
+                              eventNames[attendee.id.split('_').last] ??
                               'Unknown Event',
                           onTap: () => _onAttendeeTap(context, attendee),
                         ),
@@ -158,7 +163,7 @@ class LatestAttendeeCard extends StatelessWidget {
     required this.onTap,
   });
 
-  // Getters that use registration data when available (similar to AttendeeQRDialog)
+  // Getters that use registration data when available
   bool get hasAttended {
     return registration?.hasAttended ?? false;
   }
@@ -174,31 +179,73 @@ class LatestAttendeeCard extends StatelessWidget {
 
   bool _isBase64(String? value) {
     if (value == null || value.isEmpty) return false;
-
     try {
-      // Remove data URL prefix if present (e.g., "data:image/jpeg;base64,")
-      String base64String = value;
-      if (value.contains(',')) {
-        base64String = value.split(',').last;
-      }
-
-      // Check if it's a valid base64 string
-      if (base64String.isEmpty) return false;
-
-      // Try to decode
-      base64Decode(base64String);
+      base64Decode(value);
       return true;
     } catch (e) {
       return false;
     }
   }
 
-  String _getBase64Data(String value) {
-    // Remove data URL prefix if present
-    if (value.contains(',')) {
-      return value.split(',').last;
+  Widget _buildAttendeeAvatar() {
+    // Handle different image sources
+    if (attendee.profileImage != null && attendee.profileImage!.isNotEmpty) {
+      // Check if it's base64 data
+      if (_isBase64(attendee.profileImage!)) {
+        return ClipOval(
+          child: Image.memory(
+            base64Decode(attendee.profileImage!),
+            fit: BoxFit.cover,
+            width: 48,
+            height: 48,
+            errorBuilder:
+                (context, error, stackTrace) => _buildInitialsAvatar(),
+          ),
+        );
+      } else {
+        // It's a regular URL
+        return ClipOval(
+          child: Image.network(
+            attendee.profileImage!,
+            fit: BoxFit.cover,
+            width: 48,
+            height: 48,
+            errorBuilder:
+                (context, error, stackTrace) => _buildInitialsAvatar(),
+          ),
+        );
+      }
+    } else {
+      // No image, show initials
+      return _buildInitialsAvatar();
     }
-    return value;
+  }
+
+  Widget _buildInitialsAvatar() {
+    return CircleAvatar(
+      radius: 24,
+      backgroundColor:
+          hasAttended ? AppConstants.successColor : AppConstants.primaryColor,
+      child: Text(
+        _getInitials(attendee.fullName),
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+          fontSize: 16,
+        ),
+      ),
+    );
+  }
+
+  String _getInitials(String name) {
+    List<String> names = name.split(' ');
+    if (names.length >= 2) {
+      return '${names[0][0]}${names[1][0]}'.toUpperCase();
+    } else if (name.isNotEmpty) {
+      return name[0].toUpperCase();
+    } else {
+      return 'U';
+    }
   }
 
   String _formatDate(DateTime date) {
@@ -214,66 +261,6 @@ class LatestAttendeeCard extends StatelessWidget {
     } else {
       return 'Just now';
     }
-  }
-
-  String _getInitials(String? name) {
-    if (name == null || name.isEmpty) return '?';
-
-    List<String> names = name.trim().split(' ');
-    if (names.length >= 2) {
-      return '${names[0][0]}${names[1][0]}'.toUpperCase();
-    } else {
-      return name[0].toUpperCase();
-    }
-  }
-
-  Widget _buildAvatarContent() {
-    // Handle different image sources
-    if (attendee.profileImage != null && attendee.profileImage!.isNotEmpty) {
-      // Check if it's base64 data
-      if (_isBase64(attendee.profileImage)) {
-        try {
-          return ClipOval(
-            child: Image.memory(
-              base64Decode(_getBase64Data(attendee.profileImage!)),
-              fit: BoxFit.cover,
-              width: 48,
-              height: 48,
-              errorBuilder:
-                  (context, error, stackTrace) => _buildInitialsAvatar(),
-            ),
-          );
-        } catch (e) {
-          return _buildInitialsAvatar();
-        }
-      } else {
-        return ClipOval(
-          child: Image.network(
-            attendee.profileImage!,
-            fit: BoxFit.cover,
-            width: 48,
-            height: 48,
-            errorBuilder:
-                (context, error, stackTrace) => _buildInitialsAvatar(),
-          ),
-        );
-      }
-    } else {
-      return _buildInitialsAvatar();
-    }
-  }
-
-  Widget _buildInitialsAvatar() {
-    return Center(
-      child: Text(
-        _getInitials(attendee.fullName),
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-          fontSize: 16,
-        ),
-      ),
-    );
   }
 
   @override
@@ -300,38 +287,8 @@ class LatestAttendeeCard extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                Stack(
-                  children: [
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color:
-                            hasAttended
-                                ? AppConstants.successColor
-                                : AppConstants.primaryColor,
-                      ),
-                      child: _buildAvatarContent(),
-                    ),
-                    if (attendee.isNew)
-                      Positioned(
-                        top: 0,
-                        right: 0,
-                        child: Container(
-                          width: 12,
-                          height: 12,
-                          decoration: const BoxDecoration(
-                            color: AppConstants.successColor,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(color: Colors.white, spreadRadius: 1),
-                            ],
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
+                // Profile Avatar with image or initials
+                _buildAttendeeAvatar(),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Column(
@@ -378,8 +335,18 @@ class LatestAttendeeCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        eventName,
+                        attendee.phone,
                         style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                      ),
+                      const SizedBox(height: 2),
+                      // FIXED: This will now show the correct event name
+                      Text(
+                        eventName,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: AppConstants.primaryColor,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       Row(
