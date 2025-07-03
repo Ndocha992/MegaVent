@@ -73,7 +73,6 @@ class _AttendeesDetailsState extends State<AttendeesDetails> {
               attendee: currentAttendee,
               registration: currentRegistration,
               eventName: currentEventName,
-              onToggleAttendance: _toggleAttendanceStatus,
             ),
 
             // Attendee Information Section
@@ -118,34 +117,6 @@ class _AttendeesDetailsState extends State<AttendeesDetails> {
 
   void _showQRCode(Attendee attendee, Registration? registration) {
     showAttendeeQRDialog(context, attendee, registration, currentEventName);
-  }
-
-  void _toggleAttendanceStatus() {
-    setState(() {
-      if (currentRegistration != null) {
-        // Update the registration's attendance status
-        currentRegistration = currentRegistration!.copyWith(
-          attended: !hasAttended,
-          attendedAt: !hasAttended ? DateTime.now() : null,
-        );
-      } else {
-        // If no registration exists, you might want to create one or handle this case
-      }
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          hasAttended
-              ? '${currentAttendee.fullName} marked as attended'
-              : '${currentAttendee.fullName} marked as not attended',
-        ),
-        backgroundColor:
-            hasAttended ? AppConstants.successColor : AppConstants.warningColor,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
   }
 
   void _launchEmail(String email) {

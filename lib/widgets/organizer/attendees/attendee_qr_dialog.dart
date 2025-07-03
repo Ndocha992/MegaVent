@@ -115,13 +115,8 @@ class AttendeeQRDialog extends StatelessWidget {
     return formatter.format(date);
   }
 
-  String _generateQRData(Attendee attendee) {
-    // Generate QR data from attendee information
-    return 'ATTENDEE:${attendee.id}|EVENT:$eventId|QR:$qrCode';
-  }
-
   Widget _buildQRCode() {
-    final qrData = _generateQRData(attendee);
+    final qrData = qrCode;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -273,7 +268,6 @@ class AttendeeQRDialog extends StatelessWidget {
                   _buildDetailRow('Full Name', attendee.fullName),
                   _buildDetailRow('Email', attendee.email),
                   _buildDetailRow('Phone', attendee.phone),
-                  _buildDetailRow('QR Code', qrCode),
                   _buildDetailRow(
                     'Status',
                     attendanceStatus,
