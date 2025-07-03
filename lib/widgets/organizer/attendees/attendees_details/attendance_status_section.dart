@@ -1,14 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:megavent/models/attendee.dart';
+import 'package:megavent/models/registration.dart';
 import 'package:megavent/utils/constants.dart';
 
 class AttendanceStatusSectionWidget extends StatelessWidget {
   final Attendee attendee;
+  final Registration? registration;
 
   const AttendanceStatusSectionWidget({
     super.key,
     required this.attendee,
+    this.registration,
   });
+
+  // Getters that use registration data when available
+  bool get hasAttended {
+    return registration?.hasAttended ?? false;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,14 +42,14 @@ class AttendanceStatusSectionWidget extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: _getStatusColor(attendee.hasAttended).withOpacity(0.1),
+                  color: _getStatusColor(hasAttended).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
-                  attendee.hasAttended
+                  hasAttended
                       ? Icons.check_circle_outline
                       : Icons.schedule_outlined,
-                  color: _getStatusColor(attendee.hasAttended),
+                  color: _getStatusColor(hasAttended),
                   size: 20,
                 ),
               ),
@@ -62,33 +70,29 @@ class AttendanceStatusSectionWidget extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: _getStatusColor(attendee.hasAttended).withOpacity(0.1),
+                    color: _getStatusColor(hasAttended).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Column(
                     children: [
                       Icon(
-                        attendee.hasAttended
-                            ? Icons.check_circle
-                            : Icons.schedule,
-                        color: _getStatusColor(attendee.hasAttended),
+                        hasAttended ? Icons.check_circle : Icons.schedule,
+                        color: _getStatusColor(hasAttended),
                         size: 32,
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        attendee.hasAttended ? 'Attended' : 'Not Attended',
+                        hasAttended ? 'Attended' : 'Not Attended',
                         style: TextStyle(
-                          color: _getStatusColor(attendee.hasAttended),
+                          color: _getStatusColor(hasAttended),
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
                         ),
                       ),
                       Text(
-                        attendee.hasAttended
-                            ? 'Event completed'
-                            : 'Awaiting attendance',
+                        hasAttended ? 'Event completed' : 'Awaiting attendance',
                         style: TextStyle(
-                          color: _getStatusColor(attendee.hasAttended).withOpacity(0.7),
+                          color: _getStatusColor(hasAttended).withOpacity(0.7),
                           fontSize: 12,
                         ),
                       ),

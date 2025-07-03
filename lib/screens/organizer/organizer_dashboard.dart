@@ -3,6 +3,7 @@ import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:megavent/models/dashboard_stats.dart';
 import 'package:megavent/models/staff.dart';
 import 'package:megavent/models/attendee.dart';
+import 'package:megavent/models/registration.dart';
 import 'package:megavent/screens/organizer/create_events.dart';
 import 'package:megavent/screens/organizer/create_staff.dart';
 import 'package:megavent/screens/organizer/qr_scanner.dart';
@@ -33,8 +34,9 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
   late DatabaseService _databaseService;
   List<Event> _events = [];
   List<Attendee> _attendees = [];
-  List<Staff> _staff =
-      []; // This will now contain properly converted Staff objects
+  List<Registration> _registrations = [];
+  Map<String, String> _eventNames = {};
+  List<Staff> _staff = [];
   DashboardStats _dashboardStats = DashboardStats(
     totalEvents: 0,
     totalAttendees: 0,
@@ -60,36 +62,25 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
         _error = null;
       });
 
-      // Load all required data in parallel - FIXED: Use direct database calls
+      // Load all required data in parallel
       final results = await Future.wait([
         _databaseService.getEvents(),
         _databaseService.getLatestAttendees(),
-        _databaseService
-            .getAllStaff(), // CHANGED: Use getAllStaff() instead of getLatestStaff()
+        _databaseService.getAllStaff(),
         _databaseService.getOrganizerDashboardStats(),
+        _databaseService.getAllRegistrations(), // Add registrations
       ]);
 
       setState(() {
         _events = results[0] as List<Event>;
         _attendees = results[1] as List<Attendee>;
 
-        // FIXED: Direct assignment since getAllStaff() returns List<Staff>
-        final allStaff = results[2] as List<Staff>;
-
         // Get only the latest 5 staff members, sorted by hire date
+        final allStaff = results[2] as List<Staff>;
         _staff =
             allStaff
-              ..sort(
-                (a, b) => b.hiredAt.compareTo(a.hiredAt),
-              ) // Sort by newest first
-              ..take(5).toList(); // Take only the latest 5
-
-        // Debug print to verify data integrity
-        for (final staff in _staff) {
-          debugPrint(
-            'Staff: ${staff.name}, Hired: ${staff.hiredAt}, IsNew: ${staff.isNew}',
-          );
-        }
+              ..sort((a, b) => b.hiredAt.compareTo(a.hiredAt))
+              ..take(5).toList();
 
         // Convert Map data to DashboardStats object
         final statsData = results[3] as Map<String, dynamic>;
@@ -102,6 +93,12 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
           completedEvents: statsData['completedEvents'] ?? 0,
         );
 
+        // Get registrations
+        _registrations = results[4] as List<Registration>;
+
+        // Create event names map for quick lookup
+        _eventNames = {for (var event in _events) event.id: event.name};
+
         _isLoading = false;
       });
     } catch (e) {
@@ -110,7 +107,6 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
         _isLoading = false;
       });
 
-      // Additional debug info
       debugPrint('Dashboard loading error: $e');
     }
   }
@@ -217,11 +213,13 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
             const SizedBox(height: 24),
             LatestEventsCard(limit: 5),
             const SizedBox(height: 24),
-            LatestAttendeesCard(attendees: _attendees),
+            LatestAttendeesCard(
+              attendees: _attendees,
+              registrations: _registrations,
+              eventNames: _eventNames,
+            ),
             const SizedBox(height: 24),
-            LatestStaffCard(
-              staff: _staff,
-            ), // Now passing properly converted List<Staff>
+            LatestStaffCard(staff: _staff),
             const SizedBox(height: 24),
             QuickActionsGrid(onNavigate: _handleQuickAction),
             const SizedBox(height: 24),
@@ -341,9 +339,7 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
         _events
             .where((event) => event.startDate.isAfter(DateTime.now()))
             .toList()
-          ..sort(
-            (a, b) => a.startDate.compareTo(b.startDate),
-          ) // Sort by nearest date first
+          ..sort((a, b) => a.startDate.compareTo(b.startDate))
           ..take(3).toList();
 
     return Column(
@@ -547,19 +543,33 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
         'icon': Icons.event,
         'color': AppConstants.primaryColor,
         'isNew': _isRecent(event.createdAt),
-        'dateTime': event.createdAt, // Add actual DateTime for sorting
+        'dateTime': event.createdAt,
       });
     }
 
-    // Add recent attendee activities
+    // Add recent attendee activities - use registeredAt from Registration model
     for (final attendee in _attendees.take(2)) {
+      // Find the registration for this attendee
+      final registration = _registrations.firstWhere(
+        (reg) => reg.userId == attendee.id,
+        orElse:
+            () => Registration(
+              id: '',
+              userId: attendee.id,
+              eventId: '',
+              registeredAt: attendee.createdAt,
+              hasAttended: false,
+              qrCode: '',
+            ),
+      );
+
       activities.add({
         'title': 'New attendee ${attendee.fullName} registered',
-        'time': _getTimeAgo(attendee.registeredAt),
+        'time': _getTimeAgo(registration.registeredAt),
         'icon': Icons.person_add,
         'color': AppConstants.successColor,
-        'isNew': _isRecent(attendee.registeredAt),
-        'dateTime': attendee.registeredAt, // Add actual DateTime for sorting
+        'isNew': _isRecent(registration.registeredAt),
+        'dateTime': registration.registeredAt,
       });
     }
 
@@ -571,14 +581,14 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
         'icon': Icons.badge,
         'color': AppConstants.accentColor,
         'isNew': _isRecent(staff.hiredAt),
-        'dateTime': staff.hiredAt, // Add actual DateTime for sorting
+        'dateTime': staff.hiredAt,
       });
     }
 
-    // Sort by most recent using actual DateTime objects
+    // Sort by most recent
     activities.sort((a, b) => b['dateTime'].compareTo(a['dateTime']));
 
-    // Remove the dateTime field after sorting (optional, for cleaner data)
+    // Remove the dateTime field after sorting
     for (var activity in activities) {
       activity.remove('dateTime');
     }

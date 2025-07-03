@@ -1,15 +1,35 @@
 import 'package:flutter/material.dart';
 import 'package:megavent/models/attendee.dart';
+import 'package:megavent/models/registration.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/widgets/organizer/attendees/attendees_details/info_row.dart';
+import 'package:intl/intl.dart';
 
 class EventRegistrationSectionWidget extends StatelessWidget {
   final Attendee attendee;
+  final Registration? registration;
+  final String eventName;
 
   const EventRegistrationSectionWidget({
     super.key,
     required this.attendee,
+    this.registration,
+    required this.eventName,
   });
+
+  // Getters that use registration data when available
+  DateTime get registeredAt {
+    return registration?.registeredAt ?? attendee.createdAt;
+  }
+
+  String get eventId {
+    return registration?.eventId ?? 'Unknown';
+  }
+
+  String _getFormattedRegistrationDate(DateTime date) {
+    final formatter = DateFormat('MMM dd, yyyy \'at\' HH:mm');
+    return formatter.format(date);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -55,17 +75,14 @@ class EventRegistrationSectionWidget extends StatelessWidget {
           ),
           const SizedBox(height: 20),
 
-          InfoRowWidget(label: 'Event Name', value: attendee.eventName),
-          InfoRowWidget(label: 'Event ID', value: attendee.eventId),
-          InfoRowWidget(label: 'Registration Date', value: _formatRegistrationDate()),
+          InfoRowWidget(label: 'Event Name', value: eventName),
+          InfoRowWidget(label: 'Event ID', value: eventId),
+          InfoRowWidget(
+            label: 'Registration Date',
+            value: _getFormattedRegistrationDate(registeredAt),
+          ),
         ],
       ),
     );
-  }
-
-  String _formatRegistrationDate() {
-    // Format the registration date - you'll need to implement this based on your date format
-    // For now, returning a placeholder
-    return 'January 15, 2025'; // Replace with actual date formatting
   }
 }

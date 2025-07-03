@@ -1,13 +1,22 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:megavent/models/attendee.dart';
+import 'package:megavent/models/registration.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:intl/intl.dart';
 
 class AttendeeQRDialog extends StatelessWidget {
   final Attendee attendee;
+  final Registration? registration;
+  final String eventName;
 
-  const AttendeeQRDialog({super.key, required this.attendee});
+  const AttendeeQRDialog({
+    super.key,
+    required this.attendee,
+    this.registration,
+    required this.eventName,
+  });
 
   bool _isBase64(String value) {
     try {
@@ -16,6 +25,28 @@ class AttendeeQRDialog extends StatelessWidget {
     } catch (e) {
       return false;
     }
+  }
+
+  // Getters that use registration data when available
+  bool get hasAttended {
+    return registration?.hasAttended ?? false;
+  }
+
+  DateTime get registeredAt {
+    return registration?.registeredAt ?? attendee.createdAt;
+  }
+
+  String get attendanceStatus {
+    if (!attendee.isApproved) return 'Pending Approval';
+    return hasAttended ? 'Attended' : 'Registered';
+  }
+
+  String get eventId {
+    return registration?.eventId ?? 'Unknown';
+  }
+
+  String get qrCode {
+    return registration?.qrCode ?? 'No QR Code';
   }
 
   Widget _buildAttendeeAvatar() {
@@ -56,9 +87,7 @@ class AttendeeQRDialog extends StatelessWidget {
     return CircleAvatar(
       radius: 20,
       backgroundColor:
-          attendee.hasAttended
-              ? AppConstants.successColor
-              : AppConstants.primaryColor,
+          hasAttended ? AppConstants.successColor : AppConstants.primaryColor,
       child: Text(
         _getAttendeeInitials(attendee.fullName),
         style: const TextStyle(
@@ -88,13 +117,63 @@ class AttendeeQRDialog extends StatelessWidget {
 
   String _generateQRData(Attendee attendee) {
     // Generate QR data from attendee information
-    return 'ATTENDEE:${attendee.id}|EVENT:${attendee.eventId}|QR:${attendee.qrCode}';
+    return 'ATTENDEE:${attendee.id}|EVENT:$eventId|QR:$qrCode';
+  }
+
+  Widget _buildQRCode() {
+    final qrData = _generateQRData(attendee);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      child: Column(
+        children: [
+          Text(
+            'QR Code Data',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: AppConstants.primaryColor,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey[300]!),
+            ),
+            child: QrImageView(
+              data: qrData,
+              version: QrVersions.auto,
+              size: 150.0,
+              backgroundColor: Colors.white,
+              foregroundColor: Colors.black,
+              errorCorrectionLevel: QrErrorCorrectLevel.M,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Data: $qrData',
+            style: TextStyle(
+              fontSize: 10,
+              color: Colors.grey[600],
+              fontFamily: 'monospace',
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final qrData = _generateQRData(attendee);
-
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
@@ -163,8 +242,8 @@ class AttendeeQRDialog extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  _buildDetailRow('Event', attendee.eventName),
-                  _buildDetailRow('Event ID', attendee.eventId),
+                  _buildDetailRow('Event', eventName),
+                  _buildDetailRow('Event ID', eventId),
                 ],
               ),
             ),
@@ -194,14 +273,12 @@ class AttendeeQRDialog extends StatelessWidget {
                   _buildDetailRow('Full Name', attendee.fullName),
                   _buildDetailRow('Email', attendee.email),
                   _buildDetailRow('Phone', attendee.phone),
-                  _buildDetailRow('QR Code', attendee.qrCode),
+                  _buildDetailRow('QR Code', qrCode),
                   _buildDetailRow(
                     'Status',
-                    attendee.attendanceStatus,
+                    attendanceStatus,
                     statusColor:
-                        attendee.hasAttended
-                            ? AppConstants.successColor
-                            : Colors.orange,
+                        hasAttended ? AppConstants.successColor : Colors.orange,
                   ),
                   _buildDetailRow(
                     'Approved',
@@ -213,7 +290,7 @@ class AttendeeQRDialog extends StatelessWidget {
                   ),
                   _buildDetailRow(
                     'Registered',
-                    _getFormattedRegistrationDate(attendee.registeredAt),
+                    _getFormattedRegistrationDate(registeredAt),
                   ),
                 ],
               ),
@@ -221,62 +298,8 @@ class AttendeeQRDialog extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            // QR Code Section (placeholder for now)
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.grey[50],
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey[300]!),
-              ),
-              child: Column(
-                children: [
-                  Text(
-                    'QR Code Data',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: AppConstants.primaryColor,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    width: 150,
-                    height: 150,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.grey[300]!),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.qr_code, size: 80, color: Colors.grey[400]),
-                        const SizedBox(height: 8),
-                        Text(
-                          'QR Code Placeholder',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[600],
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Data: $qrData',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: Colors.grey[600],
-                      fontFamily: 'monospace',
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
+            // QR Code Section - Now shows actual QR code
+            _buildQRCode(),
           ],
         ),
       ),
@@ -313,10 +336,20 @@ class AttendeeQRDialog extends StatelessWidget {
   }
 }
 
-// Helper function to show the QR dialog
-void showAttendeeQRDialog(BuildContext context, Attendee attendee) {
+// Updated helper function to show the QR dialog
+void showAttendeeQRDialog(
+  BuildContext context,
+  Attendee attendee,
+  Registration? registration,
+  String eventName,
+) {
   showDialog(
     context: context,
-    builder: (context) => AttendeeQRDialog(attendee: attendee),
+    builder:
+        (context) => AttendeeQRDialog(
+          attendee: attendee,
+          registration: registration,
+          eventName: eventName,
+        ),
   );
 }

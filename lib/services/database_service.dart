@@ -6,6 +6,7 @@ import 'package:megavent/models/attendee.dart';
 import 'package:megavent/models/attendee_stats.dart';
 import 'package:megavent/models/organizer.dart';
 import 'package:megavent/models/staff.dart';
+import 'package:megavent/models/registration.dart';
 import 'package:megavent/services/modules/database_service/attendee_service.dart';
 import 'package:megavent/services/modules/database_service/attendee_stats.dart';
 import 'package:megavent/services/modules/database_service/event_service.dart';
@@ -14,7 +15,6 @@ import 'package:megavent/services/modules/database_service/registration_service.
 import 'package:megavent/services/modules/database_service/staff_service.dart';
 import 'package:megavent/services/modules/database_service/dashboard_service.dart';
 import 'package:megavent/services/modules/database_service/stats_service.dart';
-import 'package:megavent/services/modules/database_service/checkin_service.dart';
 
 class DatabaseService extends ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -29,7 +29,6 @@ class DatabaseService extends ChangeNotifier {
   late final RegistrationService _registrationService;
   late final DashboardService _dashboardService;
   late final StatsService _statsService;
-  late final CheckinService _checkinService;
 
   DatabaseService() {
     // Initialize service modules with shared dependencies
@@ -41,7 +40,6 @@ class DatabaseService extends ChangeNotifier {
     _registrationService = RegistrationService(_firestore, _auth, this);
     _dashboardService = DashboardService(_firestore, _auth, this);
     _statsService = StatsService(_firestore, _auth, this);
-    _checkinService = CheckinService(_firestore, _auth, this);
   }
 
   /**
@@ -163,22 +161,15 @@ class DatabaseService extends ChangeNotifier {
   Future<Map<String, dynamic>> getAttendanceTrends() =>
       _attendeeStatsService.getAttendanceTrends();
 
-  /**
-   * ====== ATTENDEE CHECK-IN METHODS ======
-   */
-  Future<Attendee?> getAttendeeByIdAndEvent(
-    String attendeeId,
-    String eventId,
-  ) => _checkinService.getAttendeeByIdAndEvent(attendeeId, eventId);
+  Future<Map<String, String>> getEventIdToNameMap() =>
+      _attendeeStatsService.getEventIdToNameMap();
 
-  Future<void> checkInAttendee(String attendeeId, String eventId) =>
-      _checkinService.checkInAttendee(attendeeId, eventId);
+  Future<List<Registration>> getEventRegistrations(String eventId) =>
+      _attendeeStatsService.getEventRegistrations(eventId);
 
-  Future<void> registerAttendee(Attendee attendee) =>
-      _checkinService.registerAttendee(attendee);
-
-  Future<Map<String, int>> getEventCheckInStats(String eventId) =>
-      _checkinService.getEventCheckInStats(eventId);
+  /// Stream registrations for a specific event with real-time updates
+  Stream<List<Registration>> streamEventRegistrations(String eventId) =>
+      _attendeeStatsService.streamEventRegistrations(eventId);
 
   /**
    * ====== REGISTRATION & QR CODE METHODS ======
@@ -194,6 +185,36 @@ class DatabaseService extends ChangeNotifier {
 
   Future<void> markAttendance(String userId, String eventId) =>
       _registrationService.markAttendance(userId, eventId);
+
+  // Mark attendance using QR code
+  Future<void> markAttendanceByQRCode(String qrCodeData) =>
+      _registrationService.markAttendanceByQRCode(qrCodeData);
+
+  // Get registration by QR code
+  Future<Registration?> getRegistrationByQRCode(String qrCodeData) =>
+      _registrationService.getRegistrationByQRCode(qrCodeData);
+
+  // Get user's QR code for a specific event
+  Future<String?> getUserQRCodeForEvent(String userId, String eventId) =>
+      _registrationService.getUserQRCodeForEvent(userId, eventId);
+
+  // Verify QR code data
+  bool verifyQRCode(String qrCodeData, String userId, String eventId) =>
+      Registration.verifyQRCode(qrCodeData, userId, eventId);
+
+  // Parse QR code data
+  Map<String, String>? parseQRCode(String qrCodeData) =>
+      Registration.parseQRCode(qrCodeData);
+
+  // Get attendee by ID and event ID (returns combined attendee + registration data)
+  Future<Map<String, dynamic>?> getAttendeeByIdAndEvent(
+    String attendeeId,
+    String eventId,
+  ) => _registrationService.getAttendeeByIdAndEvent(attendeeId, eventId);
+
+  // Check in attendee (mark as attended)
+  Future<void> checkInAttendee(String attendeeId, String eventId) =>
+      _registrationService.checkInAttendee(attendeeId, eventId);
 
   /**
    * ====== DASHBOARD METHODS ======
@@ -217,11 +238,27 @@ class DatabaseService extends ChangeNotifier {
 
   Future<int> getTotalStaffCount() => _statsService.getTotalStaffCount();
 
+  /**
+ * ====== ATTENDEE DASHBOARD METHODS ======
+ */
+  Future<List<Registration>> getUserRegistrations(String userId) =>
+      _registrationService.getUserRegistrations(userId);
 
+  Future<List<Event>> getAllAvailableEvents() =>
+      _eventService.getAllAvailableEvents();
 
-// DONT TOUCH METHODS BELOW OR WRITE ANYTHING BELOW THEM, LEAVE THEM AS THEY ARE
-  getAllAvailableEvents() {}
-  getAttendeeRecords(String s) {}
-  getMyRegisteredEvents(String s) {}
-  getAttendeeDashboardStats(String s) {}
+  Future<List<Map<String, dynamic>>> getAttendeeRecords(String userId) =>
+      _attendeeService.getAttendeeRecords(userId);
+
+  Future<List<Event>> getMyRegisteredEvents(String userId) =>
+      _registrationService.getMyRegisteredEvents(userId);
+
+  Future<Map<String, dynamic>> getAttendeeDashboardStats(String userId) =>
+      _dashboardService.getAttendeeDashboardStats(userId);
+
+  /**
+ * ====== ORGANIZER METHODS ======
+ */
+  Future<List<Registration>> getAllRegistrations() =>
+      _registrationService.getAllRegistrations();
 }

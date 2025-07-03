@@ -1,4 +1,4 @@
-import 'package:megavent/models/attendee.dart';
+import 'package:megavent/models/registration.dart';
 
 class OrganizerAttendeeStats {
   final int total;
@@ -40,10 +40,13 @@ class OrganizerAttendeeStats {
     );
   }
 
-  // Create from a list of attendees (for real-time calculations)
-  factory OrganizerAttendeeStats.fromAttendeesList(List<Attendee> attendees) {
-    final total = attendees.length;
-    final attended = attendees.where((a) => a.hasAttended).length;
+  // Create from a list of registrations with event names map
+  factory OrganizerAttendeeStats.fromRegistrationsList(
+    List<Registration> registrations,
+    Map<String, String> eventIdToNameMap, // Map of eventId to eventName
+  ) {
+    final total = registrations.length;
+    final attended = registrations.where((r) => r.hasAttended).length;
     final registered = total;
     final noShow = total - attended;
     final attendanceRate = total > 0 ? (attended / total) * 100 : 0.0;
@@ -53,27 +56,28 @@ class OrganizerAttendeeStats {
       const Duration(hours: 24),
     );
     final newAttendees =
-        attendees
-            .where((a) => a.registeredAt.isAfter(twentyFourHoursAgo))
+        registrations
+            .where((r) => r.registeredAt.isAfter(twentyFourHoursAgo))
             .length;
 
     // Calculate recent attendees (last 7 days)
     final sevenDaysAgo = DateTime.now().subtract(const Duration(days: 7));
     final recentAttendees =
-        attendees.where((a) => a.registeredAt.isAfter(sevenDaysAgo)).length;
+        registrations.where((r) => r.registeredAt.isAfter(sevenDaysAgo)).length;
 
-    // Group attendees by event
+    // Group attendees by event using event names
     final Map<String, int> attendeesByEvent = {};
-    for (final attendee in attendees) {
-      attendeesByEvent[attendee.eventName] =
-          (attendeesByEvent[attendee.eventName] ?? 0) + 1;
+    for (final registration in registrations) {
+      final eventName =
+          eventIdToNameMap[registration.eventId] ?? 'Unknown Event';
+      attendeesByEvent[eventName] = (attendeesByEvent[eventName] ?? 0) + 1;
     }
 
     // Group attendees by month
     final Map<String, int> attendeesByMonth = {};
-    for (final attendee in attendees) {
+    for (final registration in registrations) {
       final monthKey =
-          '${attendee.registeredAt.year}-${attendee.registeredAt.month.toString().padLeft(2, '0')}';
+          '${registration.registeredAt.year}-${registration.registeredAt.month.toString().padLeft(2, '0')}';
       attendeesByMonth[monthKey] = (attendeesByMonth[monthKey] ?? 0) + 1;
     }
 
@@ -88,6 +92,24 @@ class OrganizerAttendeeStats {
       attendeesByEvent: attendeesByEvent,
       attendeesByMonth: attendeesByMonth,
       lastUpdated: DateTime.now(),
+    );
+  }
+
+  // Alternative factory method that takes registrations and fetches event names
+  static Future<OrganizerAttendeeStats> fromRegistrationsWithEventFetch(
+    List<Registration> registrations,
+    Future<Map<String, String>> Function(List<String>) fetchEventNames,
+  ) async {
+    // Extract unique event IDs
+    final eventIds = registrations.map((r) => r.eventId).toSet().toList();
+
+    // Fetch event names
+    final eventIdToNameMap = await fetchEventNames(eventIds);
+
+    // Create stats using the regular factory method
+    return OrganizerAttendeeStats.fromRegistrationsList(
+      registrations,
+      eventIdToNameMap,
     );
   }
 

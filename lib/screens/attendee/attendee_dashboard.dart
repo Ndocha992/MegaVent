@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
-import 'package:megavent/models/attendee.dart';
 import 'package:megavent/models/event.dart';
+import 'package:megavent/models/registration.dart';
 import 'package:megavent/screens/organizer/events_details.dart';
 import 'package:megavent/widgets/attendee/sidebar.dart';
 import 'package:provider/provider.dart';
@@ -38,7 +38,8 @@ class _AttendeeDashboardState extends State<AttendeeDashboard> {
   late DatabaseService _databaseService;
   List<Event> _allLatestEvents = []; // Latest events from all organizers
   List<Event> _myRegisteredEvents = []; // Events I'm registered for
-  List<Attendee> _myAttendeeRecords = []; // My attendee records
+  List<Registration> _myRegistrations = []; // My registration records
+  Map<String, Event> _eventCache = {}; // Cache for event details
   AttendeeStats _attendeeStats = AttendeeStats(
     registeredEvents: 0,
     attendedEvents: 0,
@@ -47,7 +48,7 @@ class _AttendeeDashboardState extends State<AttendeeDashboard> {
   );
   bool _isLoading = true;
   String? _error;
-  String? _currentUserId; // You'll need to get this from your auth service
+  String? _currentUserId;
 
   @override
   void initState() {
@@ -63,7 +64,7 @@ class _AttendeeDashboardState extends State<AttendeeDashboard> {
         _error = null;
       });
 
-      // Get current user ID from auth (replace with your auth service)
+      // Get current user ID from auth
       final currentUser =
           Provider.of<DatabaseService>(context, listen: false).currentUser;
       if (currentUser == null) {
@@ -72,23 +73,29 @@ class _AttendeeDashboardState extends State<AttendeeDashboard> {
 
       _currentUserId = currentUser.uid;
 
-      // Load data specific to attendee dashboard using new methods
+      // Load all data concurrently
       final results = await Future.wait([
-        _databaseService
-            .getAllAvailableEvents(), // Latest events from all organizers
-        _databaseService.getAttendeeRecords(
-          _currentUserId!,
-        ), // My attendee records
-        _databaseService.getMyRegisteredEvents(
-          _currentUserId!,
-        ), // My registered events
-        _databaseService.getAttendeeDashboardStats(_currentUserId!), // My stats
-      ] as Iterable<Future>);
+        _databaseService.getAllAvailableEvents(),
+        _databaseService.getUserRegistrations(_currentUserId!),
+        _databaseService.getAttendeeRecords(_currentUserId!),
+      ]);
 
       final allEvents = results[0] as List<Event>;
-      final myAttendeeRecords = results[1] as List<Attendee>;
-      final myRegisteredEvents = results[2] as List<Event>;
-      final statsData = results[3] as Map<String, dynamic>;
+      final myRegistrations = results[1] as List<Registration>;
+
+      // Build event cache for quick lookup
+      Map<String, Event> eventCache = {};
+      for (Event event in allEvents) {
+        eventCache[event.id] = event;
+      }
+
+      // Get events for which user is registered
+      List<Event> myRegisteredEvents = [];
+      for (Registration registration in myRegistrations) {
+        if (eventCache.containsKey(registration.eventId)) {
+          myRegisteredEvents.add(eventCache[registration.eventId]!);
+        }
+      }
 
       // Get latest events from all organizers (limit to 10)
       final latestEvents =
@@ -96,16 +103,20 @@ class _AttendeeDashboardState extends State<AttendeeDashboard> {
 
       // Create attendee stats from the fetched data
       final attendeeStats = AttendeeStats(
-        registeredEvents: statsData['registeredEvents'] ?? 0,
-        attendedEvents: statsData['attendedEvents'] ?? 0,
-        notAttendedEvents: statsData['notAttendedEvents'] ?? 0,
-        upcomingEvents: statsData['upcomingEvents'] ?? 0,
+        registeredEvents: myRegistrations.length,
+        attendedEvents: myRegistrations.where((r) => r.hasAttended).length,
+        notAttendedEvents: myRegistrations.where((r) => !r.hasAttended).length,
+        upcomingEvents:
+            myRegisteredEvents
+                .where((event) => event.startDate.isAfter(DateTime.now()))
+                .length,
       );
 
       setState(() {
         _allLatestEvents = latestEvents.take(10).toList();
         _myRegisteredEvents = myRegisteredEvents;
-        _myAttendeeRecords = myAttendeeRecords;
+        _myRegistrations = myRegistrations;
+        _eventCache = eventCache;
         _attendeeStats = attendeeStats;
         _isLoading = false;
       });
@@ -126,7 +137,48 @@ class _AttendeeDashboardState extends State<AttendeeDashboard> {
       case 'view_my_events':
         Navigator.of(context).pushReplacementNamed('/my-events');
         break;
+      case 'view_attendee_records':
+        // Using _myAttendeeRecords here
+        _showAttendeeRecordsDialog();
+        break;
     }
+  }
+
+  void _showAttendeeRecordsDialog() {
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('My Attendee Records'),
+            content: SizedBox(
+              width: double.maxFinite,
+              height: 300,
+              child:
+                  _myRegistrations.isEmpty
+                      ? const Center(child: Text('No attendee records found'))
+                      : ListView.builder(
+                        itemCount: _myRegistrations.length,
+                        itemBuilder: (context, index) {
+                          final record = _myRegistrations[index];
+                          final event = _eventCache[record.eventId];
+                          return ListTile(
+                            leading: const Icon(Icons.person),
+                            title: Text(event?.name ?? 'Unknown Event'),
+                            subtitle: Text(
+                              'Attended: ${record.hasAttended ? "Yes" : "No"}',
+                            ),
+                          );
+                        },
+                      ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Close'),
+              ),
+            ],
+          ),
+    );
   }
 
   @override
@@ -366,21 +418,20 @@ class _AttendeeDashboardState extends State<AttendeeDashboard> {
           ],
         ),
         const SizedBox(height: 16),
-        _myRegisteredEvents.isEmpty
+        _myRegistrations.isEmpty
             ? _buildEmptyEventsState(
               'You haven\'t registered for any events yet',
             )
             : ListView.separated(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              itemCount: _myRegisteredEvents.take(3).length,
+              itemCount: _myRegistrations.take(3).length,
               separatorBuilder: (context, index) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
-                final event = _myRegisteredEvents[index];
-                final attendeeRecord = _myAttendeeRecords.firstWhere(
-                  (a) => a.eventId == event.id,
-                );
-                return _buildMyEventTile(event, attendeeRecord);
+                final registration = _myRegistrations[index];
+                final event = _eventCache[registration.eventId];
+                if (event == null) return const SizedBox.shrink();
+                return _buildMyEventTile(event, registration);
               },
             ),
       ],
@@ -397,15 +448,11 @@ class _AttendeeDashboardState extends State<AttendeeDashboard> {
           Expanded(
             flex: 3,
             child: Container(
-              decoration: BoxDecoration(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(12),
-                ),
-                gradient: const LinearGradient(
-                  colors: AppConstants.primaryGradient,
-                ),
+              decoration: const BoxDecoration(
+                borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+                gradient: LinearGradient(colors: AppConstants.primaryGradient),
               ),
-              child: Center(
+              child: const Center(
                 child: Icon(Icons.event, color: Colors.white, size: 32),
               ),
             ),
@@ -441,7 +488,7 @@ class _AttendeeDashboardState extends State<AttendeeDashboard> {
     );
   }
 
-  Widget _buildMyEventTile(Event event, Attendee attendeeRecord) {
+  Widget _buildMyEventTile(Event event, Registration registration) {
     return GestureDetector(
       onTap: () {
         Navigator.of(context).push(
@@ -524,16 +571,16 @@ class _AttendeeDashboardState extends State<AttendeeDashboard> {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
                 color:
-                    attendeeRecord.hasAttended
+                    registration.hasAttended
                         ? AppConstants.successColor.withOpacity(0.1)
                         : AppConstants.primaryColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Text(
-                attendeeRecord.hasAttended ? 'Attended' : 'Registered',
+                registration.hasAttended ? 'Attended' : 'Registered',
                 style: AppConstants.bodySmall.copyWith(
                   color:
-                      attendeeRecord.hasAttended
+                      registration.hasAttended
                           ? AppConstants.successColor
                           : AppConstants.primaryColor,
                   fontWeight: FontWeight.w600,
@@ -555,7 +602,7 @@ class _AttendeeDashboardState extends State<AttendeeDashboard> {
         Container(
           decoration: AppConstants.cardDecoration,
           child:
-              _myAttendeeRecords.isEmpty
+              _myRegistrations.isEmpty
                   ? _buildEmptyActivityState()
                   : ListView.separated(
                     shrinkWrap: true,
@@ -603,12 +650,17 @@ class _AttendeeDashboardState extends State<AttendeeDashboard> {
   }
 
   Widget _buildUpcomingEvents() {
-    final upcomingEvents =
-        _myRegisteredEvents
-            .where((event) => event.startDate.isAfter(DateTime.now()))
-            .toList()
-          ..sort((a, b) => a.startDate.compareTo(b.startDate))
-          ..take(3).toList();
+    final upcomingRegistrations =
+        _myRegistrations.where((registration) {
+            final event = _eventCache[registration.eventId];
+            return event != null && event.startDate.isAfter(DateTime.now());
+          }).toList()
+          ..sort((a, b) {
+            final eventA = _eventCache[a.eventId];
+            final eventB = _eventCache[b.eventId];
+            if (eventA == null || eventB == null) return 0;
+            return eventA.startDate.compareTo(eventB.startDate);
+          });
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -626,19 +678,17 @@ class _AttendeeDashboardState extends State<AttendeeDashboard> {
           ],
         ),
         const SizedBox(height: 16),
-        upcomingEvents.isEmpty
+        upcomingRegistrations.isEmpty
             ? _buildEmptyUpcomingEventsState()
             : ListView.separated(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              itemCount: upcomingEvents.length,
+              itemCount: upcomingRegistrations.take(3).length,
               separatorBuilder: (context, index) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
-                final event = upcomingEvents[index];
-                final attendeeRecord = _myAttendeeRecords.firstWhere(
-                  (a) => a.eventId == event.id,
-                );
-                return _buildMyEventTile(event, attendeeRecord);
+                final registration = upcomingRegistrations[index];
+                final event = _eventCache[registration.eventId]!;
+                return _buildMyEventTile(event, registration);
               },
             ),
       ],
@@ -651,24 +701,80 @@ class _AttendeeDashboardState extends State<AttendeeDashboard> {
       children: [
         Text('Quick Actions', style: AppConstants.headlineSmall),
         const SizedBox(height: 16),
-        Row(
+        Column(
           children: [
-            Expanded(
-              child: _buildQuickActionCard(
-                'View All Events',
-                Icons.event,
-                AppConstants.primaryColor,
-                () => _handleQuickAction('view_all_events'),
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildQuickActionCard(
+                    'View All Events',
+                    Icons.event,
+                    AppConstants.primaryColor,
+                    () => _handleQuickAction('view_all_events'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildQuickActionCard(
+                    'My Events',
+                    Icons.bookmark,
+                    AppConstants.accentColor,
+                    () => _handleQuickAction('view_my_events'),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildQuickActionCard(
-                'My Events',
-                Icons.bookmark,
-                AppConstants.accentColor,
-                () => _handleQuickAction('view_my_events'),
-              ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildQuickActionCard(
+                    'Attendee Records',
+                    Icons.person_pin,
+                    AppConstants.successColor,
+                    () => _handleQuickAction('view_attendee_records'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: AppConstants.cardDecoration,
+                    child: Column(
+                      children: [
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: AppConstants.textSecondaryColor.withOpacity(
+                              0.1,
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(
+                            Icons.analytics,
+                            color: AppConstants.textSecondaryColor,
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Statistics',
+                          style: AppConstants.titleMedium,
+                          textAlign: TextAlign.center,
+                        ),
+                        Text(
+                          '${_myRegisteredEvents.length} registered',
+                          style: AppConstants.bodySmall.copyWith(
+                            color: AppConstants.textSecondaryColor,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -810,32 +916,35 @@ class _AttendeeDashboardState extends State<AttendeeDashboard> {
   }
 
   List<Map<String, dynamic>> _getRecentActivities() {
-    if (_myAttendeeRecords.isEmpty) {
+    if (_myRegistrations.isEmpty) {
       return [];
     }
 
     List<Map<String, dynamic>> activities = [];
 
     // Add registration activities
-    for (final attendee in _myAttendeeRecords.take(5)) {
+    for (final registration in _myRegistrations.take(5)) {
+      final event = _eventCache[registration.eventId];
+      if (event == null) continue;
+
       activities.add({
-        'title': 'Registered for "${attendee.eventName}"',
-        'time': _getTimeAgo(attendee.registeredAt),
+        'title': 'Registered for "${event.name}"',
+        'time': _getTimeAgo(registration.registeredAt),
         'icon': Icons.event_available,
         'color': AppConstants.primaryColor,
-        'isNew': _isRecent(attendee.registeredAt),
-        'dateTime': attendee.registeredAt,
+        'isNew': _isRecent(registration.registeredAt),
+        'dateTime': registration.registeredAt,
       });
 
       // Add attendance activity if attended
-      if (attendee.hasAttended) {
+      if (registration.hasAttended && registration.attendedAt != null) {
         activities.add({
-          'title': 'Attended "${attendee.eventName}"',
-          'time': _getTimeAgo(attendee.updatedAt),
+          'title': 'Attended "${event.name}"',
+          'time': _getTimeAgo(registration.attendedAt!),
           'icon': Icons.check_circle,
           'color': AppConstants.successColor,
-          'isNew': _isRecent(attendee.updatedAt),
-          'dateTime': attendee.updatedAt,
+          'isNew': _isRecent(registration.attendedAt!),
+          'dateTime': registration.attendedAt!,
         });
       }
     }

@@ -107,11 +107,6 @@ class AuthService extends ChangeNotifier {
         isApproved: true,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
-        eventId: '',
-        eventName: '',
-        qrCode: '',
-        hasAttended: false,
-        registeredAt: DateTime.now(),
       );
 
       // Create in attendees collection

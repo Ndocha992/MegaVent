@@ -1,17 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:megavent/models/attendee.dart';
+import 'package:megavent/models/registration.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/widgets/organizer/attendees/attendees_details/info_row.dart';
 
 class QRCodeSectionWidget extends StatelessWidget {
   final Attendee attendee;
-  final Function(Attendee) onShowQRCode;
+  final Registration? registration;
+  final Function(Attendee, Registration?) onShowQRCode;
 
   const QRCodeSectionWidget({
     super.key,
     required this.attendee,
+    this.registration,
     required this.onShowQRCode,
   });
+
+  String get qrCode {
+    return registration?.qrCode ?? 'No QR Code';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -59,14 +66,9 @@ class QRCodeSectionWidget extends StatelessWidget {
 
           Row(
             children: [
-              Expanded(
-                child: InfoRowWidget(label: 'QR Code', value: attendee.qrCode),
-              ),
+              Expanded(child: InfoRowWidget(label: 'QR Code', value: qrCode)),
               IconButton(
-                onPressed:
-                    () => onShowQRCode(
-                      attendee,
-                    ), // This creates a callback function
+                onPressed: () => onShowQRCode(attendee, registration),
                 icon: Icon(
                   Icons.qr_code_scanner,
                   color: AppConstants.primaryColor,

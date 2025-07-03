@@ -397,6 +397,8 @@ class _QRScannerState extends State<QRScanner> with WidgetsBindingObserver {
     }
   }
 
+  // Replace the _checkInAttendee method in your QRScanner class
+
   Future<void> _checkInAttendee(String qrCode) async {
     try {
       // Parse QR code data (assuming it contains attendee ID or attendee information)
@@ -413,19 +415,19 @@ class _QRScannerState extends State<QRScanner> with WidgetsBindingObserver {
       final attendeeId = qrParts[0];
 
       // Get the attendee from the database for the selected event
-      final attendee = await _databaseService.getAttendeeByIdAndEvent(
+      final attendeeData = await _databaseService.getAttendeeByIdAndEvent(
         attendeeId,
         _selectedEvent!.id,
       );
 
-      if (attendee == null) {
+      if (attendeeData == null) {
         throw Exception('Attendee not found for this event');
       }
 
       // Check if attendee is already checked in
-      if (attendee.hasAttended) {
+      if (attendeeData['hasAttended'] == true) {
         setState(() {
-          _scanResult = '${attendee.fullName} is already checked in!';
+          _scanResult = '${attendeeData['fullName']} is already checked in!';
         });
         return;
       }
@@ -434,7 +436,7 @@ class _QRScannerState extends State<QRScanner> with WidgetsBindingObserver {
       await _databaseService.checkInAttendee(attendeeId, _selectedEvent!.id);
 
       setState(() {
-        _scanResult = '${attendee.fullName} checked in successfully!';
+        _scanResult = '${attendeeData['fullName']} checked in successfully!';
       });
     } catch (e) {
       setState(() {
