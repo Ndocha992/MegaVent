@@ -22,10 +22,12 @@ class AttendeesList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Create registration map for quick lookup
+    // FIXED: Create registration map using the composite ID
     final Map<String, Registration> userRegistrationMap = {};
     for (final registration in registrations) {
-      userRegistrationMap[registration.userId] = registration;
+      // Use composite key to match with attendee.id
+      final compositeId = '${registration.userId}_${registration.eventId}';
+      userRegistrationMap[compositeId] = registration;
     }
 
     if (attendeesList.isEmpty) {
@@ -56,8 +58,12 @@ class AttendeesList extends StatelessWidget {
       itemCount: attendeesList.length,
       itemBuilder: (context, index) {
         final attendee = attendeesList[index];
+        // FIXED: Use the composite ID to get the correct registration
         final registration = userRegistrationMap[attendee.id];
-        final eventName = eventNames[registration?.eventId] ?? 'Unknown Event';
+
+        // Extract the actual eventId from the composite ID
+        final eventId = attendee.id.split('_').last;
+        final eventName = eventNames[eventId] ?? 'Unknown Event';
 
         return AttendeeCard(
           attendee: attendee,
@@ -239,9 +245,14 @@ class AttendeeCard extends StatelessWidget {
                         style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                       ),
                       const SizedBox(height: 2),
+                      // FIXED: This will now show the correct event name
                       Text(
                         eventName,
-                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: AppConstants.primaryColor,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       Row(

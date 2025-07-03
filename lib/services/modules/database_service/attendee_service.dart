@@ -64,9 +64,9 @@ class AttendeeService {
               await _firestore.collection('events').doc(eventId).get();
           if (!eventDoc.exists) continue;
 
-          // Create Attendee object
+          // Create Attendee object with unique ID combining userId and eventId
           final attendee = Attendee(
-            id: userId,
+            id: '${userId}_$eventId', // Make it unique per registration
             fullName: userData['fullName'] ?? userData['name'] ?? 'Unknown',
             email: userData['email'] ?? '',
             phone: userData['phone'] ?? '',
@@ -95,6 +95,7 @@ class AttendeeService {
   }
 
   // Get all attendees for current organizer's events (returns Attendee objects)
+  // FIXED: This now returns one Attendee object per registration (not per user)
   Future<List<Attendee>> getAllAttendees() async {
     try {
       final user = _auth.currentUser;
@@ -143,9 +144,10 @@ class AttendeeService {
               await _firestore.collection('events').doc(eventId).get();
           if (!eventDoc.exists) continue;
 
-          // Create Attendee object
+          // Create Attendee object with unique ID combining userId and eventId
+          // This ensures each registration creates a separate attendee entry
           final attendee = Attendee(
-            id: userId,
+            id: '${userId}_$eventId', // Unique ID per registration
             fullName: userData['fullName'] ?? userData['name'] ?? 'Unknown',
             email: userData['email'] ?? '',
             phone: userData['phone'] ?? '',
@@ -214,9 +216,9 @@ class AttendeeService {
 
           final userData = userDoc.data() as Map<String, dynamic>;
 
-          // Create Attendee object
+          // Create Attendee object with unique ID
           final attendee = Attendee(
-            id: userId,
+            id: '${userId}_$eventId',
             fullName: userData['fullName'] ?? userData['name'] ?? 'Unknown',
             email: userData['email'] ?? '',
             phone: userData['phone'] ?? '',
@@ -274,9 +276,9 @@ class AttendeeService {
                   await _firestore.collection('events').doc(eventId).get();
               if (!eventDoc.exists) continue;
 
-              // Create Attendee object
+              // Create Attendee object with unique ID
               final attendee = Attendee(
-                id: userId,
+                id: '${userId}_$eventId',
                 fullName: userData['fullName'] ?? userData['name'] ?? 'Unknown',
                 email: userData['email'] ?? '',
                 phone: userData['phone'] ?? '',

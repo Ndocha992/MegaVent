@@ -35,7 +35,7 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
   List<Event> _events = [];
   List<Attendee> _attendees = [];
   List<Registration> _registrations = [];
-  Map<String, String> _eventNames = {};
+  Map<String, String> _eventIdToNameMap = {};
   List<Staff> _staff = [];
   DashboardStats _dashboardStats = DashboardStats(
     totalEvents: 0,
@@ -65,15 +65,27 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
       // Load all required data in parallel
       final results = await Future.wait([
         _databaseService.getEvents(),
-        _databaseService.getLatestAttendees(),
+        _databaseService
+            .getAllAttendees(), // Get all attendees instead of just latest
         _databaseService.getAllStaff(),
         _databaseService.getOrganizerDashboardStats(),
-        _databaseService.getAllRegistrations(), // Add registrations
+        _databaseService.getAllRegistrations(),
+        _databaseService.getEventIdToNameMap(), // Get event ID to name mapping
       ]);
 
       setState(() {
         _events = results[0] as List<Event>;
-        _attendees = results[1] as List<Attendee>;
+
+        // Get all attendees and then sort by registration date to get latest
+        final allAttendees = results[1] as List<Attendee>;
+        final allRegistrations = results[4] as List<Registration>;
+
+        // Sort attendees by registration date (most recent first) and take top 5
+        _attendees =
+            _sortAttendeesByRegistrationDate(
+              allAttendees,
+              allRegistrations,
+            ).take(5).toList();
 
         // Get only the latest 5 staff members, sorted by hire date
         final allStaff = results[2] as List<Staff>;
@@ -93,11 +105,11 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
           completedEvents: statsData['completedEvents'] ?? 0,
         );
 
-        // Get registrations
-        _registrations = results[4] as List<Registration>;
+        // Get all registrations for activity tracking
+        _registrations = allRegistrations;
 
-        // Create event names map for quick lookup
-        _eventNames = {for (var event in _events) event.id: event.name};
+        // Get event ID to name mapping
+        _eventIdToNameMap = results[5] as Map<String, String>;
 
         _isLoading = false;
       });
@@ -109,6 +121,29 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
 
       debugPrint('Dashboard loading error: $e');
     }
+  }
+
+  // Helper method to sort attendees by registration date
+  List<Attendee> _sortAttendeesByRegistrationDate(
+    List<Attendee> attendees,
+    List<Registration> registrations,
+  ) {
+    // Create a map of composite ID to registration date for quick lookup
+    final registrationDateMap = <String, DateTime>{};
+
+    for (final registration in registrations) {
+      final compositeId = '${registration.userId}_${registration.eventId}';
+      registrationDateMap[compositeId] = registration.registeredAt;
+    }
+
+    // Sort attendees by registration date (most recent first)
+    attendees.sort((a, b) {
+      final dateA = registrationDateMap[a.id] ?? a.createdAt;
+      final dateB = registrationDateMap[b.id] ?? b.createdAt;
+      return dateB.compareTo(dateA);
+    });
+
+    return attendees;
   }
 
   void _handleQuickAction(String action) {
@@ -216,7 +251,7 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
             LatestAttendeesCard(
               attendees: _attendees,
               registrations: _registrations,
-              eventNames: _eventNames,
+              eventNames: _eventIdToNameMap,
             ),
             const SizedBox(height: 24),
             LatestStaffCard(staff: _staff),
@@ -549,22 +584,26 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
 
     // Add recent attendee activities - use registeredAt from Registration model
     for (final attendee in _attendees.take(2)) {
-      // Find the registration for this attendee
+      // Find the registration for this attendee using composite ID
       final registration = _registrations.firstWhere(
-        (reg) => reg.userId == attendee.id,
+        (reg) => '${reg.userId}_${reg.eventId}' == attendee.id,
         orElse:
             () => Registration(
               id: '',
-              userId: attendee.id,
-              eventId: '',
+              userId: attendee.id.split('_').first,
+              eventId: attendee.id.split('_').last,
               registeredAt: attendee.createdAt,
               hasAttended: false,
               qrCode: '',
             ),
       );
 
+      // Get event name for the activity
+      final eventName =
+          _eventIdToNameMap[registration.eventId] ?? 'Unknown Event';
+
       activities.add({
-        'title': 'New attendee ${attendee.fullName} registered',
+        'title': '${attendee.fullName} registered for "$eventName"',
         'time': _getTimeAgo(registration.registeredAt),
         'icon': Icons.person_add,
         'color': AppConstants.successColor,
