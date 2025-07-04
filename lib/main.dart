@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:megavent/screens/attendee/attendee_dashboard.dart';
 import 'package:megavent/screens/attendee/events.dart';
+import 'package:megavent/screens/attendee/my_events.dart';
 import 'package:megavent/screens/attendee/profile.dart';
 import 'package:megavent/screens/authentication/forgot_password_screen.dart';
 import 'package:megavent/screens/authentication/login_screen.dart';
@@ -18,7 +19,7 @@ import 'package:megavent/screens/organizer/profile.dart';
 import 'package:megavent/services/auth_service.dart';
 import 'package:megavent/services/database_service.dart';
 import 'package:megavent/services/deep_link_service.dart';
-import 'package:megavent/services/permission_service.dart'; // Add this import
+import 'package:megavent/services/permission_service.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
@@ -56,7 +57,7 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
-    // Initialize deep link service after the app is built
+    // Initialize services after the app is built
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeApp();
     });
@@ -69,9 +70,27 @@ class _MyAppState extends State<MyApp> {
       DeepLinkService().initialize(context);
       DeepLinkService().handleInitialLink();
 
-      // Request permissions on app start (like other apps)
+      // Request permissions on app start
       _requestInitialPermissions(context);
+
+      // Set up auth state listener for deep links only
+      _setupAuthListener();
     }
+  }
+
+  void _setupAuthListener() {
+    final authService = Provider.of<AuthService>(
+      navigatorKey.currentContext!,
+      listen: false,
+    );
+
+    // Only listen for deep link related auth changes
+    authService.addListener(() {
+      if (authService.isLoggedIn) {
+        // Check for pending event registration after successful login
+        DeepLinkService().checkPendingRegistration();
+      }
+    });
   }
 
   void _requestInitialPermissions(BuildContext context) async {
@@ -102,7 +121,7 @@ class _MyAppState extends State<MyApp> {
         fontFamily: 'Poppins',
         scaffoldBackgroundColor: AppConstants.backgroundColor,
       ),
-      home: const AuthenticationWrapper(),
+      home: const SplashScreen(),
       routes: {
         // Auth routes
         '/login': (context) => const LoginScreen(),
@@ -120,56 +139,10 @@ class _MyAppState extends State<MyApp> {
         // Attendee routes
         '/attendee-dashboard': (context) => const AttendeeDashboard(),
         '/attendee-all-events': (context) => const AttendeeAllEvents(),
-        // '/attendee-my-events': (context) => const AttendeeMyEvents(),
-        // '/attendee-event-registration':
-        //     (context) => const AttendeeEventRegistration(),
+        '/attendee-my-events': (context) => const AttendeeMyEvents(),
         '/attendee-profile': (context) => const AttendeeProfile(),
-        // Admin routes
-        // '/admin-event-details': (context) => const AdminEventDetails(),
-        // Staff routes
-        // '/staff-event-details': (context) => const StaffEventDetails(),
+        // Admin and Staff routes can be added here as needed
       },
     );
-  }
-}
-
-// This wrapper handles authentication state and shows appropriate screens
-class AuthenticationWrapper extends StatefulWidget {
-  const AuthenticationWrapper({super.key});
-
-  @override
-  State<AuthenticationWrapper> createState() => _AuthenticationWrapperState();
-}
-
-class _AuthenticationWrapperState extends State<AuthenticationWrapper> {
-  @override
-  void initState() {
-    super.initState();
-    // Listen to auth state changes to check for pending registrations
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _listenToAuthChanges();
-    });
-  }
-
-  void _listenToAuthChanges() {
-    final authService = Provider.of<AuthService>(context, listen: false);
-
-    // Listen to auth state changes
-    authService.addListener(() {
-      if (authService.isLoggedIn) {
-        // Check for pending event registration after successful login
-        DeepLinkService().checkPendingRegistration();
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // Update deep link service context when this widget builds
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      DeepLinkService().initialize(context);
-    });
-
-    return const SplashScreen();
   }
 }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
-import 'package:megavent/screens/attendee/events_details.dart';
+import 'package:megavent/screens/attendee/my_events_details.dart';
 import 'package:megavent/widgets/attendee/events/event_card.dart';
 import 'package:megavent/widgets/attendee/events/event_filters.dart';
 import 'package:megavent/widgets/attendee/sidebar.dart';
@@ -9,18 +9,19 @@ import 'package:megavent/utils/constants.dart';
 import 'package:megavent/widgets/app_bar.dart';
 import 'package:megavent/services/database_service.dart';
 import 'package:megavent/models/event.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-class AttendeeAllEvents extends StatefulWidget {
-  const AttendeeAllEvents({super.key});
+class AttendeeMyEvents extends StatefulWidget {
+  const AttendeeMyEvents({super.key});
 
   @override
-  State<AttendeeAllEvents> createState() => _AttendeeAllEventsState();
+  State<AttendeeMyEvents> createState() => _AttendeeMyEventsState();
 }
 
-class _AttendeeAllEventsState extends State<AttendeeAllEvents>
+class _AttendeeMyEventsState extends State<AttendeeMyEvents>
     with TickerProviderStateMixin {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  String currentRoute = '/attendee-all-events';
+  String currentRoute = '/attendee-my-events';
 
   late TabController _tabController;
 
@@ -33,7 +34,7 @@ class _AttendeeAllEventsState extends State<AttendeeAllEvents>
   final TextEditingController _searchController = TextEditingController();
 
   late DatabaseService _databaseService;
-  List<Event> _events = [];
+  List<Event> _registeredEvents = [];
   List<String> _categories = [];
   bool _isLoading = true;
   String? _error;
@@ -61,7 +62,7 @@ class _AttendeeAllEventsState extends State<AttendeeAllEvents>
       });
 
       _categories = ['All', ..._databaseService.getEventCategories()];
-      await _loadEvents();
+      await _loadMyRegisteredEvents();
     } catch (e) {
       setState(() {
         _error = 'Failed to load data: ${e.toString()}';
@@ -70,37 +71,41 @@ class _AttendeeAllEventsState extends State<AttendeeAllEvents>
     }
   }
 
-  Future<void> _loadEvents() async {
+  Future<void> _loadMyRegisteredEvents() async {
     try {
-      _databaseService.streamAllEvents().listen(
-        (events) {
-          if (mounted) {
-            setState(() {
-              _events = events;
-              _isLoading = false;
-              _error = null;
-            });
-          }
-        },
-        onError: (error) {
-          if (mounted) {
-            setState(() {
-              _error = 'Failed to load events: ${error.toString()}';
-              _isLoading = false;
-            });
-          }
-        },
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        setState(() {
+          _error = 'User not authenticated';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      // Get registered events for the current user
+      final registeredEvents = await _databaseService.getMyRegisteredEvents(
+        user.uid,
       );
+
+      if (mounted) {
+        setState(() {
+          _registeredEvents = registeredEvents;
+          _isLoading = false;
+          _error = null;
+        });
+      }
     } catch (e) {
-      setState(() {
-        _error = 'Failed to load events: ${e.toString()}';
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _error = 'Failed to load registered events: ${e.toString()}';
+          _isLoading = false;
+        });
+      }
     }
   }
 
   List<Event> get _filteredEvents {
-    List<Event> events = List.from(_events);
+    List<Event> events = List.from(_registeredEvents);
 
     // Filter by search query
     if (_searchQuery.isNotEmpty) {
@@ -251,7 +256,7 @@ class _AttendeeAllEventsState extends State<AttendeeAllEvents>
   }
 
   Future<void> _refreshEvents() async {
-    await _loadEvents();
+    await _loadMyRegisteredEvents();
   }
 
   @override
@@ -302,7 +307,7 @@ class _AttendeeAllEventsState extends State<AttendeeAllEvents>
               ),
               const SizedBox(height: 16),
               Text(
-                'Error Loading Events',
+                'Error Loading Your Events',
                 style: AppConstants.titleLarge.copyWith(
                   color: AppConstants.errorColor,
                 ),
@@ -358,14 +363,14 @@ class _AttendeeAllEventsState extends State<AttendeeAllEvents>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Discover Events',
+                'My Registered Events',
                 style: AppConstants.headlineLarge,
                 overflow: TextOverflow.ellipsis,
                 maxLines: 1,
               ),
               const SizedBox(height: 4),
               Text(
-                'Find and join amazing events happening around you',
+                'View and manage events you have registered for',
                 style: AppConstants.bodyLarge.copyWith(
                   color: AppConstants.textSecondaryColor,
                 ),
@@ -387,11 +392,15 @@ class _AttendeeAllEventsState extends State<AttendeeAllEvents>
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.event, color: Colors.white, size: 16),
+                    const Icon(
+                      Icons.event_available,
+                      color: Colors.white,
+                      size: 16,
+                    ),
                     const SizedBox(width: 8),
                     Flexible(
                       child: Text(
-                        '${_filteredEvents.length} Events',
+                        '${_filteredEvents.length} Registered Events',
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.w600,
@@ -420,7 +429,7 @@ class _AttendeeAllEventsState extends State<AttendeeAllEvents>
         indicatorColor: AppConstants.primaryColor,
         indicatorWeight: 3,
         tabs: const [
-          Tab(text: 'All Events'),
+          Tab(text: 'All Registered'),
           Tab(text: 'Upcoming'),
           Tab(text: 'Past'),
         ],
@@ -446,7 +455,7 @@ class _AttendeeAllEventsState extends State<AttendeeAllEvents>
                     controller: _searchController,
                     onChanged: (value) => setState(() => _searchQuery = value),
                     decoration: InputDecoration(
-                      hintText: 'Search events, categories, locations...',
+                      hintText: 'Search your registered events...',
                       hintStyle: TextStyle(
                         color: AppConstants.textSecondaryColor,
                         fontSize: 14,
@@ -665,7 +674,7 @@ class _AttendeeAllEventsState extends State<AttendeeAllEvents>
                   Navigator.of(context).push(
                     MaterialPageRoute(
                       builder:
-                          (context) => AttendeeEventsDetails(
+                          (context) => AttendeeMyEventsDetails(
                             event: filteredEvents[index],
                           ),
                     ),
@@ -696,14 +705,16 @@ class _AttendeeAllEventsState extends State<AttendeeAllEvents>
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  Icons.event_busy,
+                  Icons.event_note,
                   size: 60,
                   color: AppConstants.primaryColor,
                 ),
               ),
               const SizedBox(height: 24),
               Text(
-                'No events found',
+                _searchQuery.isNotEmpty || _hasActiveFilters()
+                    ? 'No matching events found'
+                    : 'No registered events yet',
                 style: AppConstants.titleLarge.copyWith(
                   color: AppConstants.textSecondaryColor,
                 ),
@@ -713,7 +724,7 @@ class _AttendeeAllEventsState extends State<AttendeeAllEvents>
               Text(
                 _searchQuery.isNotEmpty || _hasActiveFilters()
                     ? 'Try adjusting your search or filter criteria'
-                    : 'No events are available at the moment',
+                    : 'You haven\'t registered for any events yet. Browse available events to get started!',
                 textAlign: TextAlign.center,
                 style: AppConstants.bodyMedium.copyWith(
                   color: AppConstants.textSecondaryColor,
@@ -734,6 +745,20 @@ class _AttendeeAllEventsState extends State<AttendeeAllEvents>
                   },
                   icon: const Icon(Icons.clear_all),
                   label: const Text('Clear All Filters'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppConstants.primaryColor,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ] else ...[
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    // Navigate to browse events page
+                    Navigator.of(context).pushNamed('/attendee-all-events');
+                  },
+                  icon: const Icon(Icons.explore),
+                  label: const Text('Browse Events'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppConstants.primaryColor,
                     foregroundColor: Colors.white,

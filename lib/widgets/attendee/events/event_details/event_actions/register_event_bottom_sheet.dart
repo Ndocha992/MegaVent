@@ -26,6 +26,87 @@ class _AttendeeRegisterEventBottomSheetState
   late DatabaseService _databaseService;
   String? _errorMessage;
 
+  // Check if event has ended
+  bool _isEventEnded() {
+    final now = DateTime.now();
+    final eventEnd = widget.event.endDate;
+
+    // Create DateTime object for event end using its date + end time
+    final endTimeParts = widget.event.endTime.split(':');
+    final endHour = int.parse(endTimeParts[0]);
+    final endMinute = int.parse(endTimeParts[1].split(' ')[0]);
+    final isPM = widget.event.endTime.contains('PM') && endHour != 12;
+    final eventEndDateTime = DateTime(
+      eventEnd.year,
+      eventEnd.month,
+      eventEnd.day,
+      isPM ? endHour + 12 : endHour,
+      endMinute,
+    );
+
+    return eventEndDateTime.isBefore(now);
+  }
+
+  // Show event ended dialog
+  void _showEventEndedDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Icon(Icons.event_busy, color: AppConstants.errorColor),
+              const SizedBox(width: 8),
+              const Text('Event Has Ended'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Sorry, registration is no longer available for this event.',
+                style: TextStyle(fontSize: 16, color: Colors.grey[700]),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey[200]!),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Event: ${widget.event.name}',
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Ended: ${_formatEventDate()}',
+                      style: TextStyle(color: Colors.grey[600]),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -135,7 +216,7 @@ class _AttendeeRegisterEventBottomSheetState
               Icon(Icons.calendar_today, size: 16, color: Colors.grey[600]),
               const SizedBox(width: 8),
               Text(
-                _formatEventDate(),
+                _formatDateTime(widget.event.startDate, widget.event.startTime),
                 style: TextStyle(fontSize: 14, color: Colors.grey[600]),
               ),
             ],
@@ -146,7 +227,7 @@ class _AttendeeRegisterEventBottomSheetState
               Icon(Icons.access_time, size: 16, color: Colors.grey[600]),
               const SizedBox(width: 8),
               Text(
-                '${widget.event.startTime} - ${widget.event.endTime}',
+                'Ends: ${_formatDateTime(widget.event.endDate, widget.event.endTime)}',
                 style: TextStyle(fontSize: 14, color: Colors.grey[600]),
               ),
             ],
@@ -181,20 +262,14 @@ class _AttendeeRegisterEventBottomSheetState
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color:
-                      _isEventFull()
-                          ? AppConstants.errorColor.withOpacity(0.1)
-                          : AppConstants.successColor.withOpacity(0.1),
+                  color: _getEventStatusColor().withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  _isEventFull() ? 'Full' : 'Available',
+                  _getEventStatusText(),
                   style: TextStyle(
                     fontSize: 12,
-                    color:
-                        _isEventFull()
-                            ? AppConstants.errorColor
-                            : AppConstants.successColor,
+                    color: _getEventStatusColor(),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -379,6 +454,26 @@ class _AttendeeRegisterEventBottomSheetState
             ),
           ),
         ],
+      );
+    }
+
+    // Check if event has ended
+    if (_isEventEnded()) {
+      return SizedBox(
+        width: double.infinity,
+        height: 48,
+        child: ElevatedButton.icon(
+          onPressed: () => _showEventEndedDialog(),
+          icon: const Icon(Icons.event_busy),
+          label: const Text('Event Has Ended'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppConstants.errorColor,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
       );
     }
 
@@ -609,6 +704,25 @@ class _AttendeeRegisterEventBottomSheetState
     }
   }
 
+  // Helper method to format date and time together
+  String _formatDateTime(DateTime date, String time) {
+    return DateFormat('EEEE, MMMM d, yyyy').format(date) + ' at $time';
+  }
+
+  // Helper methods for event status
+  String _getEventStatusText() {
+    if (_isEventEnded()) return 'Ended';
+    if (_isEventFull()) return 'Full';
+    return 'Open';
+  }
+
+  // Status color
+  Color _getEventStatusColor() {
+    if (_isEventEnded()) return AppConstants.errorColor;
+    if (_isEventFull()) return AppConstants.warningColor;
+    return AppConstants.successColor;
+  }
+
   bool _isEventFull() {
     return widget.event.registeredCount >= widget.event.capacity;
   }
@@ -644,6 +758,12 @@ class _AttendeeRegisterEventBottomSheetState
 
   void _handleRegistration() async {
     if (_isEventFull() || _isRegistered) return;
+
+    // Check if event has ended before proceeding
+    if (_isEventEnded()) {
+      _showEventEndedDialog();
+      return;
+    }
 
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
