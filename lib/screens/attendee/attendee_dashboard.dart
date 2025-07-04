@@ -896,7 +896,9 @@ class _AttendeeDashboardState extends State<AttendeeDashboard> {
             const SizedBox(height: 16),
             ElevatedButton.icon(
               onPressed: () {
-                Navigator.of(context).pushReplacementNamed('/attendee-events');
+                Navigator.of(
+                  context,
+                ).pushReplacementNamed('/attendee-all-events');
               },
               icon: const Icon(Icons.search),
               label: const Text('Browse Events'),

@@ -380,7 +380,7 @@ class RegistrationService {
   /**
    * ====== QR SCANNER SPECIFIC METHODS ======
    */
-  
+
   // Get attendee by ID and event ID (returns combined attendee + registration data)
   Future<Map<String, dynamic>?> getAttendeeByIdAndEvent(
     String attendeeId,
@@ -404,12 +404,13 @@ class RegistrationService {
       }
 
       // Get registration record
-      final registrationSnapshot = await _firestore
-          .collection('registrations')
-          .where('userId', isEqualTo: attendeeId)
-          .where('eventId', isEqualTo: eventId)
-          .limit(1)
-          .get();
+      final registrationSnapshot =
+          await _firestore
+              .collection('registrations')
+              .where('userId', isEqualTo: attendeeId)
+              .where('eventId', isEqualTo: eventId)
+              .limit(1)
+              .get();
 
       if (registrationSnapshot.docs.isEmpty) {
         return null;
@@ -418,7 +419,8 @@ class RegistrationService {
       final registrationData = registrationSnapshot.docs.first.data();
 
       // Get attendee details
-      final attendeeDoc = await _firestore.collection('attendees').doc(attendeeId).get();
+      final attendeeDoc =
+          await _firestore.collection('attendees').doc(attendeeId).get();
       if (!attendeeDoc.exists) {
         return null;
       }
@@ -428,25 +430,30 @@ class RegistrationService {
       // Return combined data
       return {
         'id': attendeeId,
-        'fullName': attendeeData['fullName'] ?? attendeeData['name'] ?? 'Unknown',
+        'fullName':
+            attendeeData['fullName'] ?? attendeeData['name'] ?? 'Unknown',
         'email': attendeeData['email'] ?? '',
         'phone': attendeeData['phone'] ?? '',
         'profileImage': attendeeData['profileImage'],
         'isApproved': attendeeData['isApproved'] ?? true,
-        'createdAt': attendeeData['createdAt'] != null
-            ? (attendeeData['createdAt'] as Timestamp).toDate()
-            : DateTime.now(),
-        'updatedAt': attendeeData['updatedAt'] != null
-            ? (attendeeData['updatedAt'] as Timestamp).toDate()
-            : DateTime.now(),
+        'createdAt':
+            attendeeData['createdAt'] != null
+                ? (attendeeData['createdAt'] as Timestamp).toDate()
+                : DateTime.now(),
+        'updatedAt':
+            attendeeData['updatedAt'] != null
+                ? (attendeeData['updatedAt'] as Timestamp).toDate()
+                : DateTime.now(),
         // Registration specific fields
         'hasAttended': registrationData['attended'] ?? false,
-        'registeredAt': registrationData['registeredAt'] != null
-            ? (registrationData['registeredAt'] as Timestamp).toDate()
-            : DateTime.now(),
-        'attendedAt': registrationData['attendedAt'] != null
-            ? (registrationData['attendedAt'] as Timestamp).toDate()
-            : null,
+        'registeredAt':
+            registrationData['registeredAt'] != null
+                ? (registrationData['registeredAt'] as Timestamp).toDate()
+                : DateTime.now(),
+        'attendedAt':
+            registrationData['attendedAt'] != null
+                ? (registrationData['attendedAt'] as Timestamp).toDate()
+                : null,
         'eventName': eventData['name'] ?? 'Unknown Event',
         'eventId': eventId,
         'qrCode': registrationData['qrCode'] ?? '',
@@ -472,16 +479,19 @@ class RegistrationService {
 
       final eventData = eventDoc.data() as Map<String, dynamic>;
       if (eventData['organizerId'] != user.uid) {
-        throw Exception('Unauthorized: You can only check in attendees for your own events');
+        throw Exception(
+          'Unauthorized: You can only check in attendees for your own events',
+        );
       }
 
       // Find the registration
-      final registrationSnapshot = await _firestore
-          .collection('registrations')
-          .where('userId', isEqualTo: attendeeId)
-          .where('eventId', isEqualTo: eventId)
-          .limit(1)
-          .get();
+      final registrationSnapshot =
+          await _firestore
+              .collection('registrations')
+              .where('userId', isEqualTo: attendeeId)
+              .where('eventId', isEqualTo: eventId)
+              .limit(1)
+              .get();
 
       if (registrationSnapshot.docs.isEmpty) {
         throw Exception('Registration not found');
@@ -515,6 +525,58 @@ class RegistrationService {
       _notifier.notifyListeners();
     } catch (e) {
       throw Exception('Failed to check in attendee: $e');
+    }
+  }
+
+  /**
+ * ====== UNREGISTRATION METHOD ======
+ */
+  Future<void> unregisterUserFromEvent(String uid, String eventId) async {
+    try {
+      // Check if user is registered for the event
+      final registrationSnapshot =
+          await _firestore
+              .collection('registrations')
+              .where('userId', isEqualTo: uid)
+              .where('eventId', isEqualTo: eventId)
+              .limit(1)
+              .get();
+
+      if (registrationSnapshot.docs.isEmpty) {
+        throw Exception('Registration not found for this event');
+      }
+
+      final registrationDoc = registrationSnapshot.docs.first;
+      final registrationData = registrationDoc.data();
+
+      // Get event to update counts
+      final eventDoc = await _firestore.collection('events').doc(eventId).get();
+      if (!eventDoc.exists) {
+        throw Exception('Event not found');
+      }
+
+      // Use batch write for consistency
+      final batch = _firestore.batch();
+
+      // Delete the registration record
+      batch.delete(registrationDoc.reference);
+
+      // Update event registered count
+      final eventRef = _firestore.collection('events').doc(eventId);
+      batch.update(eventRef, {
+        'registeredCount': FieldValue.increment(-1),
+        'updatedAt': DateTime.now(),
+      });
+
+      // If user had attended, also decrement attended count
+      if (registrationData['attended'] == true) {
+        batch.update(eventRef, {'attendedCount': FieldValue.increment(-1)});
+      }
+
+      await batch.commit();
+      _notifier.notifyListeners();
+    } catch (e) {
+      throw Exception('Failed to unregister from event: $e');
     }
   }
 }
