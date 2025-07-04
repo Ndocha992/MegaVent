@@ -186,6 +186,12 @@ class DatabaseService extends ChangeNotifier {
   Future<void> unregisterUserFromEvent(String uid, String eventId) =>
       _registrationService.unregisterUserFromEvent(uid, eventId);
 
+  // Get registration by user and event
+  Future<Registration?> getRegistrationByUserAndEvent(
+    String userId,
+    String eventId,
+  ) => _registrationService.getRegistrationByUserAndEvent(userId, eventId);
+
   Future<void> markAttendance(String userId, String eventId) =>
       _registrationService.markAttendance(userId, eventId);
 

@@ -179,15 +179,46 @@ class EventService {
         });
   }
 
-  // Stream upcoming events
+  // Helper to return full combined date
+  DateTime _combineDateAndTime(DateTime date, String timeStr) {
+    final parts = timeStr.split(':');
+    final hour = int.parse(parts[0]);
+    final minute = int.parse(parts[1].split(' ')[0]);
+    final isPM = timeStr.contains('PM') && hour != 12;
+
+    return DateTime(
+      date.year,
+      date.month,
+      date.day,
+      isPM ? hour + 12 : hour,
+      minute,
+    );
+  }
+
+  // Update upcoming events query
   Stream<List<Event>> streamUpcomingEvents() {
     return _firestore
         .collection('events')
-        .where('startDate', isGreaterThan: DateTime.now())
-        .orderBy('startDate', descending: false)
+        .where('endDate', isGreaterThan: DateTime.now())
+        .orderBy('endDate', descending: false)
         .snapshots()
         .map((snapshot) {
-          return snapshot.docs.map((doc) => Event.fromFirestore(doc)).toList();
+          return snapshot.docs
+              .map((doc) {
+                final event = Event.fromFirestore(doc);
+                final endDateTime = _combineDateAndTime(
+                  event.endDate,
+                  event.endTime,
+                );
+
+                // Filter out events that have ended today
+                if (endDateTime.isBefore(DateTime.now())) {
+                  return null;
+                }
+                return event;
+              })
+              .whereType<Event>()
+              .toList();
         });
   }
 

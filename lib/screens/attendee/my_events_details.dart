@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:megavent/widgets/attendee/events/event_details/event_actions_section.dart';
+import 'package:megavent/widgets/attendee/events/event_details/event_attendance_status_section.dart';
 import 'package:megavent/widgets/attendee/events/event_details/event_description_section.dart';
 import 'package:megavent/widgets/attendee/events/event_details/event_header.dart';
 import 'package:megavent/widgets/attendee/events/event_details/event_info_section.dart';
@@ -9,24 +10,26 @@ import 'package:megavent/widgets/attendee/sidebar.dart';
 import 'package:provider/provider.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/models/event.dart';
+import 'package:megavent/models/registration.dart';
 import 'package:megavent/widgets/nested_app_bar.dart';
 import 'package:megavent/services/database_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class AttendeeMyEventsDetails extends StatefulWidget {
   final Event? event;
-  final String? eventId; // Add eventId parameter for cases where we only have ID
-  final bool isRegisteredEvent; // Add this parameter to indicate if user is registered
+  final String? eventId;
+  final bool isRegisteredEvent;
 
   const AttendeeMyEventsDetails({
-    super.key, 
-    this.event, 
+    super.key,
+    this.event,
     this.eventId,
-    this.isRegisteredEvent = false, // Default to false for backward compatibility
+    this.isRegisteredEvent = false,
   });
 
   @override
-  State<AttendeeMyEventsDetails> createState() => _AttendeeMyEventsDetailsState();
+  State<AttendeeMyEventsDetails> createState() =>
+      _AttendeeMyEventsDetailsState();
 }
 
 class _AttendeeMyEventsDetailsState extends State<AttendeeMyEventsDetails> {
@@ -35,6 +38,7 @@ class _AttendeeMyEventsDetailsState extends State<AttendeeMyEventsDetails> {
 
   late DatabaseService _databaseService;
   Event? currentEvent;
+  Registration? currentRegistration;
   bool _isLoading = true;
   String? _error;
   bool _isUserRegistered = false;
@@ -60,10 +64,13 @@ class _AttendeeMyEventsDetailsState extends State<AttendeeMyEventsDetails> {
           currentEvent = widget.event;
           _isLoading = false;
         });
-        
+
         // Check registration status if not explicitly provided
         if (!widget.isRegisteredEvent) {
           await _checkRegistrationStatus();
+        } else {
+          // If we know the user is registered, load their registration data
+          await _loadRegistrationData();
         }
       } else if (widget.eventId != null && widget.eventId!.isNotEmpty) {
         // Fetch event by ID
@@ -72,8 +79,8 @@ class _AttendeeMyEventsDetailsState extends State<AttendeeMyEventsDetails> {
           currentEvent = event;
           _isLoading = false;
         });
-        
-        // Check registration status
+
+        // Check registration status and load registration data
         await _checkRegistrationStatus();
       } else {
         setState(() {
@@ -94,15 +101,36 @@ class _AttendeeMyEventsDetailsState extends State<AttendeeMyEventsDetails> {
     if (user != null && currentEvent != null) {
       try {
         final isRegistered = await _databaseService.isUserRegisteredForEvent(
-          user.uid, 
-          currentEvent!.id
+          user.uid,
+          currentEvent!.id,
         );
         setState(() {
           _isUserRegistered = isRegistered;
         });
+
+        // If user is registered, load their registration data
+        if (isRegistered) {
+          await _loadRegistrationData();
+        }
       } catch (e) {
-        // Handle error silently or show a message
         print('Error checking registration status: $e');
+      }
+    }
+  }
+
+  Future<void> _loadRegistrationData() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null && currentEvent != null) {
+      try {
+        final registration = await _databaseService.getRegistrationByUserAndEvent(
+          user.uid,
+          currentEvent!.id,
+        );
+        setState(() {
+          currentRegistration = registration;
+        });
+      } catch (e) {
+        print('Error loading registration data: $e');
       }
     }
   }
@@ -274,6 +302,12 @@ class _AttendeeMyEventsDetailsState extends State<AttendeeMyEventsDetails> {
 
             // Attendee Event Info Section
             AttendeeEventInfoSection(event: currentEvent!),
+
+            // Attendance Status Section - only show if user is registered
+            if (_isUserRegistered)
+              EventAttendanceStatusSection(
+                registration: currentRegistration,
+              ),
 
             // Attendee Event Description
             AttendeeEventDescriptionSection(event: currentEvent!),

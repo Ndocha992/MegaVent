@@ -31,6 +31,30 @@ class RegistrationService {
     }
   }
 
+  // ADD THIS NEW METHOD - Get registration by user and event
+  Future<Registration?> getRegistrationByUserAndEvent(
+    String userId,
+    String eventId,
+  ) async {
+    try {
+      final snapshot =
+          await _firestore
+              .collection('registrations')
+              .where('userId', isEqualTo: userId)
+              .where('eventId', isEqualTo: eventId)
+              .limit(1)
+              .get();
+
+      if (snapshot.docs.isEmpty) {
+        return null;
+      }
+
+      return Registration.fromFirestore(snapshot.docs.first);
+    } catch (e) {
+      throw Exception('Failed to get registration: $e');
+    }
+  }
+
   Future<Map<String, int>> getEventCapacityInfo(String eventId) async {
     try {
       final doc = await _firestore.collection('events').doc(eventId).get();
@@ -58,13 +82,36 @@ class RegistrationService {
         throw Exception('User is already registered for this event');
       }
 
-      // Get event to check capacity
+      // Get event to check capacity and end date
       final doc = await _firestore.collection('events').doc(eventId).get();
       if (!doc.exists) {
         throw Exception('Event not found');
       }
 
       final event = Event.fromFirestore(doc);
+      final now = DateTime.now();
+
+      // Parse event end time
+      final endTimeParts = event.endTime.split(':');
+      final endHour = int.parse(endTimeParts[0]);
+      final endMinute = int.parse(endTimeParts[1].split(' ')[0]);
+      final isPM = event.endTime.contains('PM') && endHour != 12;
+
+      // Create DateTime for event end
+      final eventEndDateTime = DateTime(
+        event.endDate.year,
+        event.endDate.month,
+        event.endDate.day,
+        isPM ? endHour + 12 : endHour,
+        endMinute,
+      );
+
+      // Check if event has ended
+      if (eventEndDateTime.isBefore(now)) {
+        throw Exception('Registration closed - Event has ended');
+      }
+
+      // Check capacity
       if (!event.hasAvailableSpots) {
         throw Exception('Event is full');
       }
@@ -375,6 +422,7 @@ class RegistrationService {
       throw Exception('Failed to get all registrations: $e');
     }
   }
+
   // Add these methods to your RegistrationService class
 
   /**
@@ -529,8 +577,8 @@ class RegistrationService {
   }
 
   /**
- * ====== UNREGISTRATION METHOD ======
- */
+   * ====== UNREGISTRATION METHOD ======
+   */
   Future<void> unregisterUserFromEvent(String uid, String eventId) async {
     try {
       // Check if user is registered for the event
