@@ -230,7 +230,6 @@ class EventService {
       final snapshot =
           await _firestore
               .collection('events')
-              .where('isActive', isEqualTo: true)
               .orderBy('createdAt', descending: true)
               .get();
 

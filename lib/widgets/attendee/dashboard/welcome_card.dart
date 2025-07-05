@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:megavent/utils/constants.dart';
 
-class WelcomeCard extends StatelessWidget {
-  const WelcomeCard({super.key});
+class AttendeeWelcomeCard extends StatelessWidget {
+  const AttendeeWelcomeCard({super.key});
 
   @override
   Widget build(BuildContext context) {

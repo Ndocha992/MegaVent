@@ -359,24 +359,22 @@ class RegistrationService {
 
   Future<List<Event>> getMyRegisteredEvents(String userId) async {
     try {
-      // Get user's registrations
       final registrations = await getUserRegistrations(userId);
+      if (registrations.isEmpty) return [];
 
-      // Get events for those registrations
-      List<Event> events = [];
-      for (final registration in registrations) {
-        final eventDoc =
-            await _firestore
-                .collection('events')
-                .doc(registration.eventId)
-                .get();
+      // Get all event IDs
+      final eventIds = registrations.map((reg) => reg.eventId).toSet().toList();
 
-        if (eventDoc.exists) {
-          events.add(Event.fromFirestore(eventDoc));
-        }
-      }
+      // Fetch all events in a single query
+      final eventsSnapshot =
+          await _firestore
+              .collection('events')
+              .where(FieldPath.documentId, whereIn: eventIds)
+              .get();
 
-      return events;
+      return eventsSnapshot.docs
+          .map((doc) => Event.fromFirestore(doc))
+          .toList();
     } catch (e) {
       throw Exception('Failed to get registered events: $e');
     }

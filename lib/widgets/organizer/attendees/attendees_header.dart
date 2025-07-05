@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/services/database_service.dart';
-import 'package:megavent/models/attendee_stats.dart';
+import 'package:megavent/models/organizer_attendee_stats.dart';
 import 'package:provider/provider.dart';
 
 class AttendeesHeader extends StatelessWidget {

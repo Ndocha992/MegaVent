@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:megavent/models/registration.dart';
-import 'package:megavent/models/attendee_stats.dart';
+import 'package:megavent/models/organizer_attendee_stats.dart';
 
 class AttendeeStatsService {
   final FirebaseFirestore _firestore;
