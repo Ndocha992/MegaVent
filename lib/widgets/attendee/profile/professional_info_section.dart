@@ -1,37 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:megavent/utils/constants.dart';
-import 'package:megavent/models/organizer.dart';
+import 'package:megavent/models/attendee.dart';
 
 class ProfessionalInfoSection extends StatelessWidget {
-  final Organizer organizer;
+  final Attendee attendee;
   final Function(String) onWebsiteTap;
 
   const ProfessionalInfoSection({
     super.key,
-    required this.organizer,
+    required this.attendee,
     required this.onWebsiteTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return _buildInfoSection('Professional Information', Icons.work_outline, [
+    return _buildInfoSection('Account Information', Icons.info_outline, [
+      _buildInfoRow('User ID', attendee.id, Icons.fingerprint_outlined),
+      _buildInfoRow('Account Type', 'Event Attendee', Icons.person_outline),
       _buildInfoRow(
-        'Organization',
-        organizer.organization ?? 'Not specified',
-        Icons.business_outlined,
-      ),
-      _buildInfoRow(
-        'Job Title',
-        organizer.jobTitle ?? 'Not specified',
-        Icons.badge_outlined,
-      ),
-      _buildInfoRow(
-        'Website',
-        organizer.website ?? 'Not added',
-        Icons.web_outlined,
-        onTap: organizer.website != null
-            ? () => onWebsiteTap(organizer.website!)
-            : null,
+        'Registration Date',
+        _formatDate(attendee.createdAt),
+        Icons.event_available_outlined,
       ),
     ]);
   }
@@ -55,7 +44,8 @@ class ProfessionalInfoSection extends StatelessWidget {
                   child: Icon(icon, color: AppConstants.primaryColor, size: 20),
                 ),
                 const SizedBox(width: 12),
-                Expanded( // Added to prevent overflow
+                Expanded(
+                  // Added to prevent overflow
                   child: Text(
                     title,
                     style: AppConstants.titleLarge,
@@ -121,5 +111,9 @@ class ProfessionalInfoSection extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
   }
 }

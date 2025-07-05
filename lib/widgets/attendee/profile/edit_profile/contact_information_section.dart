@@ -2,13 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:megavent/utils/constants.dart';
 
 class ContactInformationSection extends StatelessWidget {
-  final TextEditingController emailController;
   final TextEditingController phoneController;
   final VoidCallback onFieldChanged;
 
   const ContactInformationSection({
     super.key,
-    required this.emailController,
     required this.phoneController,
     required this.onFieldChanged,
   });
@@ -102,23 +100,6 @@ class ContactInformationSection extends StatelessWidget {
         _buildSectionHeader(
           title: 'Contact Information',
           icon: Icons.contact_phone_outlined,
-        ),
-        const SizedBox(height: 16),
-        _buildTextField(
-          controller: emailController,
-          label: 'Email Address',
-          icon: Icons.email_outlined,
-          hint: 'Enter your email address',
-          keyboardType: TextInputType.emailAddress,
-          validator: (value) {
-            if (value == null || value.trim().isEmpty) {
-              return 'Please enter your email address';
-            }
-            if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-              return 'Please enter a valid email address';
-            }
-            return null;
-          },
         ),
         const SizedBox(height: 16),
         _buildTextField(

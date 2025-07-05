@@ -1,62 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:megavent/utils/constants.dart';
-import 'package:megavent/models/organizer.dart';
+import 'package:megavent/models/attendee.dart';
 import 'package:megavent/services/database_service.dart';
 
 class PersonalInfoSection extends StatelessWidget {
-  final Organizer organizer;
+  final Attendee attendee;
   final DatabaseService databaseService;
 
   const PersonalInfoSection({
     super.key,
-    required this.organizer,
+    required this.attendee,
     required this.databaseService,
   });
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<Map<String, dynamic>>(
-      stream: databaseService.streamOrganizerStats(),
-      builder: (context, snapshot) {
-        final stats = snapshot.data ?? {
-          'totalEvents': 0,
-          'totalAttendees': 0,
-          'totalStaff': 0,
-          'experienceLevel': 'Beginner'
-        };
-
-        final isLoading = snapshot.connectionState == ConnectionState.waiting;
-        final experienceLevel = isLoading ? 'Loading...' : stats['experienceLevel'];
-
-        return _buildInfoSection('Personal Information', Icons.person_outline, [
-          _buildInfoRow(
-            'Full Name',
-            organizer.fullName,
-            Icons.badge_outlined,
-          ),
-          _buildInfoRow(
-            'Bio',
-            organizer.bio ?? 'No bio added',
-            Icons.description_outlined,
-          ),
-          _buildInfoRow(
-            'Experience Level',
-            experienceLevel,
-            Icons.star_outline,
-          ),
-          _buildInfoRow(
-            'Member Since',
-            _formatDate(organizer.createdAt),
-            Icons.calendar_today_outlined,
-          ),
-          _buildInfoRow(
-            'Last Updated',
-            _formatDate(organizer.updatedAt),
-            Icons.update_outlined,
-          ),
-        ]);
-      },
-    );
+    return _buildInfoSection('Personal Information', Icons.person_outline, [
+      _buildInfoRow('Full Name', attendee.fullName, Icons.badge_outlined),
+      _buildInfoRow(
+        'Account Status',
+        attendee.isApproved ? 'Active' : 'Pending Approval',
+        Icons.verified_user_outlined,
+      ),
+      _buildInfoRow(
+        'Member Since',
+        _formatDate(attendee.createdAt),
+        Icons.calendar_today_outlined,
+      ),
+      _buildInfoRow(
+        'Last Updated',
+        _formatDate(attendee.updatedAt),
+        Icons.update_outlined,
+      ),
+    ]);
   }
 
   Widget _buildInfoSection(String title, IconData icon, List<Widget> children) {
@@ -78,7 +54,8 @@ class PersonalInfoSection extends StatelessWidget {
                   child: Icon(icon, color: AppConstants.primaryColor, size: 20),
                 ),
                 const SizedBox(width: 12),
-                Expanded( // Added to prevent overflow
+                Expanded(
+                  // Added to prevent overflow
                   child: Text(
                     title,
                     style: AppConstants.titleLarge,

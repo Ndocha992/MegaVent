@@ -118,14 +118,6 @@ class PersonalInformationSection extends StatelessWidget {
             return null;
           },
         ),
-        const SizedBox(height: 16),
-        _buildTextField(
-          controller: bioController,
-          label: 'Bio',
-          icon: Icons.info_outline,
-          hint: 'Tell us about yourself',
-          maxLines: 3,
-        ),
       ],
     );
   }

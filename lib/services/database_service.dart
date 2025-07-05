@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:megavent/models/attendee_stats.dart';
 import 'package:megavent/models/event.dart';
 import 'package:megavent/models/attendee.dart';
 import 'package:megavent/models/organizer_attendee_stats.dart';
@@ -139,6 +140,23 @@ class DatabaseService extends ChangeNotifier {
 
   Future<List<Map<String, dynamic>>> getEventAttendeesAsMap(String eventId) =>
       _attendeeService.getEventAttendeesAsMap(eventId);
+
+  Stream<Attendee?> streamAttendeeData() =>
+      _attendeeService.streamAttendeeData();
+
+  Future<void> updateAttendeeProfile(Attendee attendee) =>
+      _attendeeService.updateAttendeeProfile(attendee);
+
+  Future<void> updateAttendeeProfileFields(
+    String attendeeId,
+    Map<String, dynamic> fields,
+  ) => _attendeeService.updateAttendeeProfileFields(attendeeId, fields);
+
+  Future<Attendee?> getCurrentAttendeeData() =>
+      _attendeeService.getCurrentAttendeeData();
+
+  Future<AttendeeStats> getAttendeePersonalStats(String userId) =>
+      _attendeeService.getAttendeePersonalStats(userId);
 
   /**
    * ====== ATTENDEE STATS METHODS ======

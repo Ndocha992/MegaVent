@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:megavent/models/attendee.dart';
+import 'package:megavent/models/attendee_stats.dart';
 
 class AttendeeService {
   final FirebaseFirestore _firestore;
@@ -433,6 +434,174 @@ class AttendeeService {
       return attendeeRecords;
     } catch (e) {
       throw Exception('Failed to get attendee records: $e');
+    }
+  }
+
+  /**
+ * ====== CURRENT USER ATTENDEE DATA METHODS ======
+ */
+
+  // Stream current user's attendee data
+  Stream<Attendee?> streamAttendeeData() {
+    final user = _auth.currentUser;
+    if (user == null) {
+      return Stream.value(null);
+    }
+
+    return _firestore.collection('attendees').doc(user.uid).snapshots().map((
+      snapshot,
+    ) {
+      if (!snapshot.exists) {
+        return null;
+      }
+
+      final data = snapshot.data() as Map<String, dynamic>;
+      return Attendee(
+        id: user.uid,
+        fullName: data['fullName'] ?? data['name'] ?? 'Unknown',
+        email: data['email'] ?? '',
+        phone: data['phone'] ?? '',
+        profileImage: data['profileImage'],
+        isApproved: data['isApproved'] ?? true,
+        createdAt:
+            (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+        updatedAt:
+            (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      );
+    });
+  }
+
+  // Get current user's attendee data (one-time fetch)
+  Future<Attendee?> getCurrentAttendeeData() async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        return null;
+      }
+
+      final snapshot =
+          await _firestore.collection('attendees').doc(user.uid).get();
+
+      if (!snapshot.exists) {
+        return null;
+      }
+
+      final data = snapshot.data() as Map<String, dynamic>;
+      return Attendee(
+        id: user.uid,
+        fullName: data['fullName'] ?? data['name'] ?? 'Unknown',
+        email: data['email'] ?? '',
+        phone: data['phone'] ?? '',
+        profileImage: data['profileImage'],
+        isApproved: data['isApproved'] ?? true,
+        createdAt:
+            (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+        updatedAt:
+            (data['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      );
+    } catch (e) {
+      throw Exception('Failed to get current attendee data: $e');
+    }
+  }
+
+  // Update attendee profile
+  Future<void> updateAttendeeProfile(Attendee attendee) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        throw Exception('User not authenticated');
+      }
+
+      await _firestore.collection('attendees').doc(user.uid).update({
+        'fullName': attendee.fullName,
+        'email': attendee.email,
+        'phone': attendee.phone,
+        'profileImage': attendee.profileImage,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      _notifier.notifyListeners();
+    } catch (e) {
+      throw Exception('Failed to update attendee profile: $e');
+    }
+  }
+
+  // Update specific fields of attendee profile
+  Future<void> updateAttendeeProfileFields(
+    String attendeeId,
+    Map<String, dynamic> fields,
+  ) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) {
+        throw Exception('User not authenticated');
+      }
+
+      // Add updatedAt timestamp
+      fields['updatedAt'] = FieldValue.serverTimestamp();
+
+      await _firestore.collection('attendees').doc(attendeeId).update(fields);
+      _notifier.notifyListeners();
+    } catch (e) {
+      throw Exception('Failed to update attendee profile fields: $e');
+    }
+  }
+
+  // Get attendee's personal stats
+  Future<AttendeeStats> getAttendeePersonalStats(String userId) async {
+    try {
+      // Get all registrations for this user
+      final registrationsSnapshot =
+          await _firestore
+              .collection('registrations')
+              .where('userId', isEqualTo: userId)
+              .get();
+
+      int registeredEvents = registrationsSnapshot.docs.length;
+      int attendedEvents = 0;
+      int upcomingEvents = 0;
+      int notAttendedEvents = 0;
+
+      final now = DateTime.now();
+
+      for (final regDoc in registrationsSnapshot.docs) {
+        final regData = regDoc.data();
+        final eventId = regData['eventId'];
+        final hasAttended = regData['attended'] ?? false;
+
+        try {
+          // Get event details to check if it's upcoming or past
+          final eventDoc =
+              await _firestore.collection('events').doc(eventId).get();
+          if (!eventDoc.exists) continue;
+
+          final eventData = eventDoc.data() as Map<String, dynamic>;
+          final eventDate = (eventData['date'] as Timestamp?)?.toDate();
+
+          if (eventDate != null) {
+            if (eventDate.isAfter(now)) {
+              upcomingEvents++;
+            } else {
+              if (hasAttended) {
+                attendedEvents++;
+              } else {
+                notAttendedEvents++;
+              }
+            }
+          }
+        } catch (e) {
+          continue;
+        }
+      }
+
+      return AttendeeStats(
+        registeredEvents: registeredEvents,
+        attendedEvents: attendedEvents,
+        notAttendedEvents: notAttendedEvents,
+        upcomingEvents: upcomingEvents,
+      );
+    } catch (e) {
+      throw Exception('Failed to get attendee personal stats: $e');
     }
   }
 }

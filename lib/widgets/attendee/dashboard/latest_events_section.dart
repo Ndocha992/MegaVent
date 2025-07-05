@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:megavent/models/event.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/screens/attendee/events_details.dart';
@@ -65,7 +66,7 @@ class LatestEventsSection extends StatelessWidget {
         allLatestEvents.isEmpty
             ? _buildEmptyEventsState()
             : SizedBox(
-              height: 260, // Increased height for better content fit
+              height: 220, // Match LatestEventsCard height
               child: ListView.separated(
                 padding: const EdgeInsets.symmetric(horizontal: 4.0),
                 scrollDirection: Axis.horizontal,
@@ -85,13 +86,14 @@ class LatestEventsSection extends StatelessWidget {
     return GestureDetector(
       onTap: () => _navigateToEventDetails(context, event),
       child: Container(
-        width: 280, // Optimized width
+        width: 280,
+        margin: const EdgeInsets.only(right: 16),
         decoration: AppConstants.cardDecoration,
         child: Column(
           children: [
             // Image section with fixed height
             Container(
-              height: 140,
+              height: 120, // Reduced height to match compact card
               decoration: const BoxDecoration(
                 borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
               ),
@@ -105,7 +107,9 @@ class LatestEventsSection extends StatelessWidget {
             // Content section with controlled height
             Expanded(
               child: Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(
+                  12,
+                ), // Reduced padding for compact look
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -114,54 +118,54 @@ class LatestEventsSection extends StatelessWidget {
                       event.name,
                       style: AppConstants.titleMedium.copyWith(
                         fontWeight: FontWeight.w600,
-                        fontSize: 16,
+                        fontSize: 14, // Smaller font for compact look
                         height: 1.2,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     // Location with better layout
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Icon(
                           Icons.location_on_outlined,
-                          size: 14,
+                          size: 12,
                           color: AppConstants.textSecondaryColor,
                         ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: 4),
                         Expanded(
                           child: Text(
                             event.location,
                             style: AppConstants.bodySmall.copyWith(
                               color: AppConstants.textSecondaryColor,
-                              fontSize: 13,
+                              fontSize: 11,
                               height: 1.3,
                             ),
-                            maxLines: 2,
+                            maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 4),
                     // Date with better formatting
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Icon(
                           Icons.calendar_today_outlined,
-                          size: 14,
+                          size: 12,
                           color: AppConstants.textSecondaryColor,
                         ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: 4),
                         Expanded(
                           child: Text(
                             _formatEventDate(event.startDate),
                             style: AppConstants.bodySmall.copyWith(
                               color: AppConstants.textSecondaryColor,
-                              fontSize: 13,
+                              fontSize: 11,
                               fontWeight: FontWeight.w500,
                             ),
                             maxLines: 1,
@@ -208,13 +212,11 @@ class LatestEventsSection extends StatelessWidget {
             loadingBuilder: (context, child, loadingProgress) {
               if (loadingProgress == null) return child;
               return Container(
-                width: double.infinity,
-                height: double.infinity,
                 color: AppConstants.primaryColor.withOpacity(0.1),
                 child: const Center(
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
+                  child: SpinKitThreeBounce(
                     color: AppConstants.primaryColor,
+                    size: 20.0,
                   ),
                 ),
               );
@@ -247,12 +249,18 @@ class LatestEventsSection extends StatelessWidget {
           // Center icon with better styling
           Center(
             child: Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(
+                12,
+              ), // Smaller padding for compact look
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.2),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.event, color: Colors.white, size: 32),
+              child: const Icon(
+                Icons.event,
+                color: Colors.white,
+                size: 24,
+              ), // Smaller icon
             ),
           ),
         ],
@@ -293,27 +301,16 @@ class LatestEventsSection extends StatelessWidget {
 
   Widget _buildEmptyEventsState() {
     return Container(
-      height: 260,
+      height: 220,
       margin: const EdgeInsets.symmetric(horizontal: 4.0),
-      padding: const EdgeInsets.all(32),
+      padding: const EdgeInsets.all(16),
       decoration: AppConstants.cardDecoration,
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppConstants.primaryColor.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.event_busy_outlined,
-                size: 40,
-                color: AppConstants.primaryColor,
-              ),
-            ),
-            const SizedBox(height: 20),
+            Icon(Icons.event_busy, size: 40, color: AppConstants.primaryColor),
+            const SizedBox(height: 12),
             Text(
               'No Events Available',
               style: AppConstants.titleMedium.copyWith(
@@ -322,14 +319,17 @@ class LatestEventsSection extends StatelessWidget {
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Check back later for exciting events\nin your area',
-              style: AppConstants.bodySmall.copyWith(
-                color: AppConstants.textSecondaryColor,
-                height: 1.4,
+            const SizedBox(height: 6),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                'Check back later for exciting events\nin your area',
+                style: AppConstants.bodySmall.copyWith(
+                  color: AppConstants.textSecondaryColor,
+                  height: 1.4,
+                ),
+                textAlign: TextAlign.center,
               ),
-              textAlign: TextAlign.center,
             ),
           ],
         ),

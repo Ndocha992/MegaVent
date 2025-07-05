@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:megavent/utils/constants.dart';
-import 'package:megavent/models/organizer.dart';
+import 'package:megavent/models/attendee.dart';
 
 class ContactInfoSection extends StatelessWidget {
-  final Organizer organizer;
+  final Attendee attendee;
   final Function(String) onEmailTap;
   final Function(String) onPhoneTap;
 
   const ContactInfoSection({
     super.key,
-    required this.organizer,
+    required this.attendee,
     required this.onEmailTap,
     required this.onPhoneTap,
   });
@@ -22,22 +22,21 @@ class ContactInfoSection extends StatelessWidget {
       [
         _buildInfoRow(
           'Email',
-          organizer.email,
+          attendee.email.isNotEmpty ? attendee.email : 'No email provided',
           Icons.email_outlined,
-          onTap: () => onEmailTap(organizer.email),
+          onTap:
+              attendee.email.isNotEmpty
+                  ? () => onEmailTap(attendee.email)
+                  : null,
         ),
         _buildInfoRow(
           'Phone',
-          organizer.phone,
+          attendee.phone.isNotEmpty ? attendee.phone : 'No phone provided',
           Icons.phone_outlined,
-          onTap: () => onPhoneTap(organizer.phone),
-        ),
-        _buildInfoRow(
-          'Address',
-          organizer.fullAddress.isEmpty
-              ? 'No address added'
-              : organizer.fullAddress,
-          Icons.location_on_outlined,
+          onTap:
+              attendee.phone.isNotEmpty
+                  ? () => onPhoneTap(attendee.phone)
+                  : null,
         ),
       ],
     );
@@ -62,7 +61,8 @@ class ContactInfoSection extends StatelessWidget {
                   child: Icon(icon, color: AppConstants.primaryColor, size: 20),
                 ),
                 const SizedBox(width: 12),
-                Expanded( // Added to prevent overflow
+                Expanded(
+                  // Added to prevent overflow
                   child: Text(
                     title,
                     style: AppConstants.titleLarge,
