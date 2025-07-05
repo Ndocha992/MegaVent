@@ -307,6 +307,18 @@ class _VerificationScreenState extends State<VerificationScreen>
     });
 
     final authService = Provider.of<AuthService>(context, listen: false);
+
+    // First check if user is still authenticated
+    if (authService.currentUser == null) {
+      setState(() {
+        _isLoading = false;
+      });
+
+      // Show dialog asking user to login again
+      _showReLoginDialog();
+      return;
+    }
+
     final result = await authService.resendVerificationEmail();
 
     setState(() {
@@ -331,14 +343,94 @@ class _VerificationScreenState extends State<VerificationScreen>
         ),
       );
     } else {
-      // Show error message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result['message']),
-          backgroundColor: AppConstants.errorColor,
-        ),
-      );
+      // Check if it's an authentication error
+      String errorMessage = result['message'];
+      if (errorMessage.toLowerCase().contains('not signed in') ||
+          errorMessage.toLowerCase().contains('authenticated')) {
+        _showReLoginDialog();
+      } else {
+        // Show other error messages
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: AppConstants.errorColor,
+          ),
+        );
+      }
     }
+  }
+
+  void _showReLoginDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppConstants.warningColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.login,
+                  color: AppConstants.warningColor,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Session Expired',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: AppConstants.primaryColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: const Text(
+            'Your session has expired. Please log in again to resend the verification email.',
+            style: TextStyle(
+              fontSize: 14,
+              color: AppConstants.textSecondaryColor,
+              height: 1.4,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.pushReplacementNamed(context, '/login');
+              },
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text(
+                'Back to Login',
+                style: TextStyle(
+                  color: AppConstants.primaryColor,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _checkVerificationManually() async {

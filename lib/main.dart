@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:megavent/screens/admin/admin_dashboard.dart';
 import 'package:megavent/screens/attendee/attendee_dashboard.dart';
 import 'package:megavent/screens/attendee/events.dart';
 import 'package:megavent/screens/attendee/my_events.dart';
@@ -16,6 +17,7 @@ import 'package:megavent/screens/organizer/events.dart';
 import 'package:megavent/screens/organizer/staff.dart';
 import 'package:megavent/screens/organizer/attendees.dart';
 import 'package:megavent/screens/organizer/profile.dart';
+import 'package:megavent/screens/staff/staff_dashboard.dart';
 import 'package:megavent/services/auth_service.dart';
 import 'package:megavent/services/database_service.dart';
 import 'package:megavent/services/deep_link_service.dart';
@@ -141,7 +143,16 @@ class _MyAppState extends State<MyApp> {
         '/attendee-all-events': (context) => const AttendeeAllEvents(),
         '/attendee-my-events': (context) => const AttendeeMyEvents(),
         '/attendee-profile': (context) => const AttendeeProfile(),
-        // Admin and Staff routes can be added here as needed
+        // Staff routes
+        '/staff-dashboard': (context) => const StaffDashboard(),
+        // '/staff-events': (context) => const Events(),
+        // '/staff-scanqr': (context) => const QRScanner(),
+        // '/staff-staff': (context) => const StaffScreen(),
+        // '/staff-attendees': (context) => const Attendees(),
+        // '/staff-profile': (context) => const Profile(),
+        // '/staff-event-details': (context) => const EventsDetails(),
+        // Admin routes
+        '/admin-dashboard': (context) => const AdminDashboard(),
       },
     );
   }

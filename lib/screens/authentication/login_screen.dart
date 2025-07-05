@@ -248,10 +248,12 @@ class _LoginScreenState extends State<LoginScreen>
         String errorMessage = result['message'] ?? 'Login failed';
         Color backgroundColor = AppConstants.errorColor;
 
-        // Special handling for email verification
-        if (result.containsKey('emailVerified') && !result['emailVerified']) {
+        // Special handling for email verification - check the new flag
+        if (result.containsKey('needsVerification') &&
+            result['needsVerification']) {
           backgroundColor = AppConstants.warningColor;
           // Navigate to verification screen for unverified emails
+          // User is still authenticated, so verification screen will work
           Future.delayed(const Duration(milliseconds: 1000), () {
             if (mounted) {
               Navigator.pushReplacementNamed(context, '/verify-email');
@@ -352,9 +354,8 @@ class _LoginScreenState extends State<LoginScreen>
                                     color: Colors.white.withOpacity(0.6),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: AppConstants.primaryColor.withOpacity(
-                                          0.2,
-                                        ),
+                                        color: AppConstants.primaryColor
+                                            .withOpacity(0.2),
                                         blurRadius: 20,
                                         spreadRadius: 1,
                                         offset: const Offset(0, 10),
@@ -387,7 +388,8 @@ class _LoginScreenState extends State<LoginScreen>
                                     vertical: 8,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: AppConstants.primaryColor.withOpacity(0.1),
+                                    color: AppConstants.primaryColor
+                                        .withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(20),
                                   ),
                                   child: Text(
@@ -425,16 +427,21 @@ class _LoginScreenState extends State<LoginScreen>
                                         TextFormField(
                                           controller: _emailController,
                                           focusNode: _emailFocusNode,
-                                          keyboardType: TextInputType.emailAddress,
-                                          style: AppConstants.bodyLarge.copyWith(
-                                            color: AppConstants.textColor,
-                                          ),
-                                          decoration: AppConstants.inputDecoration(
-                                            labelText: 'Email Address',
-                                            prefixIcon: Icons.email_outlined,
-                                          ),
+                                          keyboardType:
+                                              TextInputType.emailAddress,
+                                          style: AppConstants.bodyLarge
+                                              .copyWith(
+                                                color: AppConstants.textColor,
+                                              ),
+                                          decoration:
+                                              AppConstants.inputDecoration(
+                                                labelText: 'Email Address',
+                                                prefixIcon:
+                                                    Icons.email_outlined,
+                                              ),
                                           validator: (value) {
-                                            if (value == null || value.trim().isEmpty) {
+                                            if (value == null ||
+                                                value.trim().isEmpty) {
                                               return 'Please enter your email address';
                                             }
                                             if (!RegExp(
@@ -457,9 +464,10 @@ class _LoginScreenState extends State<LoginScreen>
                                           controller: _passwordController,
                                           focusNode: _passwordFocusNode,
                                           obscureText: !_passwordVisible,
-                                          style: AppConstants.bodyLarge.copyWith(
-                                            color: AppConstants.textColor,
-                                          ),
+                                          style: AppConstants.bodyLarge
+                                              .copyWith(
+                                                color: AppConstants.textColor,
+                                              ),
                                           decoration: AppConstants.inputDecoration(
                                             labelText: 'Password',
                                             prefixIcon: Icons.lock_outlined,
@@ -467,19 +475,24 @@ class _LoginScreenState extends State<LoginScreen>
                                               icon: Icon(
                                                 _passwordVisible
                                                     ? Icons.visibility_outlined
-                                                    : Icons.visibility_off_outlined,
-                                                color: AppConstants.textSecondaryColor,
+                                                    : Icons
+                                                        .visibility_off_outlined,
+                                                color:
+                                                    AppConstants
+                                                        .textSecondaryColor,
                                                 size: 22,
                                               ),
                                               onPressed: () {
                                                 setState(() {
-                                                  _passwordVisible = !_passwordVisible;
+                                                  _passwordVisible =
+                                                      !_passwordVisible;
                                                 });
                                               },
                                             ),
                                           ),
                                           validator: (value) {
-                                            if (value == null || value.isEmpty) {
+                                            if (value == null ||
+                                                value.isEmpty) {
                                               return 'Please enter your password';
                                             }
                                             if (value.length < 6) {
@@ -487,7 +500,8 @@ class _LoginScreenState extends State<LoginScreen>
                                             }
                                             return null;
                                           },
-                                          onFieldSubmitted: (_) => _handleLogin(),
+                                          onFieldSubmitted:
+                                              (_) => _handleLogin(),
                                         ),
                                         const SizedBox(height: 16),
 
@@ -501,17 +515,21 @@ class _LoginScreenState extends State<LoginScreen>
                                                   '/forgot-password',
                                                 ),
                                             style: TextButton.styleFrom(
-                                              padding: const EdgeInsets.symmetric(
-                                                horizontal: 8,
-                                                vertical: 4,
-                                              ),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 8,
+                                                    vertical: 4,
+                                                  ),
                                             ),
                                             child: Text(
                                               'Forgot Password?',
-                                              style: AppConstants.bodyMedium.copyWith(
-                                                color: AppConstants.primaryColor,
-                                                fontWeight: FontWeight.w600,
-                                              ),
+                                              style: AppConstants.bodyMedium
+                                                  .copyWith(
+                                                    color:
+                                                        AppConstants
+                                                            .primaryColor,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
                                             ),
                                           ),
                                         ),
@@ -520,7 +538,8 @@ class _LoginScreenState extends State<LoginScreen>
                                         // Login Button
                                         AppConstants.gradientButton(
                                           text: 'Sign In',
-                                          onPressed: _isLoading ? () {} : _handleLogin,
+                                          onPressed:
+                                              _isLoading ? () {} : _handleLogin,
                                           isLoading: _isLoading,
                                         ),
                                       ],
