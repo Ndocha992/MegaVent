@@ -1,52 +1,61 @@
 import 'package:flutter/material.dart';
+import 'package:megavent/models/attendee_stats.dart';
 import 'package:megavent/utils/constants.dart';
-import 'package:megavent/models/dashboard_stats.dart'; // Import the correct model
 
 class StatsOverview extends StatelessWidget {
-  final DashboardStats stats; // Using the correct DashboardStats model
+  final AttendeeStats attendeeStats;
 
-  const StatsOverview({super.key, required this.stats});
+  const StatsOverview({
+    super.key,
+    required this.attendeeStats,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Overview', style: AppConstants.headlineSmall),
+        Text('My Event Overview', style: AppConstants.headlineSmall),
         const SizedBox(height: 16),
         Row(
           children: [
             Expanded(
               child: _buildStatCard(
-                'Events',
-                stats.totalEvents.toString(),
-                Icons.event,
+                'Registered',
+                attendeeStats.registeredEvents.toString(),
+                Icons.event_available,
                 AppConstants.primaryColor,
-                _calculateGrowthPercentage('events'),
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 12),
             Expanded(
               child: _buildStatCard(
-                'Attendees',
-                stats.totalAttendees.toString(),
-                Icons.people,
-                AppConstants.secondaryColor,
-                _calculateGrowthPercentage('attendees'),
+                'Attended',
+                attendeeStats.attendedEvents.toString(),
+                Icons.check_circle,
+                AppConstants.successColor,
               ),
             ),
           ],
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         Row(
           children: [
             Expanded(
               child: _buildStatCard(
-                'Staff',
-                stats.totalStaff.toString(),
-                Icons.badge,
+                'Not Attended',
+                attendeeStats.notAttendedEvents.toString(),
+                Icons.cancel,
+                AppConstants.errorColor,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildStatCard(
+                'Upcoming',
+                attendeeStats.upcomingEvents.toString(),
+                Icons.schedule,
                 AppConstants.accentColor,
-                _calculateGrowthPercentage('staff'),
               ),
             ),
           ],
@@ -60,7 +69,6 @@ class StatsOverview extends StatelessWidget {
     String value,
     IconData icon,
     Color color,
-    String growthPercentage,
   ) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -72,67 +80,24 @@ class StatsOverview extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Icon(icon, color: color, size: 24),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  growthPercentage,
-                  style: AppConstants.bodySmall.copyWith(
-                    color: color,
-                    fontWeight: FontWeight.w600,
-                  ),
+              Text(
+                value,
+                style: AppConstants.headlineMedium.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          Text(value, style: AppConstants.headlineLarge.copyWith(color: color)),
-          Text(title, style: AppConstants.bodySmall),
+          const SizedBox(height: 8),
+          Text(
+            title,
+            style: AppConstants.bodyMedium.copyWith(
+              color: AppConstants.textSecondaryColor,
+            ),
+          ),
         ],
       ),
     );
-  }
-
-  // Calculate growth percentage based on available data
-  String _calculateGrowthPercentage(String type) {
-    // Since we don't have historical data, we'll calculate based on current stats
-    switch (type) {
-      case 'events':
-        // Calculate based on completion rate
-        if (stats.totalEvents > 0) {
-          double completionRate =
-              (stats.completedEvents / stats.totalEvents) * 100;
-          return '+${completionRate.toStringAsFixed(0)}%';
-        }
-        return '+0%';
-      case 'attendees':
-        // Calculate based on event capacity utilization
-        if (stats.totalEvents > 0) {
-          // Assuming average event capacity and current attendees
-          double utilizationRate =
-              (stats.totalAttendees / (stats.totalEvents * 100)) * 100;
-          return '+${utilizationRate.clamp(0, 99).toStringAsFixed(0)}%';
-        }
-        return '+0%';
-      case 'staff':
-        // Calculate based on staff per event ratio
-        if (stats.totalEvents > 0) {
-          double staffPerEvent = stats.totalStaff / stats.totalEvents;
-          return '+${(staffPerEvent * 10).clamp(0, 50).toStringAsFixed(0)}%';
-        }
-        return '+0%';
-      case 'active':
-        // Calculate based on active vs total events
-        if (stats.totalEvents > 0) {
-          double activeRate = (stats.activeEvents / stats.totalEvents) * 100;
-          return '+${activeRate.toStringAsFixed(0)}%';
-        }
-        return '+0%';
-      default:
-        return '+0%';
-    }
   }
 }

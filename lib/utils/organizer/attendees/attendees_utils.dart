@@ -1,6 +1,6 @@
 import 'package:megavent/models/attendee.dart';
 import 'package:megavent/models/registration.dart';
-import 'package:megavent/models/attendee_stats.dart';
+import 'package:megavent/models/organizer_attendee_stats.dart';
 
 class AttendeesUtils {
   /// Get comprehensive attendance statistics using both attendees and registrations

@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:megavent/models/event.dart';
 import 'package:megavent/models/attendee.dart';
-import 'package:megavent/models/attendee_stats.dart';
+import 'package:megavent/models/organizer_attendee_stats.dart';
 import 'package:megavent/models/organizer.dart';
 import 'package:megavent/models/staff.dart';
 import 'package:megavent/models/registration.dart';

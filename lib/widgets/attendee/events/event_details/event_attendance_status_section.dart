@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:megavent/models/registration.dart';
 import 'package:megavent/utils/constants.dart';
 
@@ -14,6 +15,64 @@ class EventAttendanceStatusSection extends StatelessWidget {
 
   DateTime? get registrationDate {
     return registration?.registeredAt;
+  }
+
+  String get qrCode {
+    return registration?.qrCode ?? 'No QR Code';
+  }
+
+  Widget _buildQRCode() {
+    final qrData = qrCode;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      child: Center(
+        child: Column(
+          children: [
+            Text(
+              'Event QR Code',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: AppConstants.primaryColor,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey[300]!),
+              ),
+              child: QrImageView(
+                data: qrData,
+                version: QrVersions.auto,
+                size: 180.0,
+                backgroundColor: Colors.white,
+                foregroundColor: Colors.black,
+                errorCorrectionLevel: QrErrorCorrectLevel.M,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Scan this code for attendance',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+                fontStyle: FontStyle.italic,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -106,6 +165,12 @@ class EventAttendanceStatusSection extends StatelessWidget {
               ],
             ),
           ),
+
+          const SizedBox(height: 20),
+
+          // QR Code Section - Added this section
+          if (registration?.qrCode != null && registration!.qrCode.isNotEmpty)
+            _buildQRCode(),
         ],
       ),
     );

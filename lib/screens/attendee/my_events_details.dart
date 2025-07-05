@@ -34,7 +34,7 @@ class AttendeeMyEventsDetails extends StatefulWidget {
 
 class _AttendeeMyEventsDetailsState extends State<AttendeeMyEventsDetails> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  String currentRoute = '/attendee-all-events';
+  String currentRoute = '/attendee-my-events';
 
   late DatabaseService _databaseService;
   Event? currentEvent;
@@ -122,10 +122,8 @@ class _AttendeeMyEventsDetailsState extends State<AttendeeMyEventsDetails> {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null && currentEvent != null) {
       try {
-        final registration = await _databaseService.getRegistrationByUserAndEvent(
-          user.uid,
-          currentEvent!.id,
-        );
+        final registration = await _databaseService
+            .getRegistrationByUserAndEvent(user.uid, currentEvent!.id);
         setState(() {
           currentRegistration = registration;
         });
@@ -144,13 +142,14 @@ class _AttendeeMyEventsDetailsState extends State<AttendeeMyEventsDetails> {
         screenTitle: currentEvent?.name ?? 'Event Details',
       ),
       drawer: AttendeeSidebar(currentRoute: currentRoute),
-      body: _isLoading
-          ? _buildLoadingState()
-          : _error != null
+      body:
+          _isLoading
+              ? _buildLoadingState()
+              : _error != null
               ? _buildErrorState()
               : currentEvent == null
-                  ? _buildNotFoundState()
-                  : _buildEventDetails(),
+              ? _buildNotFoundState()
+              : _buildEventDetails(),
     );
   }
 
@@ -305,9 +304,7 @@ class _AttendeeMyEventsDetailsState extends State<AttendeeMyEventsDetails> {
 
             // Attendance Status Section - only show if user is registered
             if (_isUserRegistered)
-              EventAttendanceStatusSection(
-                registration: currentRegistration,
-              ),
+              EventAttendanceStatusSection(registration: currentRegistration),
 
             // Attendee Event Description
             AttendeeEventDescriptionSection(event: currentEvent!),
