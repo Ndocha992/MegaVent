@@ -528,7 +528,7 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  // Login with email/password - UPDATED METHOD
+  // Login with email/password
   Future<Map<String, dynamic>> loginWithEmailAndPassword(
     String email,
     String password,
@@ -562,12 +562,14 @@ class AuthService extends ChangeNotifier {
           };
         }
 
-        // If user exists in Firestore but email not verified, sign them out
-        await _auth.signOut();
+        // DON'T sign out the user - keep them authenticated for verification
+        // Just return the verification status
         return {
           'success': false,
           'message': 'Please verify your email before logging in',
           'emailVerified': false,
+          'needsVerification': true, // Add this flag
+          'userExists': true,
         };
       }
 
@@ -781,18 +783,56 @@ class AuthService extends ChangeNotifier {
     _setLoading(true);
     try {
       if (currentUser == null) {
-        return {'success': false, 'message': 'No user is currently signed in'};
+        return {
+          'success': false,
+          'message': 'No user is currently signed in. Please login again.',
+        };
       }
 
-      await currentUser!.sendEmailVerification();
-      return {'success': true, 'message': 'Verification email sent'};
+      // Reload user to ensure we have the latest state
+      await currentUser!.reload();
+      User? refreshedUser = _auth.currentUser;
+
+      if (refreshedUser == null) {
+        return {
+          'success': false,
+          'message': 'Session expired. Please login again.',
+        };
+      }
+
+      // Check if email is already verified
+      if (refreshedUser.emailVerified) {
+        return {'success': false, 'message': 'Email is already verified!'};
+      }
+
+      await refreshedUser.sendEmailVerification();
+      return {
+        'success': true,
+        'message': 'Verification email sent successfully!',
+      };
+    } on FirebaseAuthException catch (e) {
+      String errorMessage;
+      switch (e.code) {
+        case 'user-not-found':
+          errorMessage = 'User not found. Please login again.';
+          break;
+        case 'too-many-requests':
+          errorMessage = 'Too many requests. Please wait before trying again.';
+          break;
+        case 'invalid-email':
+          errorMessage = 'Invalid email address.';
+          break;
+        default:
+          errorMessage = 'Failed to send verification email. Please try again.';
+      }
+      return {'success': false, 'message': errorMessage};
     } catch (e) {
       if (e is FirebaseException && e.code == 'unavailable') {
         return {'success': false, 'message': 'No internet connection'};
       }
       return {
         'success': false,
-        'message': 'Failed to send verification email. Please try again.',
+        'message': 'Failed to send verification email. Please try again later.',
       };
     } finally {
       _setLoading(false);
