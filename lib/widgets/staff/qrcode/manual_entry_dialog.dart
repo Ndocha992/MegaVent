@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/models/event.dart';
 
-class ManualEntryDialog extends StatelessWidget {
+class StaffManualEntryDialog extends StatelessWidget {
   final Event? selectedEvent;
   final Function(String) onCheckIn;
 
-  const ManualEntryDialog({
+  const StaffManualEntryDialog({
     super.key,
     required this.selectedEvent,
     required this.onCheckIn,

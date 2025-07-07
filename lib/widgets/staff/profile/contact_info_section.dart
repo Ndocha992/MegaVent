@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/models/organizer.dart';
 
-class ContactInfoSection extends StatelessWidget {
+class StaffContactInfoSection extends StatelessWidget {
   final Organizer organizer;
   final Function(String) onEmailTap;
   final Function(String) onPhoneTap;
 
-  const ContactInfoSection({
+  const StaffContactInfoSection({
     super.key,
     required this.organizer,
     required this.onEmailTap,

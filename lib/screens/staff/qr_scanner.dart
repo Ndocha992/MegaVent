@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:megavent/widgets/organizer/qrcode/manual_entry_dialog.dart';
@@ -15,14 +16,15 @@ import 'package:megavent/widgets/app_bar.dart';
 import 'package:megavent/widgets/organizer/sidebar.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-class QRScanner extends StatefulWidget {
-  const QRScanner({super.key});
+class StaffQRScanner extends StatefulWidget {
+  const StaffQRScanner({super.key});
 
   @override
-  State<QRScanner> createState() => _QRScannerState();
+  State<StaffQRScanner> createState() => _StaffQRScannerState();
 }
 
-class _QRScannerState extends State<QRScanner> with WidgetsBindingObserver {
+class _StaffQRScannerState extends State<StaffQRScanner>
+    with WidgetsBindingObserver {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   late MobileScannerController _scannerController;
   bool _isProcessing = false;
@@ -30,7 +32,7 @@ class _QRScannerState extends State<QRScanner> with WidgetsBindingObserver {
   List<Event> _availableEvents = [];
   Event? _selectedEvent;
   late DatabaseService _databaseService;
-  String currentRoute = '/organizer-scanqr';
+  String currentRoute = '/staff-scanqr';
   bool _isFlashOn = false;
   bool _isCameraPermissionGranted = false;
   bool _isCheckingPermissions = true;
@@ -433,7 +435,11 @@ class _QRScannerState extends State<QRScanner> with WidgetsBindingObserver {
       }
 
       // Check in the attendee
-      await _databaseService.checkInAttendee(attendeeId, _selectedEvent!.id);
+      await _databaseService.checkInAttendee(
+        attendeeId,
+        _selectedEvent!.id,
+        FirebaseAuth.instance.currentUser!.uid,
+      );
 
       setState(() {
         _scanResult = '${attendeeData['fullName']} checked in successfully!';

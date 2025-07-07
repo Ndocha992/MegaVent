@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:megavent/utils/constants.dart';
 
-class LocationInformationSection extends StatelessWidget {
+class StaffLocationInformationSection extends StatelessWidget {
   final TextEditingController addressController;
   final TextEditingController cityController;
   final TextEditingController countryController;
   final VoidCallback onFieldChanged;
 
-  const LocationInformationSection({
+  const StaffLocationInformationSection({
     super.key,
     required this.addressController,
     required this.cityController,

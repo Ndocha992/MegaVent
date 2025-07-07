@@ -12,16 +12,17 @@ import 'package:megavent/widgets/organizer/events/event_details/event_actions/se
 import 'package:megavent/widgets/organizer/events/event_details/event_actions/stat_card.dart';
 import 'bottom_sheet_header.dart';
 
-class AttendeesBottomSheet extends StatefulWidget {
+class StaffAttendeesBottomSheet extends StatefulWidget {
   final Event event;
 
-  const AttendeesBottomSheet({super.key, required this.event});
+  const StaffAttendeesBottomSheet({super.key, required this.event});
 
   @override
-  State<AttendeesBottomSheet> createState() => _AttendeesBottomSheetState();
+  State<StaffAttendeesBottomSheet> createState() =>
+      _StaffAttendeesBottomSheetState();
 }
 
-class _AttendeesBottomSheetState extends State<AttendeesBottomSheet> {
+class _StaffAttendeesBottomSheetState extends State<StaffAttendeesBottomSheet> {
   List<Attendee> _allAttendees = [];
   List<Attendee> _filteredAttendees = [];
   List<Registration> _allRegistrations = [];
@@ -111,7 +112,7 @@ class _AttendeesBottomSheetState extends State<AttendeesBottomSheet> {
       ),
       child: Column(
         children: [
-          BottomSheetHeader(
+          StaffBottomSheetHeader(
             icon: Icons.people,
             title: 'Event Attendees',
             subtitle: '${_allAttendees.length} registered',

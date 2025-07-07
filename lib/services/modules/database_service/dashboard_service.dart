@@ -358,4 +358,23 @@ class DashboardService {
       throw Exception('Failed to get attendee dashboard stats: $e');
     }
   }
+
+  Future<Map<String, dynamic>> getStaffDashboardStats(String staffId) async {
+    try {
+      final registrationsSnapshot =
+          await _firestore
+              .collection('registrations')
+              .where('confirmedBy', isEqualTo: staffId)
+              .get();
+
+      final totalConfirmed = registrationsSnapshot.docs.length;
+
+      return {
+        'totalConfirmed': totalConfirmed,
+        'lastUpdated': DateTime.now().toIso8601String(),
+      };
+    } catch (e) {
+      throw Exception('Failed to get staff stats: $e');
+    }
+  }
 }

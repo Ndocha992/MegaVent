@@ -6,12 +6,12 @@ import 'package:megavent/widgets/organizer/events/event_details/event_actions/at
 import 'package:megavent/widgets/organizer/events/event_details/event_actions/danger_zone.dart';
 import 'package:megavent/widgets/organizer/events/event_details/event_actions/share_event_bottom_sheet.dart';
 
-class EventActionsSection extends StatelessWidget {
+class StaffEventActionsSection extends StatelessWidget {
   final Event event;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
-  const EventActionsSection({
+  const StaffEventActionsSection({
     super.key,
     required this.event,
     required this.onEdit,

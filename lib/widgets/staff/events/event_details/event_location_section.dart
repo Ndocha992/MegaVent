@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:megavent/models/event.dart';
 import 'package:megavent/utils/constants.dart';
 
-class EventLocationSection extends StatelessWidget {
+class StaffEventLocationSection extends StatelessWidget {
   final Event event;
 
-  const EventLocationSection({super.key, required this.event});
+  const StaffEventLocationSection({super.key, required this.event});
 
   @override
   Widget build(BuildContext context) {

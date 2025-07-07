@@ -3,11 +3,11 @@ import 'package:megavent/utils/constants.dart';
 import 'package:megavent/models/organizer.dart';
 import 'package:megavent/services/database_service.dart';
 
-class StatsOverview extends StatelessWidget {
+class StaffStatsOverview extends StatelessWidget {
   final Organizer organizer;
   final DatabaseService databaseService;
 
-  const StatsOverview({
+  const StaffStatsOverview({
     super.key,
     required this.organizer,
     required this.databaseService,

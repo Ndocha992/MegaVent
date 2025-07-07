@@ -14,14 +14,14 @@ import 'package:megavent/models/organizer.dart';
 import 'package:megavent/services/database_service.dart';
 import 'package:provider/provider.dart';
 
-class EditProfile extends StatefulWidget {
-  const EditProfile({super.key});
+class StaffEditProfile extends StatefulWidget {
+  const StaffEditProfile({super.key});
 
   @override
-  State<EditProfile> createState() => _EditProfileState();
+  State<StaffEditProfile> createState() => _StaffEditProfileState();
 }
 
-class _EditProfileState extends State<EditProfile> {
+class _StaffEditProfileState extends State<StaffEditProfile> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   String currentRoute = '/organizer-profile';

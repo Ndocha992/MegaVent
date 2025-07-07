@@ -3,12 +3,12 @@ import 'package:megavent/utils/constants.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:convert';
 
-class ProfileImageSection extends StatelessWidget {
+class StaffProfileImageSection extends StatelessWidget {
   final String? selectedImageBase64;
   final String fullName;
   final Function(String?) onImageChanged;
 
-  const ProfileImageSection({
+  const StaffProfileImageSection({
     super.key,
     required this.selectedImageBase64,
     required this.fullName,

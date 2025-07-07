@@ -15,14 +15,14 @@ import 'package:megavent/screens/organizer/edit_profile.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-class Profile extends StatefulWidget {
-  const Profile({super.key});
+class StaffProfile extends StatefulWidget {
+  const StaffProfile({super.key});
 
   @override
-  State<Profile> createState() => _ProfileState();
+  State<StaffProfile> createState() => _StaffProfileState();
 }
 
-class _ProfileState extends State<Profile> {
+class _StaffProfileState extends State<StaffProfile> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   String currentRoute = '/organizer-profile';
   bool _isLoading = false;

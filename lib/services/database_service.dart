@@ -115,6 +115,18 @@ class DatabaseService extends ChangeNotifier {
   Future<void> deleteStaff(String staffId) =>
       _staffService.deleteStaff(staffId);
 
+  Future<List<Event>> getEventsForOrganizer(String organizerId) {
+    return _eventService.getEventsForOrganizer(organizerId);
+  }
+
+  Future<List<Attendee>> getStaffAttendees(String staffId) {
+    return _attendeeService.getStaffAttendees(staffId);
+  }
+
+  Future<Map<String, dynamic>> getStaffDashboardStats(String staffId) {
+    return _dashboardService.getStaffDashboardStats(staffId);
+  }
+
   /**
    * ====== ATTENDEE METHODS ======
    */
@@ -210,12 +222,12 @@ class DatabaseService extends ChangeNotifier {
     String eventId,
   ) => _registrationService.getRegistrationByUserAndEvent(userId, eventId);
 
-  Future<void> markAttendance(String userId, String eventId) =>
-      _registrationService.markAttendance(userId, eventId);
+  Future<void> markAttendance(String userId, String eventId, String staffId) =>
+      _registrationService.markAttendance(userId, eventId, staffId);
 
   // Mark attendance using QR code
-  Future<void> markAttendanceByQRCode(String qrCodeData) =>
-      _registrationService.markAttendanceByQRCode(qrCodeData);
+  Future<void> markAttendanceByQRCode(String qrCodeData, String staffId) =>
+      _registrationService.markAttendanceByQRCode(qrCodeData, staffId);
 
   // Get registration by QR code
   Future<Registration?> getRegistrationByQRCode(String qrCodeData) =>
@@ -240,8 +252,8 @@ class DatabaseService extends ChangeNotifier {
   ) => _registrationService.getAttendeeByIdAndEvent(attendeeId, eventId);
 
   // Check in attendee (mark as attended)
-  Future<void> checkInAttendee(String attendeeId, String eventId) =>
-      _registrationService.checkInAttendee(attendeeId, eventId);
+  Future<void> checkInAttendee(String attendeeId, String eventId, String staffId) =>
+      _registrationService.checkInAttendee(attendeeId, eventId, staffId);
 
   /**
    * ====== DASHBOARD METHODS ======

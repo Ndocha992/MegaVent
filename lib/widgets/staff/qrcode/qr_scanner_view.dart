@@ -3,13 +3,13 @@ import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:megavent/utils/constants.dart';
 
-class QRScannerView extends StatelessWidget {
+class StaffQRScannerView extends StatelessWidget {
   final bool isProcessing;
   final double screenWidth;
   final MobileScannerController controller;
   final Function(BarcodeCapture) onDetect;
 
-  const QRScannerView({
+  const StaffQRScannerView({
     super.key,
     required this.isProcessing,
     required this.screenWidth,

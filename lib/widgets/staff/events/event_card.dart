@@ -3,12 +3,12 @@ import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/models/event.dart'; // Changed from fake_data import
 
-class EventCard extends StatelessWidget {
+class StaffEventCard extends StatelessWidget {
   final Event event;
   final VoidCallback? onTap;
   final bool isCompact;
 
-  const EventCard({
+  const StaffEventCard({
     super.key,
     required this.event,
     this.onTap,

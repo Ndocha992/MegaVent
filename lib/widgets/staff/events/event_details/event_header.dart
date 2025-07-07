@@ -3,10 +3,10 @@ import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:megavent/models/event.dart';
 import 'package:megavent/utils/constants.dart';
 
-class EventHeader extends StatelessWidget {
+class StaffEventHeader extends StatelessWidget {
   final Event event;
 
-  const EventHeader({super.key, required this.event});
+  const StaffEventHeader({super.key, required this.event});
 
   @override
   Widget build(BuildContext context) {
