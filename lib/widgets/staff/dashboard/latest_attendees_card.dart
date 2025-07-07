@@ -1,9 +1,9 @@
 import 'dart:convert';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:megavent/models/attendee.dart';
 import 'package:megavent/models/registration.dart';
 import 'package:megavent/utils/constants.dart';
-import 'package:megavent/screens/organizer/attendees_details.dart';
 
 class StaffLatestAttendeesCard extends StatelessWidget {
   final List<Attendee> attendees;
@@ -17,43 +17,40 @@ class StaffLatestAttendeesCard extends StatelessWidget {
     required this.eventNames,
   });
 
-  void _onAttendeeTap(BuildContext context, Attendee attendee) {
-    // FIXED: Create registration map using the composite ID
-    final Map<String, Registration> userRegistrationMap = {};
-    for (final registration in registrations) {
-      // Use composite key to match with attendee.id
-      final compositeId = '${registration.userId}_${registration.eventId}';
-      userRegistrationMap[compositeId] = registration;
-    }
-
-    // Get the registration for this attendee using composite ID
-    final Registration? attendeeRegistration = userRegistrationMap[attendee.id];
-
-    // Extract the actual eventId from the composite ID
-    final eventId = attendee.id.split('_').last;
-    final eventName = eventNames[eventId] ?? 'Unknown Event';
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder:
-            (context) => AttendeesDetails(
-              attendee: attendee,
-              registration: attendeeRegistration,
-              eventName: eventName,
-            ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    // FIXED: Create registration map using the composite ID
-    final Map<String, Registration> userRegistrationMap = {};
-    for (final registration in registrations) {
-      // Use composite key to match with attendee.id
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+
+    if (currentUserId == null) {
+      return _buildEmptyAttendeesState(context);
+    }
+
+    // Filter registrations to only show those confirmed by this staff member
+    final staffConfirmedRegistrations =
+        registrations
+            .where(
+              (registration) =>
+                  registration.confirmedBy == currentUserId &&
+                  registration.hasAttended,
+            )
+            .toList();
+
+    // Sort by attended date (most recent first)
+    staffConfirmedRegistrations.sort(
+      (a, b) => (b.attendedAt ?? DateTime.now()).compareTo(
+        a.attendedAt ?? DateTime.now(),
+      ),
+    );
+
+    // Get the attendees for these registrations
+    final staffScannedAttendees = <Attendee>[];
+    for (final registration in staffConfirmedRegistrations.take(5)) {
+      // Find the attendee with composite ID matching the registration
       final compositeId = '${registration.userId}_${registration.eventId}';
-      userRegistrationMap[compositeId] = registration;
+      final attendee = attendees.firstWhere(
+        (attendee) => attendee.id == compositeId,
+      );
+      staffScannedAttendees.add(attendee);
     }
 
     return Column(
@@ -62,36 +59,35 @@ class StaffLatestAttendeesCard extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('Latest Attendees', style: AppConstants.headlineSmall),
-            TextButton(
-              onPressed: () {
-                Navigator.of(
-                  context,
-                ).pushReplacementNamed('/organizer-attendees');
-              },
-              child: const Text('View All'),
-            ),
+            Text('Latest Scanned Attendees', style: AppConstants.headlineSmall),
+            if (staffScannedAttendees.isNotEmpty)
+              Text(
+                'Scanned by you',
+                style: AppConstants.bodySmall.copyWith(
+                  color: AppConstants.textSecondaryColor,
+                ),
+              ),
           ],
         ),
         const SizedBox(height: 16),
-        attendees.isEmpty
+        staffScannedAttendees.isEmpty
             ? _buildEmptyAttendeesState(context)
             : Column(
               children:
-                  attendees
-                      .map(
-                        (attendee) => LatestAttendeeCard(
-                          attendee: attendee,
-                          // FIXED: Use the composite ID to get the correct registration
-                          registration: userRegistrationMap[attendee.id],
-                          // FIXED: Extract eventId from composite ID and get event name
-                          eventName:
-                              eventNames[attendee.id.split('_').last] ??
-                              'Unknown Event',
-                          onTap: () => _onAttendeeTap(context, attendee),
-                        ),
-                      )
-                      .toList(),
+                  staffScannedAttendees.map((attendee) {
+                    // Find the corresponding registration
+                    final registration = staffConfirmedRegistrations.firstWhere(
+                      (reg) => '${reg.userId}_${reg.eventId}' == attendee.id,
+                    );
+
+                    return LatestAttendeeCard(
+                      attendee: attendee,
+                      registration: registration,
+                      eventName:
+                          eventNames[registration.eventId] ?? 'Unknown Event',
+                      confirmedBy: true,
+                    );
+                  }).toList(),
             ),
       ],
     );
@@ -105,20 +101,20 @@ class StaffLatestAttendeesCard extends StatelessWidget {
         child: Column(
           children: [
             Icon(
-              Icons.people_alt_outlined,
+              Icons.qr_code_scanner_outlined,
               size: 48,
               color: AppConstants.primaryColor,
             ),
             const SizedBox(height: 16),
             Text(
-              'No Attendees Yet',
+              'No Scanned Attendees Yet',
               style: AppConstants.titleMedium.copyWith(
                 color: AppConstants.textSecondaryColor,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Attendees will appear here once they register for your events',
+              'Attendees you scan will appear here',
               textAlign: TextAlign.center,
               style: AppConstants.bodySmall.copyWith(
                 color: AppConstants.textSecondaryColor,
@@ -127,12 +123,10 @@ class StaffLatestAttendeesCard extends StatelessWidget {
             const SizedBox(height: 16),
             ElevatedButton.icon(
               onPressed: () {
-                Navigator.of(
-                  context,
-                ).pushReplacementNamed('/organizer-attendees');
+                Navigator.of(context).pushNamed('/staff-scanqr');
               },
-              icon: const Icon(Icons.visibility),
-              label: const Text('View Attendees'),
+              icon: const Icon(Icons.qr_code_scanner),
+              label: const Text('Start Scanning'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppConstants.primaryColor,
                 foregroundColor: Colors.white,
@@ -153,14 +147,14 @@ class LatestAttendeeCard extends StatelessWidget {
   final Attendee attendee;
   final Registration? registration;
   final String eventName;
-  final VoidCallback onTap;
+  final bool confirmedBy;
 
   const LatestAttendeeCard({
     super.key,
     required this.attendee,
     required this.registration,
     required this.eventName,
-    required this.onTap,
+    this.confirmedBy = false,
   });
 
   // Getters that use registration data when available
@@ -170,6 +164,10 @@ class LatestAttendeeCard extends StatelessWidget {
 
   DateTime get registeredAt {
     return registration?.registeredAt ?? attendee.createdAt;
+  }
+
+  DateTime? get attendedAt {
+    return registration?.attendedAt;
   }
 
   String get attendanceStatus {
@@ -277,18 +275,47 @@ class LatestAttendeeCard extends StatelessWidget {
             offset: const Offset(0, 2),
           ),
         ],
+        // Add a subtle border for scanned attendees
+        border:
+            confirmedBy
+                ? Border.all(
+                  color: AppConstants.successColor.withOpacity(0.3),
+                  width: 1,
+                )
+                : null,
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
-          onTap: onTap,
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
                 // Profile Avatar with image or initials
-                _buildAttendeeAvatar(),
+                Stack(
+                  children: [
+                    _buildAttendeeAvatar(),
+                    if (confirmedBy && hasAttended)
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Container(
+                          width: 16,
+                          height: 16,
+                          decoration: const BoxDecoration(
+                            color: AppConstants.successColor,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.check,
+                            color: Colors.white,
+                            size: 12,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Column(
@@ -305,24 +332,24 @@ class LatestAttendeeCard extends StatelessWidget {
                               ),
                             ),
                           ),
-                          if (attendee.isNew)
+                          if (confirmedBy)
                             Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 8,
                                 vertical: 4,
                               ),
                               decoration: BoxDecoration(
-                                color: AppConstants.primaryColor.withOpacity(
+                                color: AppConstants.successColor.withOpacity(
                                   0.1,
                                 ),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
-                                'NEW',
+                                'SCANNED',
                                 style: TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
-                                  color: AppConstants.primaryColor,
+                                  color: AppConstants.successColor,
                                 ),
                               ),
                             ),
@@ -339,7 +366,6 @@ class LatestAttendeeCard extends StatelessWidget {
                         style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                       ),
                       const SizedBox(height: 2),
-                      // FIXED: This will now show the correct event name
                       Text(
                         eventName,
                         style: TextStyle(
@@ -375,7 +401,9 @@ class LatestAttendeeCard extends StatelessWidget {
                           ),
                           const Spacer(),
                           Text(
-                            'Registered ${_formatDate(registeredAt)}',
+                            attendedAt != null
+                                ? 'Scanned ${_formatDate(attendedAt!)}'
+                                : 'Registered ${_formatDate(registeredAt)}',
                             style: TextStyle(
                               fontSize: 12,
                               color: Colors.grey[500],
@@ -385,12 +413,6 @@ class LatestAttendeeCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(width: 16),
-                Icon(
-                  Icons.arrow_forward_ios,
-                  size: 16,
-                  color: AppConstants.textSecondaryColor,
                 ),
               ],
             ),
