@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:megavent/utils/constants.dart';
 
-class PersonalInformationSection extends StatelessWidget {
+class StaffPersonalInformationSection extends StatelessWidget {
   final TextEditingController fullNameController;
   final TextEditingController bioController;
   final VoidCallback onFieldChanged;
 
-  const PersonalInformationSection({
+  const StaffPersonalInformationSection({
     super.key,
     required this.fullNameController,
     required this.bioController,

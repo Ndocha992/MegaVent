@@ -604,4 +604,33 @@ class AttendeeService {
       throw Exception('Failed to get attendee personal stats: $e');
     }
   }
+
+  Future<List<Attendee>> getStaffAttendees(String staffId) async {
+    try {
+      final registrationsSnapshot =
+          await _firestore
+              .collection('registrations')
+              .where('confirmedBy', isEqualTo: staffId)
+              .orderBy('attendedAt', descending: true)
+              .limit(5)
+              .get();
+
+      List<Attendee> attendees = [];
+
+      for (final regDoc in registrationsSnapshot.docs) {
+        final regData = regDoc.data();
+        final userId = regData['userId'];
+
+        final userDoc =
+            await _firestore.collection('attendees').doc(userId).get();
+        if (userDoc.exists) {
+          attendees.add(Attendee.fromFirestore(userDoc));
+        }
+      }
+
+      return attendees;
+    } catch (e) {
+      throw Exception('Failed to get staff attendees: $e');
+    }
+  }
 }

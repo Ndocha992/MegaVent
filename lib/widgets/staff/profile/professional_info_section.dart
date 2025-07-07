@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/models/organizer.dart';
 
-class ProfessionalInfoSection extends StatelessWidget {
+class StaffProfessionalInfoSection extends StatelessWidget {
   final Organizer organizer;
   final Function(String) onWebsiteTap;
 
-  const ProfessionalInfoSection({
+  const StaffProfessionalInfoSection({
     super.key,
     required this.organizer,
     required this.onWebsiteTap,

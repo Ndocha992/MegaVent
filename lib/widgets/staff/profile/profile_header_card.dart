@@ -4,10 +4,10 @@ import 'package:megavent/models/organizer.dart';
 import 'dart:convert';
 import 'dart:typed_data';
 
-class ProfileHeaderCard extends StatelessWidget {
+class StaffProfileHeaderCard extends StatelessWidget {
   final Organizer organizer;
 
-  const ProfileHeaderCard({
+  const StaffProfileHeaderCard({
     super.key,
     required this.organizer,
   });

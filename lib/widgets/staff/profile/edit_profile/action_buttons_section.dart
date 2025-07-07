@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:megavent/utils/constants.dart';
 
-class ActionButtonsSection extends StatelessWidget {
+class StaffActionButtonsSection extends StatelessWidget {
   final bool isLoading;
   final VoidCallback onCancel;
   final VoidCallback onSave;
 
-  const ActionButtonsSection({
+  const StaffActionButtonsSection({
     super.key,
     required this.isLoading,
     required this.onCancel,

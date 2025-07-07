@@ -153,7 +153,7 @@ class RegistrationService {
   }
 
   // Mark attendee as attended using QR code
-  Future<void> markAttendanceByQRCode(String qrCodeData) async {
+  Future<void> markAttendanceByQRCode(String qrCodeData, String staffId) async {
     try {
       final user = _auth.currentUser;
       if (user == null) {
@@ -214,6 +214,7 @@ class RegistrationService {
       batch.update(registrationDoc.reference, {
         'attended': true,
         'attendedAt': DateTime.now(),
+        'confirmedBy': staffId,
       });
 
       // Update event attended count
@@ -231,7 +232,11 @@ class RegistrationService {
   }
 
   // Original mark attendance method (kept for backward compatibility)
-  Future<void> markAttendance(String userId, String eventId) async {
+  Future<void> markAttendance(
+    String userId,
+    String eventId,
+    String staffId,
+  ) async {
     try {
       final user = _auth.currentUser;
       if (user == null) {
@@ -279,6 +284,7 @@ class RegistrationService {
       batch.update(registrationDoc.reference, {
         'attended': true,
         'attendedAt': DateTime.now(),
+        'confirmedBy': staffId,
       });
 
       // Update event attended count
@@ -510,7 +516,11 @@ class RegistrationService {
   }
 
   // Check in attendee (mark as attended)
-  Future<void> checkInAttendee(String attendeeId, String eventId) async {
+  Future<void> checkInAttendee(
+    String attendeeId,
+    String eventId,
+    String staffId,
+  ) async {
     try {
       final user = _auth.currentUser;
       if (user == null) {
@@ -558,6 +568,7 @@ class RegistrationService {
       batch.update(registrationDoc.reference, {
         'attended': true,
         'attendedAt': DateTime.now(),
+        'confirmedBy': staffId,
       });
 
       // Update event attended count

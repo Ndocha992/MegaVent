@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:megavent/utils/constants.dart';
 
-class ShareButtonWidget extends StatelessWidget {
+class StaffShareButtonWidget extends StatelessWidget {
   final IconData icon;
   final String label;
   final Color color;
   final bool isLoading;
   final VoidCallback onTap;
 
-  const ShareButtonWidget({
+  const StaffShareButtonWidget({
     super.key,
     required this.icon,
     required this.label,

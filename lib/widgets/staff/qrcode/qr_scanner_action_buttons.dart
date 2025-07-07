@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/models/event.dart';
 
-class QRScannerActionButtons extends StatelessWidget {
+class StaffQRScannerActionButtons extends StatelessWidget {
   final Event? selectedEvent;
   final VoidCallback onResetScanner;
   final VoidCallback onManualEntry;
 
-  const QRScannerActionButtons({
+  const StaffQRScannerActionButtons({
     super.key,
     required this.selectedEvent,
     required this.onResetScanner,

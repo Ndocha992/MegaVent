@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
-class StatCardWidget extends StatelessWidget {
+class StaffStatCardWidget extends StatelessWidget {
   final String title;
   final String value;
   final Color color;
   final IconData icon;
 
-  const StatCardWidget({
+  const StaffStatCardWidget({
     super.key,
     required this.title,
     required this.value,

@@ -12,16 +12,16 @@ import 'package:megavent/utils/constants.dart';
 import 'bottom_sheet_header.dart';
 import 'package:intl/intl.dart';
 
-class ShareEventBottomSheet extends StatefulWidget {
+class StaffShareEventBottomSheet extends StatefulWidget {
   final Event event;
 
-  const ShareEventBottomSheet({super.key, required this.event});
+  const StaffShareEventBottomSheet({super.key, required this.event});
 
   @override
-  State<ShareEventBottomSheet> createState() => _ShareEventBottomSheetState();
+  State<StaffShareEventBottomSheet> createState() => _StaffShareEventBottomSheetState();
 }
 
-class _ShareEventBottomSheetState extends State<ShareEventBottomSheet> {
+class _StaffShareEventBottomSheetState extends State<StaffShareEventBottomSheet> {
   final GlobalKey _qrKey = GlobalKey();
   bool _isSharing = false;
   String? _registrationLink;
@@ -45,7 +45,7 @@ class _ShareEventBottomSheetState extends State<ShareEventBottomSheet> {
       ),
       child: Column(
         children: [
-          BottomSheetHeader(
+          StaffBottomSheetHeader(
             icon: Icons.share,
             title: 'Share Event',
             subtitle: 'Share registration QR code',

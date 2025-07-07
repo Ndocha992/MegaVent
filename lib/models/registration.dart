@@ -9,7 +9,8 @@ class Registration {
   final DateTime registeredAt;
   final bool hasAttended;
   final DateTime? attendedAt;
-  final String qrCode; // New field for QR code data
+  final String qrCode;
+  final String confirmedBy;
 
   Registration({
     required this.id,
@@ -19,6 +20,7 @@ class Registration {
     this.hasAttended = false,
     this.attendedAt,
     required this.qrCode,
+    required this.confirmedBy,
   });
 
   // Create Registration from Firestore document
@@ -34,6 +36,7 @@ class Registration {
       hasAttended: data['attended'] ?? false,
       attendedAt: (data['attendedAt'] as Timestamp?)?.toDate(),
       qrCode: data['qrCode'] ?? '',
+      confirmedBy: data['confirmedBy'],
     );
   }
 
@@ -46,6 +49,7 @@ class Registration {
       'attended': hasAttended,
       'attendedAt': attendedAt != null ? Timestamp.fromDate(attendedAt!) : null,
       'qrCode': qrCode,
+      'confirmedBy': confirmedBy,
     };
   }
 
@@ -118,6 +122,7 @@ class Registration {
     bool? attended,
     DateTime? attendedAt,
     String? qrCode,
+    String? confirmedBy,
   }) {
     return Registration(
       id: id ?? this.id,
@@ -127,12 +132,13 @@ class Registration {
       hasAttended: attended ?? this.hasAttended,
       attendedAt: attendedAt ?? this.attendedAt,
       qrCode: qrCode ?? this.qrCode,
+      confirmedBy: confirmedBy ?? this.confirmedBy,
     );
   }
 
   @override
   String toString() {
-    return 'Registration(id: $id, userId: $userId, eventId: $eventId, registeredAt: $registeredAt, attended: $hasAttended, attendedAt: $attendedAt, qrCode: $qrCode)';
+    return 'Registration(id: $id, userId: $userId, eventId: $eventId, registeredAt: $registeredAt, attended: $hasAttended, attendedAt: $attendedAt, qrCode: $qrCode, confirmedBy: $confirmedBy)';
   }
 
   @override
@@ -146,7 +152,8 @@ class Registration {
         other.registeredAt == registeredAt &&
         other.hasAttended == hasAttended &&
         other.attendedAt == attendedAt &&
-        other.qrCode == qrCode;
+        other.qrCode == qrCode &&
+        other.confirmedBy == confirmedBy;
   }
 
   @override
@@ -157,6 +164,7 @@ class Registration {
         registeredAt.hashCode ^
         hasAttended.hashCode ^
         attendedAt.hashCode ^
-        qrCode.hashCode;
+        qrCode.hashCode ^
+        confirmedBy.hashCode;
   }
 }

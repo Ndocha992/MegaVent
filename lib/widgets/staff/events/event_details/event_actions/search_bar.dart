@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
-class SearchBarWidget extends StatelessWidget {
+class StaffSearchBarWidget extends StatelessWidget {
   final TextEditingController controller;
   final String hintText;
   final VoidCallback? onClear;
   final ValueChanged<String>? onChanged;
 
-  const SearchBarWidget({
+  const StaffSearchBarWidget({
     super.key,
     required this.controller,
     required this.hintText,

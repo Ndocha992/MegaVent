@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:megavent/widgets/organizer/qrcode/manual_entry_dialog.dart';
@@ -433,7 +434,11 @@ class _QRScannerState extends State<QRScanner> with WidgetsBindingObserver {
       }
 
       // Check in the attendee
-      await _databaseService.checkInAttendee(attendeeId, _selectedEvent!.id);
+      await _databaseService.checkInAttendee(
+        attendeeId,
+        _selectedEvent!.id,
+        FirebaseAuth.instance.currentUser!.uid,
+      );
 
       setState(() {
         _scanResult = '${attendeeData['fullName']} checked in successfully!';

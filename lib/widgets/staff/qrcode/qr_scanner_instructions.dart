@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/models/event.dart';
 
-class QRScannerInstructions extends StatelessWidget {
+class StaffQRScannerInstructions extends StatelessWidget {
   final Event? selectedEvent;
 
-  const QRScannerInstructions({
+  const StaffQRScannerInstructions({
     super.key,
     required this.selectedEvent,
   });

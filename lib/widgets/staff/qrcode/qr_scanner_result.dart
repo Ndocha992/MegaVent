@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:megavent/utils/constants.dart';
 
-class QRScannerResult extends StatelessWidget {
+class StaffQRScannerResult extends StatelessWidget {
   final String scanResult;
 
-  const QRScannerResult({
+  const StaffQRScannerResult({
     super.key,
     required this.scanResult,
   });

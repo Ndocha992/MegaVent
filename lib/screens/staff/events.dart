@@ -11,14 +11,14 @@ import 'package:megavent/widgets/organizer/events/event_filters.dart';
 import 'package:megavent/services/database_service.dart';
 import 'package:megavent/models/event.dart';
 
-class Events extends StatefulWidget {
-  const Events({super.key});
+class StaffEvents extends StatefulWidget {
+  const StaffEvents({super.key});
 
   @override
-  State<Events> createState() => _EventsState();
+  State<StaffEvents> createState() => _StaffEventsState();
 }
 
-class _EventsState extends State<Events> with TickerProviderStateMixin {
+class _StaffEventsState extends State<StaffEvents> with TickerProviderStateMixin {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   String currentRoute = '/organizer-events';
 

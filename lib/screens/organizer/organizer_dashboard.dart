@@ -595,6 +595,7 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
               registeredAt: attendee.createdAt,
               hasAttended: false,
               qrCode: '',
+              confirmedBy: '',
             ),
       );
 

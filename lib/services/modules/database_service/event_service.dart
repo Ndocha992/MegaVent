@@ -354,4 +354,19 @@ class EventService {
           return snapshot.docs.map((doc) => Event.fromFirestore(doc)).toList();
         });
   }
+
+  Future<List<Event>> getEventsForOrganizer(String organizerId) async {
+    try {
+      final querySnapshot =
+          await _firestore
+              .collection('events')
+              .where('organizerId', isEqualTo: organizerId)
+              .orderBy('createdAt', descending: true)
+              .get();
+
+      return querySnapshot.docs.map((doc) => Event.fromFirestore(doc)).toList();
+    } catch (e) {
+      throw Exception('Failed to get events: $e');
+    }
+  }
 }

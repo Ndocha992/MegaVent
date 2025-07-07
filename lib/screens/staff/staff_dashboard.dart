@@ -1,25 +1,25 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
-import 'package:megavent/models/dashboard_stats.dart';
-import 'package:megavent/models/staff.dart';
 import 'package:megavent/models/attendee.dart';
 import 'package:megavent/models/registration.dart';
-import 'package:megavent/screens/organizer/create_events.dart';
-import 'package:megavent/screens/organizer/create_staff.dart';
-import 'package:megavent/screens/organizer/qr_scanner.dart';
+import 'package:megavent/models/staff_dashboard_stats.dart';
+import 'package:megavent/screens/staff/events.dart';
+import 'package:megavent/screens/staff/events_details.dart';
+import 'package:megavent/screens/staff/qr_scanner.dart';
+import 'package:megavent/services/auth_service.dart';
+import 'package:megavent/widgets/staff/dashboard/latest_attendees_card.dart';
+import 'package:megavent/widgets/staff/dashboard/latest_events_card.dart';
+import 'package:megavent/widgets/staff/dashboard/quick_actions_grid.dart';
+import 'package:megavent/widgets/staff/dashboard/stats_overview.dart';
+import 'package:megavent/widgets/staff/dashboard/welcome_card.dart';
 import 'package:megavent/widgets/staff/sidebar.dart';
 import 'package:provider/provider.dart';
-import 'package:megavent/screens/organizer/events_details.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/models/event.dart';
 import 'package:megavent/services/database_service.dart';
 import 'package:megavent/widgets/app_bar.dart';
-import 'package:megavent/widgets/organizer/dashboard/latest_attendees_card.dart';
-import 'package:megavent/widgets/organizer/dashboard/latest_events_card.dart';
-import 'package:megavent/widgets/organizer/dashboard/latest_staff_card.dart';
-import 'package:megavent/widgets/organizer/dashboard/quick_actions_grid.dart';
-import 'package:megavent/widgets/organizer/dashboard/stats_overview.dart';
-import 'package:megavent/widgets/organizer/dashboard/welcome_card.dart';
 
 class StaffDashboard extends StatefulWidget {
   const StaffDashboard({super.key});
@@ -30,87 +30,105 @@ class StaffDashboard extends StatefulWidget {
 
 class _StaffDashboardState extends State<StaffDashboard> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-
   late DatabaseService _databaseService;
+  late AuthService
+  _authService;
   List<Event> _events = [];
   List<Attendee> _attendees = [];
   List<Registration> _registrations = [];
   Map<String, String> _eventIdToNameMap = {};
-  List<Staff> _staff = [];
-  DashboardStats _dashboardStats = DashboardStats(
+  StaffDashboardStats _dashboardStats = StaffDashboardStats(
     totalEvents: 0,
-    totalAttendees: 0,
-    totalStaff: 0,
-    activeEvents: 0,
+    totalConfirmed: 0,
     upcomingEvents: 0,
-    completedEvents: 0,
   );
   bool _isLoading = true;
   String? _error;
+  String? _organizerId;
 
   @override
   void initState() {
     super.initState();
+    _authService = Provider.of<AuthService>(
+      context,
+      listen: false,
+    ); // Fixed: Assign to correct type
     _databaseService = Provider.of<DatabaseService>(context, listen: false);
-    _loadDashboardData();
+    _loadStaffOrganizerId();
+  }
+
+  Future<void> _loadStaffOrganizerId() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final staffDoc =
+            await FirebaseFirestore.instance
+                .collection('staff')
+                .doc(user.uid)
+                .get();
+
+        if (staffDoc.exists) {
+          setState(() {
+            _organizerId = staffDoc.data()?['organizerId'];
+          });
+          await _loadDashboardData(); // Fixed: Added await for proper async handling
+        }
+      }
+    } catch (e) {
+      setState(() {
+        _error = 'Failed to load staff data: ${e.toString()}';
+      });
+    }
   }
 
   Future<void> _loadDashboardData() async {
+    if (_organizerId == null) return;
+
     try {
       setState(() {
         _isLoading = true;
         _error = null;
       });
 
-      // Load all required data in parallel
       final results = await Future.wait([
-        _databaseService.getEvents(),
-        _databaseService
-            .getAllAttendees(), // Get all attendees instead of just latest
-        _databaseService.getAllStaff(),
-        _databaseService.getOrganizerDashboardStats(),
+        _databaseService.getEventsForOrganizer(_organizerId!),
+        _databaseService.getStaffAttendees(
+          FirebaseAuth.instance.currentUser!.uid,
+        ),
+        _databaseService.getStaffDashboardStats(
+          FirebaseAuth.instance.currentUser!.uid,
+        ),
+        _databaseService.getEventIdToNameMap(),
         _databaseService.getAllRegistrations(),
-        _databaseService.getEventIdToNameMap(), // Get event ID to name mapping
       ]);
 
       setState(() {
         _events = results[0] as List<Event>;
-
-        // Get all attendees and then sort by registration date to get latest
-        final allAttendees = results[1] as List<Attendee>;
         final allRegistrations = results[4] as List<Registration>;
-
-        // Sort attendees by registration date (most recent first) and take top 5
         _attendees =
-            _sortAttendeesByRegistrationDate(
-              allAttendees,
-              allRegistrations,
-            ).take(5).toList();
+            (results[1] as List<Attendee>)
+              ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        _attendees =
+            _attendees.take(5).toList(); // Fixed: Separate the take operation
 
-        // Get only the latest 5 staff members, sorted by hire date
-        final allStaff = results[2] as List<Staff>;
-        _staff =
-            allStaff
-              ..sort((a, b) => b.hiredAt.compareTo(a.hiredAt))
-              ..take(5).toList();
-
-        // Convert Map data to DashboardStats object
-        final statsData = results[3] as Map<String, dynamic>;
-        _dashboardStats = DashboardStats(
-          totalEvents: statsData['totalEvents'] ?? 0,
-          totalAttendees: statsData['totalAttendees'] ?? 0,
-          totalStaff: statsData['totalStaff'] ?? 0,
-          activeEvents: statsData['activeEvents'] ?? 0,
-          upcomingEvents: statsData['upcomingEvents'] ?? 0,
-          completedEvents: statsData['completedEvents'] ?? 0,
-        );
+        final statsData = results[2] as Map<String, dynamic>;
 
         // Get all registrations for activity tracking
         _registrations = allRegistrations;
 
-        // Get event ID to name mapping
-        _eventIdToNameMap = results[5] as Map<String, String>;
+        // Calculate stats from events
+        final totalEvents = _events.length;
+        final now = DateTime.now();
+        final upcomingEvents =
+            _events.where((event) => event.startDate.isAfter(now)).length;
 
+        _dashboardStats = StaffDashboardStats(
+          totalEvents: totalEvents,
+          totalConfirmed: statsData['totalConfirmed'] ?? 0,
+          upcomingEvents: upcomingEvents,
+        );
+
+        _eventIdToNameMap = results[3] as Map<String, String>;
         _isLoading = false;
       });
     } catch (e) {
@@ -118,50 +136,21 @@ class _StaffDashboardState extends State<StaffDashboard> {
         _error = 'Failed to load dashboard data: ${e.toString()}';
         _isLoading = false;
       });
-
       debugPrint('Dashboard loading error: $e');
     }
   }
 
-  // Helper method to sort attendees by registration date
-  List<Attendee> _sortAttendeesByRegistrationDate(
-    List<Attendee> attendees,
-    List<Registration> registrations,
-  ) {
-    // Create a map of composite ID to registration date for quick lookup
-    final registrationDateMap = <String, DateTime>{};
-
-    for (final registration in registrations) {
-      final compositeId = '${registration.userId}_${registration.eventId}';
-      registrationDateMap[compositeId] = registration.registeredAt;
-    }
-
-    // Sort attendees by registration date (most recent first)
-    attendees.sort((a, b) {
-      final dateA = registrationDateMap[a.id] ?? a.createdAt;
-      final dateB = registrationDateMap[b.id] ?? b.createdAt;
-      return dateB.compareTo(dateA);
-    });
-
-    return attendees;
-  }
-
   void _handleQuickAction(String action) {
     switch (action) {
-      case 'create_event':
+      case 'event':
         Navigator.of(
           context,
-        ).push(MaterialPageRoute(builder: (context) => const CreateEvents()));
-        break;
-      case 'add_staff':
-        Navigator.of(
-          context,
-        ).push(MaterialPageRoute(builder: (context) => const CreateStaff()));
+        ).push(MaterialPageRoute(builder: (context) => const StaffEvents()));
         break;
       case 'scan_qr':
         Navigator.of(
           context,
-        ).push(MaterialPageRoute(builder: (context) => const QRScanner()));
+        ).push(MaterialPageRoute(builder: (context) => const StaffQRScanner()));
         break;
     }
   }
@@ -242,21 +231,19 @@ class _StaffDashboardState extends State<StaffDashboard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const WelcomeCard(),
+            const StaffWelcomeCard(),
             const SizedBox(height: 24),
-            StatsOverview(stats: _dashboardStats),
+            StaffStatsOverview(stats: _dashboardStats),
             const SizedBox(height: 24),
-            LatestEventsCard(limit: 5),
+            StaffLatestEventsCard(limit: 5),
             const SizedBox(height: 24),
-            LatestAttendeesCard(
+            StaffLatestAttendeesCard(
               attendees: _attendees,
               registrations: _registrations,
               eventNames: _eventIdToNameMap,
             ),
             const SizedBox(height: 24),
-            LatestStaffCard(staff: _staff),
-            const SizedBox(height: 24),
-            QuickActionsGrid(onNavigate: _handleQuickAction),
+            StaffQuickActionsGrid(onNavigate: _handleQuickAction),
             const SizedBox(height: 24),
             _buildRecentActivity(),
             const SizedBox(height: 24),
@@ -373,9 +360,10 @@ class _StaffDashboardState extends State<StaffDashboard> {
     final upcomingEvents =
         _events
             .where((event) => event.startDate.isAfter(DateTime.now()))
-            .toList()
-          ..sort((a, b) => a.startDate.compareTo(b.startDate))
-          ..take(3).toList();
+            .toList();
+    upcomingEvents.sort((a, b) => a.startDate.compareTo(b.startDate));
+    final limitedEvents =
+        upcomingEvents.take(3).toList(); // Fixed: Separate the operations
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -393,20 +381,20 @@ class _StaffDashboardState extends State<StaffDashboard> {
           ],
         ),
         const SizedBox(height: 16),
-        upcomingEvents.isEmpty
+        limitedEvents.isEmpty
             ? _buildEmptyUpcomingEventsState()
             : ListView.separated(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              itemCount: upcomingEvents.length,
+              itemCount: limitedEvents.length,
               separatorBuilder: (context, index) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
-                final event = upcomingEvents[index];
+                final event = limitedEvents[index];
                 return GestureDetector(
                   onTap: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (context) => EventsDetails(event: event),
+                        builder: (context) => StaffEventsDetails(event: event),
                       ),
                     );
                   },
@@ -539,24 +527,6 @@ class _StaffDashboardState extends State<StaffDashboard> {
                 color: AppConstants.textSecondaryColor,
               ),
             ),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (context) => const CreateEvents()),
-                );
-              },
-              icon: const Icon(Icons.add),
-              label: const Text('Create Event'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppConstants.primaryColor,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 10,
-                ),
-              ),
-            ),
           ],
         ),
       ),
@@ -564,75 +534,28 @@ class _StaffDashboardState extends State<StaffDashboard> {
   }
 
   List<Map<String, dynamic>> _getRecentActivities() {
-    if (_events.isEmpty && _attendees.isEmpty && _staff.isEmpty) {
-      return [];
-    }
+    final currentUserId =
+        FirebaseAuth
+            .instance
+            .currentUser
+            ?.uid; // Fixed: Get current user ID safely
+    if (currentUserId == null) return [];
 
-    List<Map<String, dynamic>> activities = [];
-
-    // Add recent event-related activities
-    for (final event in _events.take(2)) {
-      activities.add({
-        'title': 'Event "${event.name}" created',
-        'time': _getTimeAgo(event.createdAt),
-        'icon': Icons.event,
-        'color': AppConstants.primaryColor,
-        'isNew': _isRecent(event.createdAt),
-        'dateTime': event.createdAt,
-      });
-    }
-
-    // Add recent attendee activities - use registeredAt from Registration model
-    for (final attendee in _attendees.take(2)) {
-      // Find the registration for this attendee using composite ID
-      final registration = _registrations.firstWhere(
-        (reg) => '${reg.userId}_${reg.eventId}' == attendee.id,
-        orElse:
-            () => Registration(
-              id: '',
-              userId: attendee.id.split('_').first,
-              eventId: attendee.id.split('_').last,
-              registeredAt: attendee.createdAt,
-              hasAttended: false,
-              qrCode: '',
-            ),
-      );
-
-      // Get event name for the activity
-      final eventName =
-          _eventIdToNameMap[registration.eventId] ?? 'Unknown Event';
-
-      activities.add({
-        'title': '${attendee.fullName} registered for "$eventName"',
-        'time': _getTimeAgo(registration.registeredAt),
-        'icon': Icons.person_add,
-        'color': AppConstants.successColor,
-        'isNew': _isRecent(registration.registeredAt),
-        'dateTime': registration.registeredAt,
-      });
-    }
-
-    // Add recent staff activities
-    for (final staff in _staff.take(2)) {
-      activities.add({
-        'title': 'Staff member ${staff.name} joined',
-        'time': _getTimeAgo(staff.hiredAt),
-        'icon': Icons.badge,
-        'color': AppConstants.accentColor,
-        'isNew': _isRecent(staff.hiredAt),
-        'dateTime': staff.hiredAt,
-      });
-    }
-
-    // Sort by most recent
-    activities.sort((a, b) => b['dateTime'].compareTo(a['dateTime']));
-
-    // Remove the dateTime field after sorting
-    for (var activity in activities) {
-      activity.remove('dateTime');
-    }
-
-    return activities.take(6).toList();
+    return _registrations
+        .where((reg) => reg.confirmedBy == currentUserId)
+        .where(
+          (reg) => reg.attendedAt != null,
+        ) // Fixed: Ensure attendedAt is not null
+        .map(
+          (reg) => {
+            'title': 'Confirmed attendance for ${reg.userId}',
+            'time': _getTimeAgo(reg.attendedAt!),
+            'icon': Icons.check_circle,
+            'color': AppConstants.successColor,
+            'isNew': true,
+          },
+        )
+        .toList();
   }
 
   String _getTimeAgo(DateTime dateTime) {
@@ -650,12 +573,6 @@ class _StaffDashboardState extends State<StaffDashboard> {
     } else {
       return '${(difference.inDays / 7).floor()} weeks ago';
     }
-  }
-
-  bool _isRecent(DateTime dateTime) {
-    final now = DateTime.now();
-    final difference = now.difference(dateTime);
-    return difference.inHours < 6;
   }
 
   String _getMonthName(int month) {
