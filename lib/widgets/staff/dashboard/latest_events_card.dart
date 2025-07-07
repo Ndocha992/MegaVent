@@ -1,10 +1,11 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:megavent/screens/staff/events_details.dart';
+import 'package:megavent/widgets/staff/events/event_card.dart';
 import 'package:provider/provider.dart';
-import 'package:megavent/screens/organizer/events_details.dart';
-import 'package:megavent/screens/organizer/create_events.dart';
 import 'package:megavent/utils/constants.dart';
-import 'package:megavent/widgets/organizer/events/event_card.dart';
 import 'package:megavent/services/database_service.dart';
 import 'package:megavent/models/event.dart';
 
@@ -22,50 +23,68 @@ class _StaffLatestEventsCardState extends State<StaffLatestEventsCard> {
   List<Event> _events = [];
   bool _isLoading = true;
   String? _error;
+  String? _organizerId;
 
   @override
   void initState() {
     super.initState();
     _databaseService = Provider.of<DatabaseService>(context, listen: false);
-    _loadLatestEvents();
+    _loadStaffOrganizerId();
+  }
+
+  Future<void> _loadStaffOrganizerId() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final staffDoc =
+            await FirebaseFirestore.instance
+                .collection('staff')
+                .doc(user.uid)
+                .get();
+
+        if (staffDoc.exists) {
+          setState(() {
+            _organizerId = staffDoc.data()?['organizerId'];
+          });
+          await _loadLatestEvents();
+        }
+      }
+    } catch (e) {
+      setState(() {
+        _error = 'Failed to load staff data: ${e.toString()}';
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _loadLatestEvents() async {
+    if (_organizerId == null) return;
+
     try {
       setState(() {
         _isLoading = true;
         _error = null;
       });
 
-      // Listen to organizer events stream
-      _databaseService.streamEventsByOrganizer().listen(
-        (events) {
-          if (mounted) {
-            // Sort events by creation date (most recent first) and limit
-            final sortedEvents = List<Event>.from(events);
-            sortedEvents.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-
-            final limitedEvents =
-                widget.limit != null
-                    ? sortedEvents.take(widget.limit!).toList()
-                    : sortedEvents;
-
-            setState(() {
-              _events = limitedEvents;
-              _isLoading = false;
-              _error = null;
-            });
-          }
-        },
-        onError: (error) {
-          if (mounted) {
-            setState(() {
-              _error = 'Failed to load events: ${error.toString()}';
-              _isLoading = false;
-            });
-          }
-        },
+      // Get events for the staff's organizer
+      final events = await _databaseService.getEventsForOrganizer(
+        _organizerId!,
       );
+
+      // Sort events by creation date (most recent first) and limit
+      final sortedEvents = List<Event>.from(events);
+      sortedEvents.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+      final limitedEvents =
+          widget.limit != null
+              ? sortedEvents.take(widget.limit!).toList()
+              : sortedEvents;
+
+      setState(() {
+        _events = limitedEvents;
+        _isLoading = false;
+        _error = null;
+      });
     } catch (e) {
       setState(() {
         _error = 'Failed to load events: ${e.toString()}';
@@ -85,7 +104,7 @@ class _StaffLatestEventsCardState extends State<StaffLatestEventsCard> {
             Text('Latest Events', style: AppConstants.headlineSmall),
             TextButton(
               onPressed: () {
-                Navigator.of(context).pushReplacementNamed('/organizer-events');
+                Navigator.of(context).pushNamed('/staff-events');
               },
               child: const Text('View All'),
             ),
@@ -120,13 +139,13 @@ class _StaffLatestEventsCardState extends State<StaffLatestEventsCard> {
           return Container(
             width: 280,
             margin: const EdgeInsets.only(right: 16),
-            child: EventCard(
+            child: StaffEventCard(
               event: event,
               isCompact: true, // Use compact version
               onTap: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (context) => EventsDetails(event: event),
+                    builder: (context) => StaffEventsDetails(event: event),
                   ),
                 );
               },
@@ -226,36 +245,10 @@ class _StaffLatestEventsCardState extends State<StaffLatestEventsCard> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Text(
-                'Create your first event to get started',
+                'Events will appear here once your Organizer creates events',
                 textAlign: TextAlign.center,
                 style: AppConstants.bodySmall.copyWith(
                   color: AppConstants.textSecondaryColor,
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: 140,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => const CreateEvents(),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.add, size: 16),
-                label: const Text(
-                  'Create Event',
-                  style: TextStyle(fontSize: 12),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppConstants.primaryColor,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
                 ),
               ),
             ),

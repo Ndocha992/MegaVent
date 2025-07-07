@@ -17,6 +17,10 @@ import 'package:megavent/screens/organizer/events.dart';
 import 'package:megavent/screens/organizer/staff.dart';
 import 'package:megavent/screens/organizer/attendees.dart';
 import 'package:megavent/screens/organizer/profile.dart';
+import 'package:megavent/screens/staff/events.dart';
+import 'package:megavent/screens/staff/events_details.dart';
+import 'package:megavent/screens/staff/profile.dart';
+import 'package:megavent/screens/staff/qr_scanner.dart';
 import 'package:megavent/screens/staff/staff_dashboard.dart';
 import 'package:megavent/services/auth_service.dart';
 import 'package:megavent/services/database_service.dart';
@@ -145,12 +149,10 @@ class _MyAppState extends State<MyApp> {
         '/attendee-profile': (context) => const AttendeeProfile(),
         // Staff routes
         '/staff-dashboard': (context) => const StaffDashboard(),
-        // '/staff-events': (context) => const Events(),
-        // '/staff-scanqr': (context) => const QRScanner(),
-        // '/staff-staff': (context) => const StaffScreen(),
-        // '/staff-attendees': (context) => const Attendees(),
-        // '/staff-profile': (context) => const Profile(),
-        // '/staff-event-details': (context) => const EventsDetails(),
+        '/staff-events': (context) => const StaffEvents(),
+        '/staff-scanqr': (context) => const StaffQRScanner(),
+        '/staff-profile': (context) => const StaffProfile(),
+        '/staff-event-details': (context) => const StaffEventsDetails(),
         // Admin routes
         '/admin-dashboard': (context) => const AdminDashboard(),
       },

@@ -31,8 +31,7 @@ class StaffDashboard extends StatefulWidget {
 class _StaffDashboardState extends State<StaffDashboard> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   late DatabaseService _databaseService;
-  late AuthService
-  _authService;
+  late AuthService _authService;
   List<Event> _events = [];
   List<Attendee> _attendees = [];
   List<Registration> _registrations = [];
@@ -235,7 +234,7 @@ class _StaffDashboardState extends State<StaffDashboard> {
             const SizedBox(height: 24),
             StaffStatsOverview(stats: _dashboardStats),
             const SizedBox(height: 24),
-            StaffLatestEventsCard(limit: 5),
+            const StaffLatestEventsCard(limit: 5),
             const SizedBox(height: 24),
             StaffLatestAttendeesCard(
               attendees: _attendees,
