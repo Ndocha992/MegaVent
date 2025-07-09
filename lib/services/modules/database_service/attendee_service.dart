@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:megavent/models/attendee.dart';
 import 'package:megavent/models/attendee_stats.dart';
+import 'package:megavent/models/registration.dart';
 
 class AttendeeService {
   final FirebaseFirestore _firestore;
@@ -65,9 +66,12 @@ class AttendeeService {
               await _firestore.collection('events').doc(eventId).get();
           if (!eventDoc.exists) continue;
 
+          // Composite ID format
+          final compositeId = Registration.getCompositeId(userId, eventId);
+
           // Create Attendee object with unique ID combining userId and eventId
           final attendee = Attendee(
-            id: '${userId}_$eventId', // Make it unique per registration
+            id: compositeId,
             fullName: userData['fullName'] ?? userData['name'] ?? 'Unknown',
             email: userData['email'] ?? '',
             phone: userData['phone'] ?? '',
@@ -145,10 +149,13 @@ class AttendeeService {
               await _firestore.collection('events').doc(eventId).get();
           if (!eventDoc.exists) continue;
 
+          // Composite ID format
+          final compositeId = Registration.getCompositeId(userId, eventId);
+
           // Create Attendee object with unique ID combining userId and eventId
           // This ensures each registration creates a separate attendee entry
           final attendee = Attendee(
-            id: '${userId}_$eventId', // Unique ID per registration
+            id: compositeId,
             fullName: userData['fullName'] ?? userData['name'] ?? 'Unknown',
             email: userData['email'] ?? '',
             phone: userData['phone'] ?? '',
@@ -217,9 +224,12 @@ class AttendeeService {
 
           final userData = userDoc.data() as Map<String, dynamic>;
 
+          // Composite ID format
+          final compositeId = Registration.getCompositeId(userId, eventId);
+
           // Create Attendee object with unique ID
           final attendee = Attendee(
-            id: '${userId}_$eventId',
+            id: compositeId,
             fullName: userData['fullName'] ?? userData['name'] ?? 'Unknown',
             email: userData['email'] ?? '',
             phone: userData['phone'] ?? '',
@@ -277,9 +287,12 @@ class AttendeeService {
                   await _firestore.collection('events').doc(eventId).get();
               if (!eventDoc.exists) continue;
 
+              // Composite ID format
+              final compositeId = Registration.getCompositeId(userId, eventId);
+
               // Create Attendee object with unique ID
               final attendee = Attendee(
-                id: '${userId}_$eventId',
+                id: compositeId,
                 fullName: userData['fullName'] ?? userData['name'] ?? 'Unknown',
                 email: userData['email'] ?? '',
                 phone: userData['phone'] ?? '',

@@ -1,21 +1,102 @@
 import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:megavent/models/attendee.dart';
 import 'package:megavent/models/registration.dart';
 import 'package:megavent/utils/constants.dart';
 
-class StaffLatestAttendeesCard extends StatelessWidget {
+class StaffLatestAttendeesCard extends StatefulWidget {
   final List<Attendee> attendees;
   final List<Registration> registrations;
-  final Map<String, String> eventNames;
 
   const StaffLatestAttendeesCard({
     super.key,
     required this.attendees,
     required this.registrations,
-    required this.eventNames,
   });
+
+  @override
+  State<StaffLatestAttendeesCard> createState() =>
+      _StaffLatestAttendeesCardState();
+}
+
+class _StaffLatestAttendeesCardState extends State<StaffLatestAttendeesCard> {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  Map<String, String> eventNames = {};
+  bool isLoadingEvents = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchEventNames();
+  }
+
+  Future<void> _fetchEventNames() async {
+    try {
+      final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+      if (currentUserId == null) {
+        setState(() {
+          isLoadingEvents = false;
+        });
+        return;
+      }
+
+      // Get staff confirmed registrations first
+      final staffConfirmedRegistrations =
+          widget.registrations
+              .where(
+                (registration) =>
+                    registration.confirmedBy == currentUserId &&
+                    registration.hasAttended &&
+                    registration.attendedAt != null,
+              )
+              .toList();
+
+      if (staffConfirmedRegistrations.isEmpty) {
+        setState(() {
+          isLoadingEvents = false;
+        });
+        return;
+      }
+
+      // Get unique event IDs
+      final eventIds =
+          staffConfirmedRegistrations
+              .map((registration) => registration.eventId)
+              .toSet()
+              .toList();
+
+      // Fetch event names from Firestore
+      final Map<String, String> fetchedEventNames = {};
+
+      for (String eventId in eventIds) {
+        try {
+          final eventDoc =
+              await _firestore.collection('events').doc(eventId).get();
+          if (eventDoc.exists) {
+            final eventData = eventDoc.data() as Map<String, dynamic>;
+            fetchedEventNames[eventId] = eventData['name'] ?? 'Unknown Event';
+          } else {
+            fetchedEventNames[eventId] = 'Unknown Event';
+          }
+        } catch (e) {
+          debugPrint('Error fetching event $eventId: $e');
+          fetchedEventNames[eventId] = 'Unknown Event';
+        }
+      }
+
+      setState(() {
+        eventNames = fetchedEventNames;
+        isLoadingEvents = false;
+      });
+    } catch (e) {
+      debugPrint('Error fetching event names: $e');
+      setState(() {
+        isLoadingEvents = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,11 +108,12 @@ class StaffLatestAttendeesCard extends StatelessWidget {
 
     // Filter registrations to only show those confirmed by this staff member
     final staffConfirmedRegistrations =
-        registrations
+        widget.registrations
             .where(
               (registration) =>
                   registration.confirmedBy == currentUserId &&
-                  registration.hasAttended,
+                  registration.hasAttended &&
+                  registration.attendedAt != null,
             )
             .toList();
 
@@ -42,15 +124,42 @@ class StaffLatestAttendeesCard extends StatelessWidget {
       ),
     );
 
-    // Get the attendees for these registrations
-    final staffScannedAttendees = <Attendee>[];
+    // Get the attendees for these registrations with null safety
+    final staffScannedAttendees = <Map<String, dynamic>>[];
     for (final registration in staffConfirmedRegistrations.take(5)) {
-      // Find the attendee with composite ID matching the registration
-      final compositeId = '${registration.userId}_${registration.eventId}';
-      final attendee = attendees.firstWhere(
-        (attendee) => attendee.id == compositeId,
-      );
-      staffScannedAttendees.add(attendee);
+      try {
+        // Find the attendee by userId (not composite ID)
+        final attendee = widget.attendees.cast<Attendee?>().firstWhere(
+          (attendee) => attendee?.id == registration.userId,
+          orElse: () => null,
+        );
+
+        if (attendee != null) {
+          staffScannedAttendees.add({
+            'attendee': attendee,
+            'registration': registration,
+          });
+        } else {
+          // Create a placeholder attendee if not found
+          staffScannedAttendees.add({
+            'attendee': Attendee(
+              id: registration.userId,
+              fullName: 'Unknown Attendee',
+              email: 'unknown@example.com',
+              phone: 'N/A',
+              profileImage: null,
+              isApproved: true,
+              createdAt: registration.registeredAt,
+              updatedAt: registration.registeredAt,
+            ),
+            'registration': registration,
+          });
+        }
+      } catch (e) {
+        // Log the error but continue processing other registrations
+        debugPrint('Error processing registration ${registration.userId}: $e');
+        continue;
+      }
     }
 
     return Column(
@@ -70,25 +179,32 @@ class StaffLatestAttendeesCard extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 16),
-        staffScannedAttendees.isEmpty
-            ? _buildEmptyAttendeesState(context)
-            : Column(
-              children:
-                  staffScannedAttendees.map((attendee) {
-                    // Find the corresponding registration
-                    final registration = staffConfirmedRegistrations.firstWhere(
-                      (reg) => '${reg.userId}_${reg.eventId}' == attendee.id,
-                    );
-
-                    return LatestAttendeeCard(
-                      attendee: attendee,
-                      registration: registration,
-                      eventName:
-                          eventNames[registration.eventId] ?? 'Unknown Event',
-                      confirmedBy: true,
-                    );
-                  }).toList(),
+        if (isLoadingEvents)
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.all(32.0),
+              child: CircularProgressIndicator(),
             ),
+          )
+        else if (staffScannedAttendees.isEmpty)
+          _buildEmptyAttendeesState(context)
+        else
+          Column(
+            children:
+                staffScannedAttendees.map((data) {
+                  final attendee = data['attendee'] as Attendee;
+                  final registration = data['registration'] as Registration;
+                  final eventName =
+                      eventNames[registration.eventId] ?? 'Loading...';
+
+                  return LatestAttendeeCard(
+                    attendee: attendee,
+                    registration: registration,
+                    eventName: eventName,
+                    confirmedBy: true,
+                  );
+                }).toList(),
+          ),
       ],
     );
   }
@@ -236,6 +352,8 @@ class LatestAttendeeCard extends StatelessWidget {
   }
 
   String _getInitials(String name) {
+    if (name.isEmpty) return 'U';
+
     List<String> names = name.split(' ');
     if (names.length >= 2) {
       return '${names[0][0]}${names[1][0]}'.toUpperCase();
@@ -325,7 +443,9 @@ class LatestAttendeeCard extends StatelessWidget {
                         children: [
                           Expanded(
                             child: Text(
-                              attendee.fullName,
+                              attendee.fullName.isNotEmpty
+                                  ? attendee.fullName
+                                  : 'Unknown User',
                               style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,

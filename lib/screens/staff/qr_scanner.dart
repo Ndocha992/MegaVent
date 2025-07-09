@@ -1,19 +1,23 @@
+import 'dart:convert';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypto/crypto.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:megavent/widgets/organizer/qrcode/manual_entry_dialog.dart';
-import 'package:megavent/widgets/organizer/qrcode/qr_scanner_action_buttons.dart';
-import 'package:megavent/widgets/organizer/qrcode/qr_scanner_header.dart';
-import 'package:megavent/widgets/organizer/qrcode/qr_scanner_instructions.dart';
-import 'package:megavent/widgets/organizer/qrcode/qr_scanner_result.dart';
-import 'package:megavent/widgets/organizer/qrcode/qr_scanner_view.dart';
+import 'package:megavent/widgets/staff/qrcode/manual_entry_dialog.dart';
+import 'package:megavent/widgets/staff/qrcode/qr_scanner_action_buttons.dart';
+import 'package:megavent/widgets/staff/qrcode/qr_scanner_header.dart';
+import 'package:megavent/widgets/staff/qrcode/qr_scanner_instructions.dart';
+import 'package:megavent/widgets/staff/qrcode/qr_scanner_result.dart';
+import 'package:megavent/widgets/staff/qrcode/qr_scanner_view.dart';
+import 'package:megavent/widgets/staff/sidebar.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/services/database_service.dart';
 import 'package:megavent/models/event.dart';
 import 'package:megavent/widgets/app_bar.dart';
-import 'package:megavent/widgets/organizer/sidebar.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class StaffQRScanner extends StatefulWidget {
@@ -36,6 +40,7 @@ class _StaffQRScannerState extends State<StaffQRScanner>
   bool _isFlashOn = false;
   bool _isCameraPermissionGranted = false;
   bool _isCheckingPermissions = true;
+  String? _organizerId;
 
   @override
   void initState() {
@@ -43,7 +48,7 @@ class _StaffQRScannerState extends State<StaffQRScanner>
     WidgetsBinding.instance.addObserver(this);
     _databaseService = Provider.of<DatabaseService>(context, listen: false);
     _checkAndRequestPermissions();
-    _loadAvailableEvents();
+    _loadStaffOrganizerId();
   }
 
   @override
@@ -67,6 +72,58 @@ class _StaffQRScannerState extends State<StaffQRScanner>
         break;
       case AppLifecycleState.inactive:
         break;
+    }
+  }
+
+  // Load organizer ID
+  Future<void> _loadStaffOrganizerId() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final staffDoc =
+            await FirebaseFirestore.instance
+                .collection('staff')
+                .doc(user.uid)
+                .get();
+
+        if (staffDoc.exists) {
+          setState(() {
+            _organizerId = staffDoc.data()?['organizerId'];
+          });
+          await _loadAvailableEvents(); // Then load events
+        }
+      }
+    } catch (e) {
+      _showErrorSnackBar('Failed to load staff data: ${e.toString()}');
+    }
+  }
+
+  // Update event loading to use organizer ID
+  Future<void> _loadAvailableEvents() async {
+    if (_organizerId == null) return;
+
+    try {
+      final events = await _databaseService.getEventsForOrganizer(
+        _organizerId!,
+      );
+      final activeEvents =
+          events
+              .where(
+                (event) =>
+                    event.startDate.isAfter(DateTime.now()) ||
+                    (event.startDate.isBefore(DateTime.now()) &&
+                        event.endDate.isAfter(DateTime.now())),
+              )
+              .toList();
+
+      setState(() {
+        _availableEvents = activeEvents;
+        if (activeEvents.isNotEmpty) {
+          _selectedEvent = activeEvents.first;
+        }
+      });
+    } catch (e) {
+      _showErrorSnackBar('Failed to load events: ${e.toString()}');
     }
   }
 
@@ -166,30 +223,6 @@ class _StaffQRScannerState extends State<StaffQRScanner>
     });
   }
 
-  Future<void> _loadAvailableEvents() async {
-    try {
-      final events = await _databaseService.getEvents();
-      final activeEvents =
-          events
-              .where(
-                (event) =>
-                    event.startDate.isAfter(DateTime.now()) ||
-                    (event.startDate.isBefore(DateTime.now()) &&
-                        event.endDate.isAfter(DateTime.now())),
-              )
-              .toList();
-
-      setState(() {
-        _availableEvents = activeEvents;
-        if (activeEvents.isNotEmpty) {
-          _selectedEvent = activeEvents.first;
-        }
-      });
-    } catch (e) {
-      _showErrorSnackBar('Failed to load events: ${e.toString()}');
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
@@ -221,14 +254,14 @@ class _StaffQRScannerState extends State<StaffQRScanner>
           ),
         ],
       ),
-      drawer: OrganizerSidebar(currentRoute: currentRoute),
+      drawer: StaffSidebar(currentRoute: currentRoute),
       body: SingleChildScrollView(
         child: ConstrainedBox(
           constraints: BoxConstraints(minHeight: availableHeight),
           child: Column(
             children: [
               // Header Section with Event Selection
-              QRScannerHeader(
+              StaffQRScannerHeader(
                 availableEvents: _availableEvents,
                 selectedEvent: _selectedEvent,
                 onEventChanged: (Event? newEvent) {
@@ -319,7 +352,7 @@ class _StaffQRScannerState extends State<StaffQRScanner>
                 )
               else
                 // QR Scanner View - Fixed height based on screen size
-                QRScannerView(
+                StaffQRScannerView(
                   isProcessing: _isProcessing,
                   screenWidth: screenWidth,
                   controller: _scannerController,
@@ -334,14 +367,14 @@ class _StaffQRScannerState extends State<StaffQRScanner>
                 child: Column(
                   children: [
                     if (_scanResult.isEmpty) ...[
-                      QRScannerInstructions(selectedEvent: _selectedEvent),
+                      StaffQRScannerInstructions(selectedEvent: _selectedEvent),
                     ] else ...[
-                      QRScannerResult(scanResult: _scanResult),
+                      StaffQRScannerResult(scanResult: _scanResult),
                     ],
                     const SizedBox(height: 16),
 
                     // Action Buttons
-                    QRScannerActionButtons(
+                    StaffQRScannerActionButtons(
                       selectedEvent: _selectedEvent,
                       onResetScanner: _resetScanner,
                       onManualEntry: _manualEntry,
@@ -399,56 +432,76 @@ class _StaffQRScannerState extends State<StaffQRScanner>
     }
   }
 
-  // Replace the _checkInAttendee method in your QRScanner class
-
   Future<void> _checkInAttendee(String qrCode) async {
-    try {
-      // Parse QR code data (assuming it contains attendee ID or attendee information)
-      // QR code can be in formats:
-      // 1. Just attendee ID: "attendee123"
-      // 2. Attendee ID with event: "attendee123:event456"
-      // 3. Full format: "attendee123:event456:email@example.com"
+    if (_isProcessing || _selectedEvent == null || _organizerId == null) return;
 
-      final qrParts = qrCode.split(':');
-      if (qrParts.isEmpty) {
-        throw Exception('Invalid QR code format');
-      }
+    setState(() => _isProcessing = true);
+
+    try {
+      await _scannerController.stop();
+      HapticFeedback.mediumImpact();
+
+      // Parse QR code using new format
+      final qrParts = qrCode.split('|');
+      if (qrParts.length < 5) throw Exception('Invalid QR code format');
 
       final attendeeId = qrParts[0];
+      final eventId = qrParts[1];
+      final timestamp = qrParts[2];
+      final organizerId = qrParts[3];
+      final hash = qrParts[4];
 
-      // Get the attendee from the database for the selected event
-      final attendeeData = await _databaseService.getAttendeeByIdAndEvent(
-        attendeeId,
-        _selectedEvent!.id,
-      );
+      // Verify QR code integrity
+      final rawData = '$attendeeId|$eventId|$timestamp|$organizerId';
+      final bytes = utf8.encode(rawData);
+      final digest = sha256.convert(bytes);
+      final expectedHash = digest.toString().substring(0, 16);
 
-      if (attendeeData == null) {
-        throw Exception('Attendee not found for this event');
+      if (hash != expectedHash) {
+        throw Exception('Invalid or tampered QR code');
       }
 
-      // Check if attendee is already checked in
+      // Verify event belongs to organizer
+      if (organizerId != _organizerId) {
+        throw Exception('Attendee not registered for your organizer\'s event');
+      }
+
+      // Get attendee data
+      final attendeeData = await _databaseService.getAttendeeByIdAndEvent(
+        attendeeId,
+        eventId,
+      );
+
+      if (attendeeData == null) throw Exception('Attendee not found');
+
+      // Check if already attended
       if (attendeeData['hasAttended'] == true) {
-        setState(() {
-          _scanResult = '${attendeeData['fullName']} is already checked in!';
-        });
+        setState(
+          () => _scanResult = '${attendeeData['fullName']} already checked in!',
+        );
         return;
       }
 
-      // Check in the attendee
+      // Check in attendee
       await _databaseService.checkInAttendee(
         attendeeId,
-        _selectedEvent!.id,
+        eventId,
         FirebaseAuth.instance.currentUser!.uid,
       );
 
-      setState(() {
-        _scanResult = '${attendeeData['fullName']} checked in successfully!';
-      });
+      setState(
+        () =>
+            _scanResult =
+                '${attendeeData['fullName']} checked in successfully!',
+      );
     } catch (e) {
-      setState(() {
-        _scanResult = 'Error: ${e.toString()}';
-      });
+      setState(() => _scanResult = 'Error: ${e.toString()}');
       _showErrorSnackBar(e.toString());
+    } finally {
+      setState(() => _isProcessing = false);
+      await Future.delayed(const Duration(seconds: 3));
+      if (mounted && _isCameraPermissionGranted)
+        await _scannerController.start();
     }
   }
 
@@ -467,14 +520,61 @@ class _StaffQRScannerState extends State<StaffQRScanner>
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return ManualEntryDialog(
+        return StaffManualEntryDialog(
           selectedEvent: _selectedEvent,
-          onCheckIn: (String attendeeId) {
-            _processQRCode(attendeeId);
+          onCheckIn: (String attendeeId, String eventId) {
+            _processManualEntry(attendeeId, eventId);
           },
         );
       },
     );
+  }
+
+  Future<void> _processManualEntry(String attendeeId, String eventId) async {
+    if (_isProcessing || _organizerId == null) return;
+
+    setState(() => _isProcessing = true);
+
+    try {
+      // Get attendee data
+      final attendeeData = await _databaseService.getAttendeeByIdAndEvent(
+        attendeeId,
+        eventId,
+      );
+
+      if (attendeeData == null) throw Exception('Attendee not found');
+
+      // Verify event belongs to organizer
+      if (attendeeData['organizerId'] != _organizerId) {
+        throw Exception('Attendee not registered for your organizer\'s event');
+      }
+
+      // Check if already attended
+      if (attendeeData['hasAttended'] == true) {
+        setState(
+          () => _scanResult = '${attendeeData['fullName']} already checked in!',
+        );
+        return;
+      }
+
+      // Check in attendee
+      await _databaseService.checkInAttendee(
+        attendeeId,
+        eventId,
+        FirebaseAuth.instance.currentUser!.uid,
+      );
+
+      setState(
+        () =>
+            _scanResult =
+                '${attendeeData['fullName']} checked in successfully!',
+      );
+    } catch (e) {
+      setState(() => _scanResult = 'Error: ${e.toString()}');
+      _showErrorSnackBar(e.toString());
+    } finally {
+      setState(() => _isProcessing = false);
+    }
   }
 
   void _resetScanner() {

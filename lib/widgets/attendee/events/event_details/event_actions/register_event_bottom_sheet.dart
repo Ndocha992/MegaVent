@@ -756,7 +756,7 @@ class _AttendeeRegisterEventBottomSheetState
     }
   }
 
-  void _handleRegistration() async {
+  Future<void> _handleRegistration() async {
     if (_isEventFull() || _isRegistered) return;
 
     // Check if event has ended before proceeding
@@ -787,13 +787,10 @@ class _AttendeeRegisterEventBottomSheetState
 
       _showSuccessSnackBar('Successfully registered for ${widget.event.name}!');
 
-      // Auto-close after successful registration (optional)
+      // Navigate to my events after delay
       Future.delayed(const Duration(seconds: 2), () {
         if (mounted) {
-          Navigator.pop(
-            context,
-            true,
-          ); // Return true to indicate successful registration
+          Navigator.of(context).pushReplacementNamed('/attendee-my-events');
         }
       });
     } catch (e) {

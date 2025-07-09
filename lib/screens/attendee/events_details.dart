@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:megavent/services/auth_service.dart';
 import 'package:megavent/widgets/attendee/events/event_details/event_actions_section.dart';
 import 'package:megavent/widgets/attendee/events/event_details/event_description_section.dart';
 import 'package:megavent/widgets/attendee/events/event_details/event_header.dart';
@@ -14,10 +15,15 @@ import 'package:megavent/services/database_service.dart';
 
 class AttendeeEventsDetails extends StatefulWidget {
   final Event? event;
-  final String?
-  eventId; // Add eventId parameter for cases where we only have ID
+  final String? eventId;
+  final bool autoRegister;
 
-  const AttendeeEventsDetails({super.key, this.event, this.eventId});
+  const AttendeeEventsDetails({
+    super.key,
+    this.event,
+    this.eventId,
+    this.autoRegister = false,
+  });
 
   @override
   State<AttendeeEventsDetails> createState() => _AttendeeEventsDetailsState();
@@ -37,6 +43,13 @@ class _AttendeeEventsDetailsState extends State<AttendeeEventsDetails> {
     super.initState();
     _databaseService = Provider.of<DatabaseService>(context, listen: false);
     _initializeEvent();
+
+    // Auto-register if flag is set
+    if (widget.autoRegister) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _autoRegisterForEvent();
+      });
+    }
   }
 
   Future<void> _initializeEvent() async {
@@ -70,6 +83,46 @@ class _AttendeeEventsDetailsState extends State<AttendeeEventsDetails> {
         _error = 'Failed to load event: ${e.toString()}';
         _isLoading = false;
       });
+    }
+  }
+
+  void _autoRegisterForEvent() async {
+    if (currentEvent == null) return;
+
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final databaseService = Provider.of<DatabaseService>(
+      context,
+      listen: false,
+    );
+
+    if (!authService.isLoggedIn) {
+      _showErrorSnackBar('Please login to register');
+      return;
+    }
+
+    try {
+      // Show loading
+      _showLoadingDialog('Registering...');
+
+      // Register user
+      await databaseService.registerUserForEvent(
+        authService.currentUser!.uid,
+        currentEvent!.id,
+      );
+
+      // Hide loading
+      Navigator.of(context, rootNavigator: true).pop();
+
+      // Show success
+      _showSuccessSnackBar('Registered for ${currentEvent!.name}');
+
+      // Navigate to my events
+      Future.delayed(const Duration(seconds: 2), () {
+        Navigator.of(context).pushReplacementNamed('/attendee-my-events');
+      });
+    } catch (e) {
+      Navigator.of(context, rootNavigator: true).pop();
+      _showErrorSnackBar('Registration failed: ${e.toString()}');
     }
   }
 
@@ -255,6 +308,77 @@ class _AttendeeEventsDetailsState extends State<AttendeeEventsDetails> {
           ],
         ),
       ),
+    );
+  }
+
+  void _showSuccessSnackBar(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle, color: Colors.white),
+              const SizedBox(width: 8),
+              Expanded(child: Text(message)),
+            ],
+          ),
+          backgroundColor: AppConstants.successColor,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
+  void _showErrorSnackBar(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.error_outline, color: Colors.white),
+              const SizedBox(width: 8),
+              Expanded(child: Text(message)),
+            ],
+          ),
+          backgroundColor: AppConstants.errorColor,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
+  }
+
+  void _showLoadingDialog(String message) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (context) => AlertDialog(
+            content: Row(
+              children: [
+                Container(
+                  color: AppConstants.primaryColor.withOpacity(0.1),
+                  child: const Center(
+                    child: SpinKitThreeBounce(
+                      color: AppConstants.primaryColor,
+                      size: 20.0,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 20),
+                Expanded(
+                  child: Text(message, style: const TextStyle(fontSize: 16)),
+                ),
+              ],
+            ),
+          ),
     );
   }
 }

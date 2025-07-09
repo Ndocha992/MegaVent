@@ -4,7 +4,7 @@ import 'package:megavent/models/event.dart';
 
 class StaffManualEntryDialog extends StatelessWidget {
   final Event? selectedEvent;
-  final Function(String) onCheckIn;
+  final Function(String, String) onCheckIn;
 
   const StaffManualEntryDialog({
     super.key,
@@ -17,9 +17,7 @@ class StaffManualEntryDialog extends StatelessWidget {
     final TextEditingController attendeeIdController = TextEditingController();
 
     return AlertDialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       title: Row(
         children: [
           Container(
@@ -30,11 +28,7 @@ class StaffManualEntryDialog extends StatelessWidget {
               ),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Icon(
-              Icons.keyboard,
-              color: Colors.white,
-              size: 20,
-            ),
+            child: const Icon(Icons.keyboard, color: Colors.white, size: 20),
           ),
           const SizedBox(width: 12),
           const Text('Manual Check-in'),
@@ -53,11 +47,7 @@ class StaffManualEntryDialog extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  Icon(
-                    Icons.event,
-                    color: AppConstants.primaryColor,
-                    size: 16,
-                  ),
+                  Icon(Icons.event, color: AppConstants.primaryColor, size: 16),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
@@ -117,7 +107,7 @@ class StaffManualEntryDialog extends StatelessWidget {
             final attendeeId = attendeeIdController.text.trim();
             if (attendeeId.isNotEmpty) {
               Navigator.of(context).pop();
-              onCheckIn(attendeeId);
+              onCheckIn(attendeeId, selectedEvent!.id);
             }
           },
           style: ElevatedButton.styleFrom(

@@ -36,6 +36,7 @@ class _StaffDashboardState extends State<StaffDashboard> {
   List<Attendee> _attendees = [];
   List<Registration> _registrations = [];
   Map<String, String> _eventIdToNameMap = {};
+  Map<String, String> _attendeeIdToNameMap = {}; // Add this line
   StaffDashboardStats _dashboardStats = StaffDashboardStats(
     totalEvents: 0,
     totalConfirmed: 0,
@@ -48,10 +49,7 @@ class _StaffDashboardState extends State<StaffDashboard> {
   @override
   void initState() {
     super.initState();
-    _authService = Provider.of<AuthService>(
-      context,
-      listen: false,
-    ); // Fixed: Assign to correct type
+    _authService = Provider.of<AuthService>(context, listen: false);
     _databaseService = Provider.of<DatabaseService>(context, listen: false);
     _loadStaffOrganizerId();
   }
@@ -70,7 +68,7 @@ class _StaffDashboardState extends State<StaffDashboard> {
           setState(() {
             _organizerId = staffDoc.data()?['organizerId'];
           });
-          await _loadDashboardData(); // Fixed: Added await for proper async handling
+          await _loadDashboardData();
         }
       }
     } catch (e) {
@@ -107,13 +105,28 @@ class _StaffDashboardState extends State<StaffDashboard> {
         _attendees =
             (results[1] as List<Attendee>)
               ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-        _attendees =
-            _attendees.take(5).toList(); // Fixed: Separate the take operation
+        _attendees = _attendees.take(5).toList();
 
         final statsData = results[2] as Map<String, dynamic>;
 
         // Get all registrations for activity tracking
         _registrations = allRegistrations;
+
+        // Create event ID to name map from the events we have
+        _eventIdToNameMap = {};
+        for (final event in _events) {
+          _eventIdToNameMap[event.id] = event.name;
+        }
+
+        // Also add from the database service result
+        final dbEventNames = results[3] as Map<String, String>;
+        _eventIdToNameMap.addAll(dbEventNames);
+
+        // Create attendee ID to name map
+        _attendeeIdToNameMap = {};
+        for (final attendee in _attendees) {
+          _attendeeIdToNameMap[attendee.id] = attendee.fullName;
+        }
 
         // Calculate stats from events
         final totalEvents = _events.length;
@@ -127,7 +140,6 @@ class _StaffDashboardState extends State<StaffDashboard> {
           upcomingEvents: upcomingEvents,
         );
 
-        _eventIdToNameMap = results[3] as Map<String, String>;
         _isLoading = false;
       });
     } catch (e) {
@@ -239,7 +251,6 @@ class _StaffDashboardState extends State<StaffDashboard> {
             StaffLatestAttendeesCard(
               attendees: _attendees,
               registrations: _registrations,
-              eventNames: _eventIdToNameMap,
             ),
             const SizedBox(height: 24),
             StaffQuickActionsGrid(onNavigate: _handleQuickAction),
@@ -361,8 +372,7 @@ class _StaffDashboardState extends State<StaffDashboard> {
             .where((event) => event.startDate.isAfter(DateTime.now()))
             .toList();
     upcomingEvents.sort((a, b) => a.startDate.compareTo(b.startDate));
-    final limitedEvents =
-        upcomingEvents.take(3).toList(); // Fixed: Separate the operations
+    final limitedEvents = upcomingEvents.take(3).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -533,27 +543,24 @@ class _StaffDashboardState extends State<StaffDashboard> {
   }
 
   List<Map<String, dynamic>> _getRecentActivities() {
-    final currentUserId =
-        FirebaseAuth
-            .instance
-            .currentUser
-            ?.uid; // Fixed: Get current user ID safely
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
     if (currentUserId == null) return [];
 
     return _registrations
         .where((reg) => reg.confirmedBy == currentUserId)
-        .where(
-          (reg) => reg.attendedAt != null,
-        ) // Fixed: Ensure attendedAt is not null
-        .map(
-          (reg) => {
-            'title': 'Confirmed attendance for ${reg.userId}',
+        .where((reg) => reg.attendedAt != null)
+        .map((reg) {
+          // Get attendee name from the map, fallback to userId if not found
+          final attendeeName = _attendeeIdToNameMap[reg.userId] ?? reg.userId;
+
+          return {
+            'title': 'Confirmed attendance for $attendeeName',
             'time': _getTimeAgo(reg.attendedAt!),
             'icon': Icons.check_circle,
             'color': AppConstants.successColor,
             'isNew': true,
-          },
-        )
+          };
+        })
         .toList();
   }
 

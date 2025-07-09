@@ -11,6 +11,46 @@ class RegistrationService {
 
   RegistrationService(this._firestore, this._auth, this._notifier);
 
+  // Helper method to get organizer ID for current user (staff or organizer)
+  Future<String?> _getCurrentUserOrganizerId() async {
+    final user = _auth.currentUser;
+    if (user == null) return null;
+
+    try {
+      // First check if user is an organizer
+      final organizerDoc = await _firestore.collection('organizers').doc(user.uid).get();
+      if (organizerDoc.exists) {
+        return user.uid; // User is an organizer
+      }
+
+      // If not an organizer, check if user is staff
+      final staffDoc = await _firestore.collection('staff').doc(user.uid).get();
+      if (staffDoc.exists) {
+        return staffDoc.data()?['organizerId']; // Return staff's organizer ID
+      }
+
+      return null;
+    } catch (e) {
+      throw Exception('Failed to get organizer ID: $e');
+    }
+  }
+
+  // Helper method to verify if current user can manage an event
+  Future<bool> _canManageEvent(String eventId) async {
+    try {
+      final organizerId = await _getCurrentUserOrganizerId();
+      if (organizerId == null) return false;
+
+      final eventDoc = await _firestore.collection('events').doc(eventId).get();
+      if (!eventDoc.exists) return false;
+
+      final eventData = eventDoc.data() as Map<String, dynamic>;
+      return eventData['organizerId'] == organizerId;
+    } catch (e) {
+      return false;
+    }
+  }
+
   /**
    * ====== QR CODE & REGISTRATION METHODS ======
    */
@@ -31,7 +71,7 @@ class RegistrationService {
     }
   }
 
-  // ADD THIS NEW METHOD - Get registration by user and event
+  // Get registration by user and event
   Future<Registration?> getRegistrationByUserAndEvent(
     String userId,
     String eventId,
@@ -90,6 +130,7 @@ class RegistrationService {
 
       final event = Event.fromFirestore(doc);
       final now = DateTime.now();
+      final organizerId = doc.data()?['organizerId'] ?? '';
 
       // Parse event end time
       final endTimeParts = event.endTime.split(':');
@@ -123,6 +164,7 @@ class RegistrationService {
         uid,
         eventId,
         registrationTime,
+        organizerId,
       );
 
       // Use batch write for consistency
@@ -136,6 +178,8 @@ class RegistrationService {
         'registeredAt': registrationTime,
         'attended': false,
         'qrCode': qrCodeData,
+        'organizerId': organizerId,
+        // Don't set confirmedBy initially - it will be null
       });
 
       // Update event registered count
@@ -174,17 +218,9 @@ class RegistrationService {
         throw Exception('Invalid or tampered QR code');
       }
 
-      // Check if event belongs to current organizer
-      final eventDoc = await _firestore.collection('events').doc(eventId).get();
-      if (!eventDoc.exists) {
-        throw Exception('Event not found');
-      }
-
-      final event = Event.fromFirestore(eventDoc);
-      if (event.organizerId != user.uid) {
-        throw Exception(
-          'Unauthorized: You can only mark attendance for your own events',
-        );
+      // Check if current user can manage this event
+      if (!await _canManageEvent(eventId)) {
+        throw Exception('Unauthorized: You can only mark attendance for your organizer\'s events');
       }
 
       // Find the registration using QR code
@@ -231,7 +267,7 @@ class RegistrationService {
     }
   }
 
-  // Original mark attendance method (kept for backward compatibility)
+  // Original mark attendance method (modified to work with staff)
   Future<void> markAttendance(
     String userId,
     String eventId,
@@ -243,17 +279,9 @@ class RegistrationService {
         throw Exception('User not authenticated');
       }
 
-      // Check if event belongs to current organizer
-      final eventDoc = await _firestore.collection('events').doc(eventId).get();
-      if (!eventDoc.exists) {
-        throw Exception('Event not found');
-      }
-
-      final event = Event.fromFirestore(eventDoc);
-      if (event.organizerId != user.uid) {
-        throw Exception(
-          'Unauthorized: You can only mark attendance for your own events',
-        );
+      // Check if current user can manage this event
+      if (!await _canManageEvent(eventId)) {
+        throw Exception('Unauthorized: You can only mark attendance for your organizer\'s events');
       }
 
       // Find the registration
@@ -390,7 +418,7 @@ class RegistrationService {
    * ====== ORGANIZER REGISTRATION METHODS ======
    */
 
-  // Get all registrations for current organizer's events
+  // Get all registrations for current organizer's events (modified for staff)
   Future<List<Registration>> getAllRegistrations() async {
     try {
       final user = _auth.currentUser;
@@ -398,11 +426,16 @@ class RegistrationService {
         throw Exception('User not authenticated');
       }
 
-      // Get all events by this organizer first
+      final organizerId = await _getCurrentUserOrganizerId();
+      if (organizerId == null) {
+        throw Exception('No organizer found for current user');
+      }
+
+      // Get all events by this organizer
       final eventsSnapshot =
           await _firestore
               .collection('events')
-              .where('organizerId', isEqualTo: user.uid)
+              .where('organizerId', isEqualTo: organizerId)
               .get();
 
       if (eventsSnapshot.docs.isEmpty) {
@@ -427,13 +460,11 @@ class RegistrationService {
     }
   }
 
-  // Add these methods to your RegistrationService class
-
   /**
    * ====== QR SCANNER SPECIFIC METHODS ======
    */
 
-  // Get attendee by ID and event ID (returns combined attendee + registration data)
+  // Get attendee by ID and event ID (modified for staff)
   Future<Map<String, dynamic>?> getAttendeeByIdAndEvent(
     String attendeeId,
     String eventId,
@@ -444,15 +475,9 @@ class RegistrationService {
         throw Exception('User not authenticated');
       }
 
-      // Check if event belongs to current organizer
-      final eventDoc = await _firestore.collection('events').doc(eventId).get();
-      if (!eventDoc.exists) {
-        return null;
-      }
-
-      final eventData = eventDoc.data() as Map<String, dynamic>;
-      if (eventData['organizerId'] != user.uid) {
-        throw Exception('Unauthorized: Event does not belong to you');
+      // Check if current user can manage this event
+      if (!await _canManageEvent(eventId)) {
+        throw Exception('Unauthorized: You can only access attendees for your organizer\'s events');
       }
 
       // Get registration record
@@ -479,33 +504,36 @@ class RegistrationService {
 
       final attendeeData = attendeeDoc.data() as Map<String, dynamic>;
 
+      // Get event details
+      final eventDoc = await _firestore.collection('events').doc(eventId).get();
+      if (!eventDoc.exists) {
+        return null;
+      }
+
+      final eventData = eventDoc.data() as Map<String, dynamic>;
+
       // Return combined data
       return {
         'id': attendeeId,
         'fullName':
             attendeeData['fullName'] ?? attendeeData['name'] ?? 'Unknown',
+        'organizerId': eventData['organizerId'] ?? '',
         'email': attendeeData['email'] ?? '',
         'phone': attendeeData['phone'] ?? '',
         'profileImage': attendeeData['profileImage'],
         'isApproved': attendeeData['isApproved'] ?? true,
         'createdAt':
-            attendeeData['createdAt'] != null
-                ? (attendeeData['createdAt'] as Timestamp).toDate()
-                : DateTime.now(),
+            (attendeeData['createdAt'] as Timestamp?)?.toDate() ??
+            DateTime.now(),
         'updatedAt':
-            attendeeData['updatedAt'] != null
-                ? (attendeeData['updatedAt'] as Timestamp).toDate()
-                : DateTime.now(),
+            (attendeeData['updatedAt'] as Timestamp?)?.toDate() ??
+            DateTime.now(),
         // Registration specific fields
         'hasAttended': registrationData['attended'] ?? false,
         'registeredAt':
-            registrationData['registeredAt'] != null
-                ? (registrationData['registeredAt'] as Timestamp).toDate()
-                : DateTime.now(),
-        'attendedAt':
-            registrationData['attendedAt'] != null
-                ? (registrationData['attendedAt'] as Timestamp).toDate()
-                : null,
+            (registrationData['registeredAt'] as Timestamp?)?.toDate() ??
+            DateTime.now(),
+        'attendedAt': (registrationData['attendedAt'] as Timestamp?)?.toDate(),
         'eventName': eventData['name'] ?? 'Unknown Event',
         'eventId': eventId,
         'qrCode': registrationData['qrCode'] ?? '',
@@ -515,7 +543,7 @@ class RegistrationService {
     }
   }
 
-  // Check in attendee (mark as attended)
+  // Check in attendee (modified for staff)
   Future<void> checkInAttendee(
     String attendeeId,
     String eventId,
@@ -527,17 +555,9 @@ class RegistrationService {
         throw Exception('User not authenticated');
       }
 
-      // Check if event belongs to current organizer
-      final eventDoc = await _firestore.collection('events').doc(eventId).get();
-      if (!eventDoc.exists) {
-        throw Exception('Event not found');
-      }
-
-      final eventData = eventDoc.data() as Map<String, dynamic>;
-      if (eventData['organizerId'] != user.uid) {
-        throw Exception(
-          'Unauthorized: You can only check in attendees for your own events',
-        );
+      // Check if current user can manage this event
+      if (!await _canManageEvent(eventId)) {
+        throw Exception('Unauthorized: You can only check in attendees for your organizer\'s events');
       }
 
       // Find the registration
