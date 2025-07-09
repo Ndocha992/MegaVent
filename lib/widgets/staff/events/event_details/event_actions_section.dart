@@ -1,23 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:megavent/models/event.dart';
 import 'package:megavent/utils/constants.dart';
-import 'package:megavent/widgets/organizer/events/event_details/event_actions/action_card.dart';
-import 'package:megavent/widgets/organizer/events/event_details/event_actions/attendees_bottom_sheet.dart';
-import 'package:megavent/widgets/organizer/events/event_details/event_actions/danger_zone.dart';
-import 'package:megavent/widgets/organizer/events/event_details/event_actions/share_event_bottom_sheet.dart';
+import 'package:megavent/widgets/staff/events/event_details/event_actions/action_card.dart';
+import 'package:megavent/widgets/staff/events/event_details/event_actions/attendees_bottom_sheet.dart';
+import 'package:megavent/widgets/staff/events/event_details/event_actions/share_event_bottom_sheet.dart';
 
 class StaffEventActionsSection extends StatelessWidget {
   final Event event;
-  final VoidCallback onEdit;
-  final VoidCallback onDelete;
 
-  const StaffEventActionsSection({
-    super.key,
-    required this.event,
-    required this.onEdit,
-    required this.onDelete,
-    required bool isDeleting,
-  });
+  const StaffEventActionsSection({super.key, required this.event});
 
   @override
   Widget build(BuildContext context) {
@@ -29,34 +20,11 @@ class StaffEventActionsSection extends StatelessWidget {
           Text('Quick Actions', style: AppConstants.titleLarge),
           const SizedBox(height: 16),
 
-          // Primary Actions Row
+          // Actions Grid
           Row(
             children: [
               Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: onEdit,
-                  icon: const Icon(Icons.edit),
-                  label: const Text('Edit Event'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppConstants.primaryColor,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-
-          // Secondary Actions Grid
-          Row(
-            children: [
-              Expanded(
-                child: ActionCardWidget(
+                child: StaffActionCardWidget(
                   icon: Icons.share,
                   title: 'Share Event',
                   subtitle: 'Share with others',
@@ -66,7 +34,7 @@ class StaffEventActionsSection extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: ActionCardWidget(
+                child: StaffActionCardWidget(
                   icon: Icons.people,
                   title: 'Attendees',
                   subtitle: '${event.registeredCount} registered',
@@ -76,11 +44,6 @@ class StaffEventActionsSection extends StatelessWidget {
               ),
             ],
           ),
-
-          const SizedBox(height: 20),
-
-          // Danger Zone
-          DangerZoneWidget(onDelete: onDelete),
         ],
       ),
     );
@@ -91,7 +54,8 @@ class StaffEventActionsSection extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (BuildContext context) => ShareEventBottomSheet(event: event),
+      builder:
+          (BuildContext context) => StaffShareEventBottomSheet(event: event),
     );
   }
 
@@ -100,7 +64,8 @@ class StaffEventActionsSection extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (BuildContext context) => AttendeesBottomSheet(event: event),
+      builder:
+          (BuildContext context) => StaffAttendeesBottomSheet(event: event),
     );
   }
 }
