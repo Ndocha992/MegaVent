@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:megavent/models/registration.dart';
 import 'package:provider/provider.dart';
 import 'package:megavent/models/attendee.dart';
@@ -26,19 +28,53 @@ class _StaffAttendeesBottomSheetState extends State<StaffAttendeesBottomSheet> {
   List<Attendee> _allAttendees = [];
   List<Attendee> _filteredAttendees = [];
   List<Registration> _allRegistrations = [];
+  List<Registration> _eventRegistrations = [];
   Map<String, Registration> _userRegistrationMap = {};
   final TextEditingController _searchController = TextEditingController();
   bool _isLoading = true;
   String? _error;
+  String? _organizerId;
 
   @override
   void initState() {
     super.initState();
     _searchController.addListener(_filterAttendees);
-    _loadAttendees();
+    _loadStaffOrganizerId();
+  }
+
+  Future<void> _loadStaffOrganizerId() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final staffDoc =
+            await FirebaseFirestore.instance
+                .collection('staff')
+                .doc(user.uid)
+                .get();
+
+        if (staffDoc.exists) {
+          setState(() {
+            _organizerId = staffDoc.data()?['organizerId'];
+          });
+          await _loadAttendees();
+        } else {
+          setState(() {
+            _error = 'Staff data not found';
+            _isLoading = false;
+          });
+        }
+      }
+    } catch (e) {
+      setState(() {
+        _error = 'Failed to load staff data: ${e.toString()}';
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _loadAttendees() async {
+    if (_organizerId == null) return;
+
     try {
       setState(() {
         _isLoading = true;
@@ -50,24 +86,39 @@ class _StaffAttendeesBottomSheetState extends State<StaffAttendeesBottomSheet> {
         listen: false,
       );
 
-      // Load both attendees and registrations
-      final attendees = await databaseService.getEventAttendees(
-        widget.event.id,
+      // Load attendees for the staff's organizer (all attendees)
+      final attendees = await databaseService.getStaffAttendees(
+        FirebaseAuth.instance.currentUser!.uid,
       );
-      final registrations = await databaseService.getEventRegistrations(
-        widget.event.id,
-      );
+
+      // Load all registrations for the staff's organizer
+      final allRegistrations = await databaseService.getAllRegistrations();
+
+      // Filter registrations for this specific event
+      final eventRegistrations =
+          allRegistrations
+              .where((reg) => reg.eventId == widget.event.id)
+              .toList();
+
+      // Filter attendees to only show those registered for this event
+      final eventAttendeeIds =
+          eventRegistrations.map((reg) => reg.userId).toSet();
+      final eventAttendees =
+          attendees
+              .where((attendee) => eventAttendeeIds.contains(attendee.id))
+              .toList();
 
       // Create a map for quick lookup
       final userRegistrationMap = <String, Registration>{};
-      for (final registration in registrations) {
+      for (final registration in eventRegistrations) {
         userRegistrationMap[registration.userId] = registration;
       }
 
       setState(() {
-        _allAttendees = attendees;
-        _filteredAttendees = attendees;
-        _allRegistrations = registrations;
+        _allAttendees = eventAttendees;
+        _filteredAttendees = eventAttendees;
+        _allRegistrations = allRegistrations;
+        _eventRegistrations = eventRegistrations;
         _userRegistrationMap = userRegistrationMap;
         _isLoading = false;
       });
@@ -92,11 +143,11 @@ class _StaffAttendeesBottomSheetState extends State<StaffAttendeesBottomSheet> {
   }
 
   int get attendedCount {
-    return _allRegistrations.where((reg) => reg.hasAttended).length;
+    return _eventRegistrations.where((reg) => reg.hasAttended).length;
   }
 
   int get noShowCount {
-    return _allRegistrations.length - attendedCount;
+    return _eventRegistrations.length - attendedCount;
   }
 
   @override
@@ -215,7 +266,7 @@ class _StaffAttendeesBottomSheetState extends State<StaffAttendeesBottomSheet> {
             ),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: _loadAttendees,
+              onPressed: _loadStaffOrganizerId,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppConstants.primaryColor,
                 foregroundColor: Colors.white,
@@ -253,7 +304,7 @@ class _StaffAttendeesBottomSheetState extends State<StaffAttendeesBottomSheet> {
     }
 
     return RefreshIndicator(
-      onRefresh: _loadAttendees,
+      onRefresh: _loadStaffOrganizerId,
       child: ListView.builder(
         padding: const EdgeInsets.symmetric(horizontal: 20),
         itemCount: _filteredAttendees.length,

@@ -22,18 +22,11 @@ class StaffQuickActionsGrid extends StatelessWidget {
           childAspectRatio: 1.4,
           children: [
             _buildActionCard(
-              title: 'Create Event',
-              description: 'Start planning a new event',
+              title: 'View Events',
+              description: 'See Events',
               icon: Icons.add_circle_outline,
               color: AppConstants.primaryColor,
-              onTap: () => onNavigate('create_event'),
-            ),
-            _buildActionCard(
-              title: 'Add Staff',
-              description: 'Invite new team members',
-              icon: Icons.person_add_outlined,
-              color: AppConstants.secondaryColor,
-              onTap: () => onNavigate('add_staff'),
+              onTap: () => onNavigate('event'),
             ),
             _buildActionCard(
               title: 'Scan QR Code',

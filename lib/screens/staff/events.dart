@@ -1,13 +1,14 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:megavent/screens/staff/events_details.dart';
+import 'package:megavent/widgets/staff/events/event_card.dart';
+import 'package:megavent/widgets/staff/events/event_filters.dart';
+import 'package:megavent/widgets/staff/sidebar.dart';
 import 'package:provider/provider.dart';
-import 'package:megavent/screens/organizer/create_events.dart';
-import 'package:megavent/screens/organizer/events_details.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/widgets/app_bar.dart';
-import 'package:megavent/widgets/organizer/sidebar.dart';
-import 'package:megavent/widgets/organizer/events/event_card.dart';
-import 'package:megavent/widgets/organizer/events/event_filters.dart';
 import 'package:megavent/services/database_service.dart';
 import 'package:megavent/models/event.dart';
 
@@ -18,9 +19,10 @@ class StaffEvents extends StatefulWidget {
   State<StaffEvents> createState() => _StaffEventsState();
 }
 
-class _StaffEventsState extends State<StaffEvents> with TickerProviderStateMixin {
+class _StaffEventsState extends State<StaffEvents>
+    with TickerProviderStateMixin {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  String currentRoute = '/organizer-events';
+  String currentRoute = '/staff-events';
 
   late TabController _tabController;
   String _selectedCategory = 'All';
@@ -32,13 +34,14 @@ class _StaffEventsState extends State<StaffEvents> with TickerProviderStateMixin
   List<String> _categories = [];
   bool _isLoading = true;
   String? _error;
+  String? _organizerId;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _databaseService = Provider.of<DatabaseService>(context, listen: false);
-    _initializeData();
+    _loadStaffOrganizerId();
   }
 
   @override
@@ -48,7 +51,35 @@ class _StaffEventsState extends State<StaffEvents> with TickerProviderStateMixin
     super.dispose();
   }
 
+  // Add method to load staff organizer ID
+  Future<void> _loadStaffOrganizerId() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final staffDoc =
+            await FirebaseFirestore.instance
+                .collection('staff')
+                .doc(user.uid)
+                .get();
+
+        if (staffDoc.exists) {
+          setState(() {
+            _organizerId = staffDoc.data()?['organizerId'];
+          });
+          await _initializeData();
+        }
+      }
+    } catch (e) {
+      setState(() {
+        _error = 'Failed to load staff data: ${e.toString()}';
+        _isLoading = false;
+      });
+    }
+  }
+
   Future<void> _initializeData() async {
+    if (_organizerId == null) return;
+
     try {
       setState(() {
         _isLoading = true;
@@ -69,33 +100,29 @@ class _StaffEventsState extends State<StaffEvents> with TickerProviderStateMixin
   }
 
   Future<void> _loadEvents() async {
+    if (_organizerId == null) return;
+
     try {
-      // Listen to organizer events stream
-      _databaseService.streamEventsByOrganizer().listen(
-        (events) {
-          if (mounted) {
-            setState(() {
-              _events = events;
-              _isLoading = false;
-              _error = null;
-            });
-          }
-        },
-        onError: (error) {
-          if (mounted) {
-            setState(() {
-              _error = 'Failed to load events: ${error.toString()}';
-              _isLoading = false;
-            });
-          }
-        },
+      // Get events for the staff's organizer
+      final events = await _databaseService.getEventsForOrganizer(
+        _organizerId!,
       );
+
+      setState(() {
+        _events = events;
+        _isLoading = false;
+        _error = null;
+      });
     } catch (e) {
       setState(() {
         _error = 'Failed to load events: ${e.toString()}';
         _isLoading = false;
       });
     }
+  }
+
+  Future<void> _refreshEvents() async {
+    await _loadEvents();
   }
 
   List<Event> get _filteredEvents {
@@ -143,10 +170,6 @@ class _StaffEventsState extends State<StaffEvents> with TickerProviderStateMixin
     return events;
   }
 
-  Future<void> _refreshEvents() async {
-    await _loadEvents();
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -156,7 +179,7 @@ class _StaffEventsState extends State<StaffEvents> with TickerProviderStateMixin
         title: 'MegaVent',
         onMenuPressed: () => _scaffoldKey.currentState?.openDrawer(),
       ),
-      drawer: OrganizerSidebar(currentRoute: currentRoute),
+      drawer: StaffSidebar(currentRoute: currentRoute),
       body:
           _isLoading
               ? _buildLoadingState()
@@ -170,24 +193,6 @@ class _StaffEventsState extends State<StaffEvents> with TickerProviderStateMixin
                   Expanded(child: _buildEventsList()),
                 ],
               ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          final result = await Navigator.of(
-            context,
-          ).push(MaterialPageRoute(builder: (context) => const CreateEvents()));
-
-          // Refresh events if a new event was created
-          if (result != null) {
-            _refreshEvents();
-          }
-        },
-        backgroundColor: AppConstants.primaryColor,
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text(
-          'Create Event',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-        ),
-      ),
     );
   }
 
@@ -509,14 +514,14 @@ class _StaffEventsState extends State<StaffEvents> with TickerProviderStateMixin
           itemBuilder: (context, index) {
             return Padding(
               padding: const EdgeInsets.only(bottom: 16),
-              child: EventCard(
+              child: StaffEventCard(
                 event: filteredEvents[index],
                 onTap: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
                       builder:
                           (context) =>
-                              EventsDetails(event: filteredEvents[index]),
+                              StaffEventsDetails(event: filteredEvents[index]),
                     ),
                   );
                 },
@@ -550,7 +555,7 @@ class _StaffEventsState extends State<StaffEvents> with TickerProviderStateMixin
             ),
             const SizedBox(height: 24),
             Text(
-              'No events found',
+              'No events yet',
               style: AppConstants.titleLarge.copyWith(
                 color: AppConstants.textSecondaryColor,
               ),
@@ -559,32 +564,9 @@ class _StaffEventsState extends State<StaffEvents> with TickerProviderStateMixin
             Text(
               _searchQuery.isNotEmpty
                   ? 'Try adjusting your search criteria'
-                  : 'Start by creating your first event',
+                  : 'Events will are created by your Organizer',
               style: AppConstants.bodyMedium.copyWith(
                 color: AppConstants.textSecondaryColor,
-              ),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: () async {
-                final result = await Navigator.of(context).push(
-                  MaterialPageRoute(builder: (context) => const CreateEvents()),
-                );
-
-                // Refresh events if a new event was created
-                if (result != null) {
-                  _refreshEvents();
-                }
-              },
-              icon: const Icon(Icons.add),
-              label: const Text('Create Event'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppConstants.primaryColor,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 12,
-                ),
               ),
             ),
           ],
@@ -597,7 +579,7 @@ class _StaffEventsState extends State<StaffEvents> with TickerProviderStateMixin
     showDialog(
       context: context,
       builder:
-          (context) => EventFilters(
+          (context) => StaffEventFilters(
             selectedCategory: _selectedCategory,
             categories: _categories, // Pass categories list
             onCategoryChanged: (category) {

@@ -1,23 +1,23 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:megavent/widgets/staff/events/event_details/event_actions_section.dart';
+import 'package:megavent/widgets/staff/events/event_details/event_description_section.dart';
+import 'package:megavent/widgets/staff/events/event_details/event_header.dart';
+import 'package:megavent/widgets/staff/events/event_details/event_info_section.dart';
+import 'package:megavent/widgets/staff/events/event_details/event_location_section.dart';
+import 'package:megavent/widgets/staff/events/event_details/event_stats_section.dart';
+import 'package:megavent/widgets/staff/sidebar.dart';
 import 'package:provider/provider.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/models/event.dart';
 import 'package:megavent/widgets/nested_app_bar.dart';
-import 'package:megavent/widgets/organizer/sidebar.dart';
-import 'package:megavent/screens/organizer/edit_events.dart';
-import 'package:megavent/widgets/organizer/events/event_details/event_header.dart';
-import 'package:megavent/widgets/organizer/events/event_details/event_info_section.dart';
-import 'package:megavent/widgets/organizer/events/event_details/event_stats_section.dart';
-import 'package:megavent/widgets/organizer/events/event_details/event_description_section.dart';
-import 'package:megavent/widgets/organizer/events/event_details/event_location_section.dart';
-import 'package:megavent/widgets/organizer/events/event_details/event_actions_section.dart';
 import 'package:megavent/services/database_service.dart';
 
 class StaffEventsDetails extends StatefulWidget {
   final Event? event;
-  final String?
-  eventId; // Add eventId parameter for cases where we only have ID
+  final String? eventId;
 
   const StaffEventsDetails({super.key, this.event, this.eventId});
 
@@ -27,22 +27,50 @@ class StaffEventsDetails extends StatefulWidget {
 
 class _StaffEventsDetailsState extends State<StaffEventsDetails> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  String currentRoute = '/organizer-events';
+  String currentRoute = '/staff-events';
 
   late DatabaseService _databaseService;
   Event? currentEvent;
   bool _isLoading = true;
   String? _error;
-  bool _isDeleting = false;
+  String? _organizerId;
 
   @override
   void initState() {
     super.initState();
     _databaseService = Provider.of<DatabaseService>(context, listen: false);
-    _initializeEvent();
+    _loadStaffOrganizerId();
+  }
+
+  // Add method to load staff organizer ID
+  Future<void> _loadStaffOrganizerId() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final staffDoc =
+            await FirebaseFirestore.instance
+                .collection('staff')
+                .doc(user.uid)
+                .get();
+
+        if (staffDoc.exists) {
+          setState(() {
+            _organizerId = staffDoc.data()?['organizerId'];
+          });
+          await _initializeEvent();
+        }
+      }
+    } catch (e) {
+      setState(() {
+        _error = 'Failed to load staff data: ${e.toString()}';
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _initializeEvent() async {
+    if (_organizerId == null) return;
+
     try {
       setState(() {
         _isLoading = true;
@@ -56,8 +84,15 @@ class _StaffEventsDetailsState extends State<StaffEventsDetails> {
           _isLoading = false;
         });
       } else if (widget.eventId != null && widget.eventId!.isNotEmpty) {
-        // Fetch event by ID
-        final event = await _databaseService.getEventById(widget.eventId!);
+        // Fetch event by ID, but ensure it belongs to the staff's organizer
+        final events = await _databaseService.getEventsForOrganizer(
+          _organizerId!,
+        );
+        final event = events.firstWhere(
+          (e) => e.id == widget.eventId,
+          orElse: () => throw Exception('Event not found'),
+        );
+
         setState(() {
           currentEvent = event;
           _isLoading = false;
@@ -84,7 +119,7 @@ class _StaffEventsDetailsState extends State<StaffEventsDetails> {
       appBar: NestedScreenAppBar(
         screenTitle: currentEvent?.name ?? 'Event Details',
       ),
-      drawer: OrganizerSidebar(currentRoute: currentRoute),
+      drawer: StaffSidebar(currentRoute: currentRoute),
       body:
           _isLoading
               ? _buildLoadingState()
@@ -240,194 +275,27 @@ class _StaffEventsDetailsState extends State<StaffEventsDetails> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Event Header with Image
-            EventHeader(event: currentEvent!),
+            StaffEventHeader(event: currentEvent!),
 
             // Event Info Section
-            EventInfoSection(event: currentEvent!),
+            StaffEventInfoSection(event: currentEvent!),
 
             // Event Stats
-            EventStatsSection(event: currentEvent!),
+            StaffEventStatsSection(event: currentEvent!),
 
             // Event Description
-            EventDescriptionSection(event: currentEvent!),
+            StaffEventDescriptionSection(event: currentEvent!),
 
             // Event Location
-            EventLocationSection(event: currentEvent!),
+            StaffEventLocationSection(event: currentEvent!),
 
             // Action Buttons
-            EventActionsSection(
-              event: currentEvent!,
-              onEdit: _handleEditEvent,
-              onDelete: _handleDeleteEvent,
-              isDeleting: _isDeleting,
-            ),
+            StaffEventActionsSection(event: currentEvent!),
 
             const SizedBox(height: 20),
           ],
         ),
       ),
     );
-  }
-
-  void _handleEditEvent() {
-    if (currentEvent == null) return;
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => EditEvents(event: currentEvent!)),
-    ).then((result) {
-      // Refresh event details if the event was updated
-      if (result != null && result is bool && result) {
-        _initializeEvent();
-      }
-    });
-  }
-
-  void _handleDeleteEvent() {
-    if (currentEvent == null) return;
-    _showDeleteConfirmationDialog();
-  }
-
-  void _showDeleteConfirmationDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: !_isDeleting,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-              title: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppConstants.errorColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      Icons.delete_outline,
-                      color: AppConstants.errorColor,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  const Text('Delete Event'),
-                ],
-              ),
-              content: Text(
-                'Are you sure you want to delete "${currentEvent!.name}"? This action cannot be undone.',
-                style: AppConstants.bodyMedium,
-              ),
-              actions:
-                  _isDeleting
-                      ? [
-                        Padding(
-                          padding: EdgeInsets.all(16.0),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: Container(
-                                  color: AppConstants.primaryColor.withOpacity(
-                                    0.1,
-                                  ),
-                                  child: const Center(
-                                    child: SpinKitThreeBounce(
-                                      color: AppConstants.primaryColor,
-                                      size: 20.0,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              SizedBox(width: 12),
-                              Text('Deleting...'),
-                            ],
-                          ),
-                        ),
-                      ]
-                      : [
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          child: Text(
-                            'Cancel',
-                            style: TextStyle(
-                              color: AppConstants.textSecondaryColor,
-                            ),
-                          ),
-                        ),
-                        ElevatedButton(
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                            _deleteEvent();
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppConstants.errorColor,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: const Text('Delete'),
-                        ),
-                      ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Future<void> _deleteEvent() async {
-    if (currentEvent == null) return;
-
-    try {
-      setState(() {
-        _isDeleting = true;
-      });
-
-      // Delete event from database
-      await _databaseService.deleteEvent(currentEvent!.id);
-
-      // Show success message
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              '${currentEvent!.name} has been deleted successfully',
-            ),
-            backgroundColor: AppConstants.successColor,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        );
-
-        // Navigate back to events list
-        Navigator.of(context).pop();
-      }
-    } catch (e) {
-      setState(() {
-        _isDeleting = false;
-      });
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to delete event: ${e.toString()}'),
-            backgroundColor: AppConstants.errorColor,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        );
-      }
-    }
   }
 }
