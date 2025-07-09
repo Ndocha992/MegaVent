@@ -15,7 +15,7 @@ class StaffProfessionalInfoSection extends StatelessWidget {
         staff.organization ?? 'Not specified',
         Icons.business_outlined,
       ),
-      _buildInfoRow('Job Title', staff.role, Icons.badge_outlined),
+      _buildInfoRow('Role', staff.role, Icons.badge_outlined),
     ]);
   }
 
@@ -87,11 +87,6 @@ class StaffProfessionalInfoSection extends StatelessWidget {
                     ),
                   ],
                 ),
-              ),
-              Icon(
-                Icons.arrow_forward_ios,
-                size: 14,
-                color: AppConstants.textSecondaryColor,
               ),
             ],
           ),
