@@ -127,6 +127,17 @@ class DatabaseService extends ChangeNotifier {
     return _dashboardService.getStaffDashboardStats(staffId);
   }
 
+  // Stream current staff data (for authenticated staff user)
+  Stream<Staff?> streamCurrentStaffData() =>
+      _staffService.streamCurrentStaffData();
+
+  // Get current staff data as a one-time fetch
+  Future<Staff?> getCurrentStaffData() => _staffService.getCurrentStaffData();
+
+  // Update current staff profile
+  Future<void> updateCurrentStaffProfile(Staff staff) =>
+      _staffService.updateCurrentStaffProfile(staff);
+
   /**
    * ====== ATTENDEE METHODS ======
    */
@@ -252,8 +263,11 @@ class DatabaseService extends ChangeNotifier {
   ) => _registrationService.getAttendeeByIdAndEvent(attendeeId, eventId);
 
   // Check in attendee (mark as attended)
-  Future<void> checkInAttendee(String attendeeId, String eventId, String staffId) =>
-      _registrationService.checkInAttendee(attendeeId, eventId, staffId);
+  Future<void> checkInAttendee(
+    String attendeeId,
+    String eventId,
+    String staffId,
+  ) => _registrationService.checkInAttendee(attendeeId, eventId, staffId);
 
   /**
    * ====== DASHBOARD METHODS ======

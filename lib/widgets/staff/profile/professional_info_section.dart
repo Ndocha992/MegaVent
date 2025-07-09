@@ -1,38 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:megavent/models/staff.dart';
 import 'package:megavent/utils/constants.dart';
-import 'package:megavent/models/organizer.dart';
 
 class StaffProfessionalInfoSection extends StatelessWidget {
-  final Organizer organizer;
-  final Function(String) onWebsiteTap;
+  final Staff staff;
 
-  const StaffProfessionalInfoSection({
-    super.key,
-    required this.organizer,
-    required this.onWebsiteTap,
-  });
+  const StaffProfessionalInfoSection({super.key, required this.staff});
 
   @override
   Widget build(BuildContext context) {
     return _buildInfoSection('Professional Information', Icons.work_outline, [
       _buildInfoRow(
         'Organization',
-        organizer.organization ?? 'Not specified',
+        staff.organization ?? 'Not specified',
         Icons.business_outlined,
       ),
-      _buildInfoRow(
-        'Job Title',
-        organizer.jobTitle ?? 'Not specified',
-        Icons.badge_outlined,
-      ),
-      _buildInfoRow(
-        'Website',
-        organizer.website ?? 'Not added',
-        Icons.web_outlined,
-        onTap: organizer.website != null
-            ? () => onWebsiteTap(organizer.website!)
-            : null,
-      ),
+      _buildInfoRow('Job Title', staff.role, Icons.badge_outlined),
     ]);
   }
 
@@ -55,7 +38,8 @@ class StaffProfessionalInfoSection extends StatelessWidget {
                   child: Icon(icon, color: AppConstants.primaryColor, size: 20),
                 ),
                 const SizedBox(width: 12),
-                Expanded( // Added to prevent overflow
+                Expanded(
+                  // Added to prevent overflow
                   child: Text(
                     title,
                     style: AppConstants.titleLarge,
@@ -72,16 +56,10 @@ class StaffProfessionalInfoSection extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoRow(
-    String label,
-    String value,
-    IconData icon, {
-    VoidCallback? onTap,
-  }) {
+  Widget _buildInfoRow(String label, String value, IconData icon) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6), // Reduced padding
       child: InkWell(
-        onTap: onTap,
         borderRadius: BorderRadius.circular(8),
         child: Padding(
           padding: const EdgeInsets.all(8),
@@ -110,12 +88,11 @@ class StaffProfessionalInfoSection extends StatelessWidget {
                   ],
                 ),
               ),
-              if (onTap != null)
-                Icon(
-                  Icons.arrow_forward_ios,
-                  size: 14,
-                  color: AppConstants.textSecondaryColor,
-                ),
+              Icon(
+                Icons.arrow_forward_ios,
+                size: 14,
+                color: AppConstants.textSecondaryColor,
+              ),
             ],
           ),
         ),

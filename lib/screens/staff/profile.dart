@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:megavent/models/staff.dart';
 import 'package:megavent/screens/loading_screen.dart';
+import 'package:megavent/screens/staff/edit_profile.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/widgets/app_bar.dart';
-import 'package:megavent/widgets/organizer/profile/action_buttons.dart';
-import 'package:megavent/widgets/organizer/profile/contact_info_section.dart';
-import 'package:megavent/widgets/organizer/profile/personal_info_section.dart';
-import 'package:megavent/widgets/organizer/profile/professional_info_section.dart';
-import 'package:megavent/widgets/organizer/profile/profile_header_card.dart';
-import 'package:megavent/widgets/organizer/profile/stats_overview.dart';
-import 'package:megavent/widgets/organizer/sidebar.dart';
-import 'package:megavent/models/organizer.dart';
 import 'package:megavent/services/database_service.dart';
-import 'package:megavent/screens/organizer/edit_profile.dart';
+import 'package:megavent/widgets/staff/profile/action_buttons.dart';
+import 'package:megavent/widgets/staff/profile/contact_info_section.dart';
+import 'package:megavent/widgets/staff/profile/personal_info_section.dart';
+import 'package:megavent/widgets/staff/profile/professional_info_section.dart';
+import 'package:megavent/widgets/staff/profile/profile_header_card.dart';
+import 'package:megavent/widgets/staff/sidebar.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -24,7 +23,7 @@ class StaffProfile extends StatefulWidget {
 
 class _StaffProfileState extends State<StaffProfile> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  String currentRoute = '/organizer-profile';
+  String currentRoute = '/staff-profile';
   bool _isLoading = false;
   // Add a key to force StreamBuilder rebuild
   Key _streamBuilderKey = UniqueKey();
@@ -43,16 +42,15 @@ class _StaffProfileState extends State<StaffProfile> {
         title: 'MegaVent',
         onMenuPressed: () => _scaffoldKey.currentState?.openDrawer(),
       ),
-      drawer: OrganizerSidebar(currentRoute: currentRoute),
+      drawer: StaffSidebar(currentRoute: currentRoute),
       body: RefreshIndicator(
         onRefresh: _refreshProfile,
-        child: StreamBuilder<Organizer?>(
-          key: _streamBuilderKey, // Add key to force rebuild
-          stream: databaseService.streamCurrentOrganizerData(),
+        child: StreamBuilder<Staff?>(
+          key: _streamBuilderKey,
+          stream: databaseService.streamCurrentStaffData(),
           builder: (context, snapshot) {
             // Handle loading state
             if (snapshot.connectionState == ConnectionState.waiting) {
-              // Show loading overlay if not already showing
               if (!_isLoading) {
                 _isLoading = true;
                 WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -62,11 +60,8 @@ class _StaffProfileState extends State<StaffProfile> {
                   );
                 });
               }
-
-              // Return empty container while loading overlay is shown
               return Container();
             } else {
-              // Hide loading overlay when data is loaded
               if (_isLoading) {
                 _isLoading = false;
                 WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -78,7 +73,7 @@ class _StaffProfileState extends State<StaffProfile> {
             if (snapshot.hasError) {
               return SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                child: Container(
+                child: SizedBox(
                   height: MediaQuery.of(context).size.height - 200,
                   child: Center(
                     child: Column(
@@ -111,15 +106,13 @@ class _StaffProfileState extends State<StaffProfile> {
               );
             }
 
-            final organizer = snapshot.data;
-            if (organizer == null) {
+            final staff = snapshot.data;
+            if (staff == null) {
               return SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                child: Container(
+                child: SizedBox(
                   height: MediaQuery.of(context).size.height - 200,
-                  child: const Center(
-                    child: Text('No organizer data available'),
-                  ),
+                  child: const Center(child: Text('No staff data available')),
                 ),
               );
             }
@@ -140,35 +133,26 @@ class _StaffProfileState extends State<StaffProfile> {
                   ),
                   const SizedBox(height: 24),
                   // Profile Header Card
-                  ProfileHeaderCard(organizer: organizer),
-                  const SizedBox(height: 20),
-                  // Stats Overview
-                  StatsOverview(
-                    organizer: organizer,
-                    databaseService: databaseService,
-                  ),
+                  StaffProfileHeaderCard(staff: staff),
                   const SizedBox(height: 20),
                   // Personal Information
-                  PersonalInfoSection(
-                    organizer: organizer,
+                  StaffPersonalInfoSection(
+                    staff: staff,
                     databaseService: databaseService,
                   ),
                   const SizedBox(height: 20),
                   // Contact Information
-                  ContactInfoSection(
-                    organizer: organizer,
+                  StaffContactInfoSection(
+                    staff: staff,
                     onEmailTap: _launchEmail,
                     onPhoneTap: _launchPhone,
                   ),
                   const SizedBox(height: 20),
                   // Professional Information
-                  ProfessionalInfoSection(
-                    organizer: organizer,
-                    onWebsiteTap: _launchUrl,
-                  ),
+                  StaffProfessionalInfoSection(staff: staff),
                   const SizedBox(height: 20),
                   // Action Buttons
-                  ActionButtons(onEditProfile: _editProfile),
+                  StaffActionButtons(onEditProfile: _editProfile),
                 ],
               ),
             );
@@ -200,7 +184,7 @@ class _StaffProfileState extends State<StaffProfile> {
   void _editProfile() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const EditProfile()),
+      MaterialPageRoute(builder: (context) => const StaffEditProfile()),
     );
   }
 
@@ -233,26 +217,6 @@ class _StaffProfileState extends State<StaffProfile> {
       }
     } catch (e) {
       _showErrorSnackBar('Error making call: ${e.toString()}');
-    }
-  }
-
-  void _launchUrl(String url) async {
-    try {
-      // Ensure URL has a scheme
-      String formattedUrl = url;
-      if (!url.startsWith('http://') && !url.startsWith('https://')) {
-        formattedUrl = 'https://$url';
-      }
-
-      final Uri uri = Uri.parse(formattedUrl);
-
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        _showErrorSnackBar('Could not launch website');
-      }
-    } catch (e) {
-      _showErrorSnackBar('Error opening website: ${e.toString()}');
     }
   }
 
