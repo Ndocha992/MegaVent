@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:megavent/models/staff.dart';
 import 'package:megavent/utils/constants.dart';
-import 'package:megavent/models/organizer.dart';
 
 class StaffContactInfoSection extends StatelessWidget {
-  final Organizer organizer;
+  final Staff staff;
   final Function(String) onEmailTap;
   final Function(String) onPhoneTap;
 
   const StaffContactInfoSection({
     super.key,
-    required this.organizer,
+    required this.staff,
     required this.onEmailTap,
     required this.onPhoneTap,
   });
@@ -22,22 +22,15 @@ class StaffContactInfoSection extends StatelessWidget {
       [
         _buildInfoRow(
           'Email',
-          organizer.email,
+          staff.email,
           Icons.email_outlined,
-          onTap: () => onEmailTap(organizer.email),
+          onTap: () => onEmailTap(staff.email),
         ),
         _buildInfoRow(
           'Phone',
-          organizer.phone,
+          staff.phone,
           Icons.phone_outlined,
-          onTap: () => onPhoneTap(organizer.phone),
-        ),
-        _buildInfoRow(
-          'Address',
-          organizer.fullAddress.isEmpty
-              ? 'No address added'
-              : organizer.fullAddress,
-          Icons.location_on_outlined,
+          onTap: () => onPhoneTap(staff.phone),
         ),
       ],
     );
@@ -62,7 +55,8 @@ class StaffContactInfoSection extends StatelessWidget {
                   child: Icon(icon, color: AppConstants.primaryColor, size: 20),
                 ),
                 const SizedBox(width: 12),
-                Expanded( // Added to prevent overflow
+                Expanded(
+                  // Added to prevent overflow
                   child: Text(
                     title,
                     style: AppConstants.titleLarge,

@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:megavent/models/staff.dart';
 import 'package:megavent/screens/loading_screen.dart';
+import 'package:megavent/services/auth_service.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/widgets/nested_app_bar.dart';
-import 'package:megavent/widgets/organizer/profile/edit_profile/action_buttons_section.dart';
-import 'package:megavent/widgets/organizer/profile/edit_profile/contact_information_section.dart';
-import 'package:megavent/widgets/organizer/profile/edit_profile/location_info_section.dart';
-import 'package:megavent/widgets/organizer/profile/edit_profile/personal_information_section.dart';
-import 'package:megavent/widgets/organizer/profile/edit_profile/professional_info_section.dart';
-import 'package:megavent/widgets/organizer/profile/edit_profile/profile_image_section.dart';
-import 'package:megavent/widgets/organizer/sidebar.dart';
-import 'package:megavent/models/organizer.dart';
 import 'package:megavent/services/database_service.dart';
+import 'package:megavent/widgets/staff/profile/edit_profile/action_buttons_section.dart';
+import 'package:megavent/widgets/staff/profile/edit_profile/contact_information_section.dart';
+import 'package:megavent/widgets/staff/profile/edit_profile/personal_information_section.dart';
+import 'package:megavent/widgets/staff/profile/edit_profile/profile_image_section.dart';
+import 'package:megavent/widgets/staff/sidebar.dart';
 import 'package:provider/provider.dart';
 
 class StaffEditProfile extends StatefulWidget {
@@ -24,26 +23,27 @@ class StaffEditProfile extends StatefulWidget {
 class _StaffEditProfileState extends State<StaffEditProfile> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  String currentRoute = '/organizer-profile';
+  String currentRoute = '/staff-profile';
 
   // Form controllers
   final TextEditingController _fullNameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
-  final TextEditingController _organizationController = TextEditingController();
-  final TextEditingController _jobTitleController = TextEditingController();
-  final TextEditingController _bioController = TextEditingController();
-  final TextEditingController _websiteController = TextEditingController();
-  final TextEditingController _addressController = TextEditingController();
-  final TextEditingController _cityController = TextEditingController();
-  final TextEditingController _countryController = TextEditingController();
+  final TextEditingController _roleController = TextEditingController();
+  final TextEditingController _currentPasswordController =
+      TextEditingController();
+  final TextEditingController _newPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
 
+  bool _showPasswordSection = false;
+  bool _isChangingPassword = false;
   bool _isLoading = false;
   bool _hasChanges = false;
   bool _isInitialized = false;
   String? _selectedImageBase64;
-  Organizer? _currentOrganizer;
-  
+  Staff? _currentStaff;
+
   // Store original values for comparison
   Map<String, dynamic> _originalValues = {};
 
@@ -52,46 +52,29 @@ class _StaffEditProfileState extends State<StaffEditProfile> {
     _fullNameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
-    _organizationController.dispose();
-    _jobTitleController.dispose();
-    _bioController.dispose();
-    _websiteController.dispose();
-    _addressController.dispose();
-    _cityController.dispose();
-    _countryController.dispose();
+    _roleController.dispose();
     super.dispose();
   }
 
-  void _populateFields(Organizer organizer) {
-    if (_currentOrganizer?.id != organizer.id) {
-      _currentOrganizer = organizer;
-      
+  void _populateFields(Staff staff) {
+    if (_currentStaff?.id != staff.id) {
+      _currentStaff = staff;
+
       // Store original values
       _originalValues = {
-        'fullName': organizer.fullName,
-        'email': organizer.email,
-        'phone': organizer.phone,
-        'organization': organizer.organization,
-        'jobTitle': organizer.jobTitle,
-        'bio': organizer.bio,
-        'website': organizer.website,
-        'address': organizer.address,
-        'city': organizer.city,
-        'country': organizer.country,
-        'profileImage': organizer.profileImage,
+        'fullName': staff.fullName,
+        'email': staff.email,
+        'phone': staff.phone,
+        'organization': staff.organization,
+        'role': staff.role,
+        'profileImage': staff.profileImage,
       };
-      
-      _fullNameController.text = organizer.fullName;
-      _emailController.text = organizer.email;
-      _phoneController.text = organizer.phone;
-      _organizationController.text = organizer.organization ?? '';
-      _jobTitleController.text = organizer.jobTitle ?? '';
-      _bioController.text = organizer.bio ?? '';
-      _websiteController.text = organizer.website ?? '';
-      _addressController.text = organizer.address ?? '';
-      _cityController.text = organizer.city ?? '';
-      _countryController.text = organizer.country ?? '';
-      _selectedImageBase64 = organizer.profileImage;
+
+      _fullNameController.text = staff.fullName;
+      _emailController.text = staff.email;
+      _phoneController.text = staff.phone;
+      _roleController.text = staff.role;
+      _selectedImageBase64 = staff.profileImage;
 
       _hasChanges = false;
       _isInitialized = true;
@@ -127,79 +110,415 @@ class _StaffEditProfileState extends State<StaffEditProfile> {
   // Build update map with only changed fields
   Map<String, dynamic> _buildUpdateMap() {
     final Map<String, dynamic> updateMap = {};
-    
+
     // Check each field for changes
     final String fullName = _fullNameController.text.trim();
     if (_hasFieldChanged('fullName', fullName) && fullName.isNotEmpty) {
       updateMap['fullName'] = fullName;
     }
-    
+
     final String email = _emailController.text.trim();
     if (_hasFieldChanged('email', email) && email.isNotEmpty) {
       updateMap['email'] = email;
     }
-    
+
     final String phone = _phoneController.text.trim();
     if (_hasFieldChanged('phone', phone) && phone.isNotEmpty) {
       updateMap['phone'] = phone;
     }
-    
-    final String? organization = _getSafeStringValue(_organizationController.text);
-    if (_hasFieldChanged('organization', organization)) {
-      updateMap['organization'] = organization;
+
+    final String? role = _getSafeStringValue(_roleController.text);
+    if (_hasFieldChanged('role', role)) {
+      updateMap['role'] = role;
     }
-    
-    final String? jobTitle = _getSafeStringValue(_jobTitleController.text);
-    if (_hasFieldChanged('jobTitle', jobTitle)) {
-      updateMap['jobTitle'] = jobTitle;
-    }
-    
-    final String? bio = _getSafeStringValue(_bioController.text);
-    if (_hasFieldChanged('bio', bio)) {
-      updateMap['bio'] = bio;
-    }
-    
-    final String? website = _getSafeStringValue(_websiteController.text);
-    if (_hasFieldChanged('website', website)) {
-      updateMap['website'] = website;
-    }
-    
-    final String? address = _getSafeStringValue(_addressController.text);
-    if (_hasFieldChanged('address', address)) {
-      updateMap['address'] = address;
-    }
-    
-    final String? city = _getSafeStringValue(_cityController.text);
-    if (_hasFieldChanged('city', city)) {
-      updateMap['city'] = city;
-    }
-    
-    final String? country = _getSafeStringValue(_countryController.text);
-    if (_hasFieldChanged('country', country)) {
-      updateMap['country'] = country;
-    }
-    
+
     // Check profile image
     if (_hasFieldChanged('profileImage', _selectedImageBase64)) {
       updateMap['profileImage'] = _selectedImageBase64;
     }
-    
+
     // Always update the timestamp if there are changes
     if (updateMap.isNotEmpty) {
       updateMap['updatedAt'] = DateTime.now();
     }
-    
+
     return updateMap;
   }
 
+  Future<void> _changePassword() async {
+    if (_newPasswordController.text != _confirmPasswordController.text) {
+      _showErrorSnackBar('Passwords do not match');
+      return;
+    }
+
+    setState(() => _isChangingPassword = true);
+
+    try {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final result = await authService.changePassword(
+        _currentPasswordController.text,
+        _newPasswordController.text,
+      );
+
+      if (result['success'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message']),
+            backgroundColor: Colors.green,
+          ),
+        );
+        setState(() => _showPasswordSection = false);
+      } else {
+        _showErrorSnackBar(result['message']);
+      }
+    } catch (e) {
+      _showErrorSnackBar('Password change failed: ${e.toString()}');
+    } finally {
+      setState(() => _isChangingPassword = false);
+    }
+  }
+
+  Widget _buildPasswordSection() {
+    if (!_showPasswordSection) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            decoration: BoxDecoration(
+              color: AppConstants.warningColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: AppConstants.warningColor.withOpacity(0.2),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppConstants.warningColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.lock_outline,
+                    color: AppConstants.warningColor,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Password Settings',
+                    style: AppConstants.bodyLarge.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: AppConstants.warningColor,
+                    ),
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: () => setState(() => _showPasswordSection = true),
+                  icon: Icon(
+                    Icons.edit,
+                    color: AppConstants.warningColor,
+                    size: 16,
+                  ),
+                  label: Text(
+                    'Change Password',
+                    style: TextStyle(
+                      color: AppConstants.warningColor,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+        ],
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Section Header
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+          decoration: BoxDecoration(
+            color: AppConstants.warningColor.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: AppConstants.warningColor.withOpacity(0.2),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppConstants.warningColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.lock_outline,
+                  color: AppConstants.warningColor,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Change Password',
+                style: AppConstants.bodyLarge.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: AppConstants.warningColor,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Current Password Field
+        TextFormField(
+          controller: _currentPasswordController,
+          obscureText: true,
+          onChanged: (_) => _onFieldChanged(),
+          validator: (value) {
+            if (value == null || value.trim().isEmpty) {
+              return 'Please enter your current password';
+            }
+            return null;
+          },
+          decoration: InputDecoration(
+            labelText: 'Current Password',
+            hintText: 'Enter your current password',
+            prefixIcon: Icon(
+              Icons.lock_outline,
+              color: AppConstants.warningColor,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppConstants.borderColor),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppConstants.borderColor),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: AppConstants.warningColor,
+                width: 2,
+              ),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.red),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.red, width: 2),
+            ),
+            filled: true,
+            fillColor: Colors.grey[50],
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 16,
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // New Password Field
+        TextFormField(
+          controller: _newPasswordController,
+          obscureText: true,
+          onChanged: (_) => _onFieldChanged(),
+          validator: (value) {
+            if (value == null || value.trim().isEmpty) {
+              return 'Please enter a new password';
+            }
+            if (value.length < 6) {
+              return 'Password must be at least 6 characters long';
+            }
+            return null;
+          },
+          decoration: InputDecoration(
+            labelText: 'New Password',
+            hintText: 'Enter your new password',
+            prefixIcon: Icon(
+              Icons.lock_reset,
+              color: AppConstants.warningColor,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppConstants.borderColor),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppConstants.borderColor),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: AppConstants.warningColor,
+                width: 2,
+              ),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.red),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.red, width: 2),
+            ),
+            filled: true,
+            fillColor: Colors.grey[50],
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 16,
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Confirm Password Field
+        TextFormField(
+          controller: _confirmPasswordController,
+          obscureText: true,
+          onChanged: (_) => _onFieldChanged(),
+          validator: (value) {
+            if (value == null || value.trim().isEmpty) {
+              return 'Please confirm your new password';
+            }
+            if (value != _newPasswordController.text) {
+              return 'Passwords do not match';
+            }
+            return null;
+          },
+          decoration: InputDecoration(
+            labelText: 'Confirm New Password',
+            hintText: 'Re-enter your new password',
+            prefixIcon: Icon(
+              Icons.lock_reset,
+              color: AppConstants.warningColor,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppConstants.borderColor),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: AppConstants.borderColor),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(
+                color: AppConstants.warningColor,
+                width: 2,
+              ),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.red),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.red, width: 2),
+            ),
+            filled: true,
+            fillColor: Colors.grey[50],
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 16,
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        // Password Action Buttons
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () {
+                  setState(() {
+                    _showPasswordSection = false;
+                    _currentPasswordController.clear();
+                    _newPasswordController.clear();
+                    _confirmPasswordController.clear();
+                  });
+                },
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  side: BorderSide(color: AppConstants.warningColor),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Text(
+                  'Cancel',
+                  style: TextStyle(
+                    color: AppConstants.warningColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              flex: 2,
+              child: ElevatedButton(
+                onPressed: _isChangingPassword ? null : _changePassword,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppConstants.warningColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 2,
+                ),
+                child:
+                    _isChangingPassword
+                        ? const SpinKitThreeBounce(
+                          color: AppConstants.warningColor,
+                          size: 20.0,
+                        )
+                        : const Text(
+                          'Update Password',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 32),
+      ],
+    );
+  }
+
   Future<void> _saveProfile() async {
-    if (!_formKey.currentState!.validate() || _currentOrganizer == null) {
+    if (!_formKey.currentState!.validate() || _currentStaff == null) {
       return;
     }
 
     // Build update map with only changed fields
     final updateMap = _buildUpdateMap();
-    
+
     if (updateMap.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -223,8 +542,8 @@ class _StaffEditProfileState extends State<StaffEditProfile> {
       );
 
       // Use the new update method that only updates changed fields
-      await databaseService.updateOrganizerProfileFields(
-        _currentOrganizer!.id,
+      await databaseService.updateStaffProfileFields(
+        _currentStaff!.id,
         updateMap,
       );
 
@@ -298,22 +617,23 @@ class _StaffEditProfileState extends State<StaffEditProfile> {
 
     final result = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Unsaved Changes'),
-        content: const Text(
-          'You have unsaved changes. Are you sure you want to leave?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Stay'),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Unsaved Changes'),
+            content: const Text(
+              'You have unsaved changes. Are you sure you want to leave?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Stay'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Leave'),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Leave'),
-          ),
-        ],
-      ),
     );
 
     return result ?? false;
@@ -323,21 +643,20 @@ class _StaffEditProfileState extends State<StaffEditProfile> {
   Widget build(BuildContext context) {
     return WillPopScope(
       onWillPop: _onWillPop,
-      child: StreamBuilder<Organizer?>(
-        stream: Provider.of<DatabaseService>(
-          context,
-          listen: false,
-        ).streamCurrentOrganizerData(),
+      child: StreamBuilder<Staff?>(
+        stream:
+            Provider.of<DatabaseService>(
+              context,
+              listen: false,
+            ).streamCurrentStaffData(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting &&
               !_isInitialized) {
             return Scaffold(
               key: _scaffoldKey,
               backgroundColor: AppConstants.backgroundColor,
-              appBar: NestedScreenAppBar(
-                screenTitle: 'Edit Profile',
-              ),
-              drawer: OrganizerSidebar(currentRoute: currentRoute),
+              appBar: NestedScreenAppBar(screenTitle: 'Edit Profile'),
+              drawer: StaffSidebar(currentRoute: currentRoute),
               body: Container(
                 color: AppConstants.primaryColor.withOpacity(0.1),
                 child: const Center(
@@ -355,7 +674,7 @@ class _StaffEditProfileState extends State<StaffEditProfile> {
               key: _scaffoldKey,
               backgroundColor: AppConstants.backgroundColor,
               appBar: NestedScreenAppBar(screenTitle: 'Edit Profile'),
-              drawer: OrganizerSidebar(currentRoute: currentRoute),
+              drawer: StaffSidebar(currentRoute: currentRoute),
               body: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -368,9 +687,10 @@ class _StaffEditProfileState extends State<StaffEditProfile> {
                     ),
                     const SizedBox(height: 16),
                     ElevatedButton(
-                      onPressed: () => setState(() {
-                        _isInitialized = false;
-                      }),
+                      onPressed:
+                          () => setState(() {
+                            _isInitialized = false;
+                          }),
                       child: const Text('Retry'),
                     ),
                   ],
@@ -379,31 +699,29 @@ class _StaffEditProfileState extends State<StaffEditProfile> {
             );
           }
 
-          final organizer = snapshot.data;
-          if (organizer == null) {
+          final staff = snapshot.data;
+          if (staff == null) {
             return Scaffold(
               key: _scaffoldKey,
               backgroundColor: AppConstants.backgroundColor,
               appBar: NestedScreenAppBar(screenTitle: 'Edit Profile'),
-              drawer: OrganizerSidebar(currentRoute: currentRoute),
-              body: const Center(child: Text('No organizer data available')),
+              drawer: StaffSidebar(currentRoute: currentRoute),
+              body: const Center(child: Text('No staff data available')),
             );
           }
 
           // Populate fields when data is available
-          if (!_isInitialized || _currentOrganizer?.id != organizer.id) {
+          if (!_isInitialized || _currentStaff?.id != staff.id) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              _populateFields(organizer);
+              _populateFields(staff);
             });
           }
 
           return Scaffold(
             key: _scaffoldKey,
             backgroundColor: AppConstants.backgroundColor,
-            appBar: NestedScreenAppBar(
-              screenTitle: organizer.fullName,
-            ),
-            drawer: OrganizerSidebar(currentRoute: currentRoute),
+            appBar: NestedScreenAppBar(screenTitle: staff.fullName),
+            drawer: StaffSidebar(currentRoute: currentRoute),
             body: Form(
               key: _formKey,
               child: SingleChildScrollView(
@@ -412,50 +730,36 @@ class _StaffEditProfileState extends State<StaffEditProfile> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Profile Image Section
-                    ProfileImageSection(
+                    StaffProfileImageSection(
                       selectedImageBase64:
-                          _selectedImageBase64 ?? organizer.profileImage,
-                      fullName: organizer.fullName,
+                          _selectedImageBase64 ?? staff.profileImage,
+                      fullName: staff.fullName,
                       onImageChanged: _onImageChanged,
                     ),
                     const SizedBox(height: 32),
 
                     // Personal Information Section
-                    PersonalInformationSection(
+                    StaffPersonalInformationSection(
                       fullNameController: _fullNameController,
-                      bioController: _bioController,
                       onFieldChanged: _onFieldChanged,
                     ),
                     const SizedBox(height: 24),
 
                     // Contact Information Section
-                    ContactInformationSection(
+                    StaffContactInformationSection(
                       emailController: _emailController,
                       phoneController: _phoneController,
                       onFieldChanged: _onFieldChanged,
                     ),
                     const SizedBox(height: 24),
 
-                    // Professional Information Section
-                    ProfessionalInformationSection(
-                      organizationController: _organizationController,
-                      jobTitleController: _jobTitleController,
-                      websiteController: _websiteController,
-                      onFieldChanged: _onFieldChanged,
-                    ),
-                    const SizedBox(height: 24),
+                    // Add password section
+                    _buildPasswordSection(),
 
-                    // Location Information Section
-                    LocationInformationSection(
-                      addressController: _addressController,
-                      cityController: _cityController,
-                      countryController: _countryController,
-                      onFieldChanged: _onFieldChanged,
-                    ),
                     const SizedBox(height: 32),
 
                     // Action Buttons
-                    ActionButtonsSection(
+                    StaffActionButtonsSection(
                       isLoading: _isLoading,
                       onCancel: () => Navigator.of(context).pop(),
                       onSave: _saveProfile,

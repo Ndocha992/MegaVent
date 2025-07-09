@@ -1,16 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:megavent/models/staff.dart';
 import 'package:megavent/utils/constants.dart';
-import 'package:megavent/models/organizer.dart';
 import 'dart:convert';
 import 'dart:typed_data';
 
 class StaffProfileHeaderCard extends StatelessWidget {
-  final Organizer organizer;
+  final Staff staff;
 
-  const StaffProfileHeaderCard({
-    super.key,
-    required this.organizer,
-  });
+  const StaffProfileHeaderCard({super.key, required this.staff});
 
   @override
   Widget build(BuildContext context) {
@@ -36,15 +33,13 @@ class StaffProfileHeaderCard extends StatelessWidget {
                     shape: BoxShape.circle,
                     border: Border.all(color: Colors.white, width: 3),
                   ),
-                  child: ClipOval(
-                    child: _buildProfileImage(),
-                  ),
+                  child: ClipOval(child: _buildProfileImage()),
                 ),
               ],
             ),
             const SizedBox(height: 12), // Reduced spacing
             Text(
-              organizer.fullName,
+              staff.fullName,
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 22, // Slightly smaller
@@ -54,7 +49,7 @@ class StaffProfileHeaderCard extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              organizer.jobTitle ?? 'Event Organizer',
+              staff.role,
               style: const TextStyle(color: Colors.white70, fontSize: 15),
               textAlign: TextAlign.center,
             ),
@@ -62,13 +57,14 @@ class StaffProfileHeaderCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: organizer.isApproved
-                    ? AppConstants.successColor
-                    : AppConstants.warningColor,
+                color:
+                    staff.isApproved
+                        ? AppConstants.successColor
+                        : AppConstants.warningColor,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
-                organizer.approvalStatus,
+                'Approved',
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 12,
@@ -83,12 +79,12 @@ class StaffProfileHeaderCard extends StatelessWidget {
   }
 
   Widget _buildProfileImage() {
-    if (organizer.profileImage != null && organizer.profileImage!.isNotEmpty) {
+    if (staff.profileImage != null && staff.profileImage!.isNotEmpty) {
       // Check if it's a base64 image
-      if (organizer.profileImage!.startsWith('data:image')) {
+      if (staff.profileImage!.startsWith('data:image')) {
         try {
           // Extract base64 data from data URL
-          String base64String = organizer.profileImage!.split(',')[1];
+          String base64String = staff.profileImage!.split(',')[1];
           Uint8List imageBytes = base64Decode(base64String);
           return Image.memory(
             imageBytes,
@@ -102,10 +98,10 @@ class StaffProfileHeaderCard extends StatelessWidget {
         } catch (e) {
           return _buildDefaultAvatar();
         }
-      } else if (organizer.profileImage!.startsWith('http')) {
+      } else if (staff.profileImage!.startsWith('http')) {
         // Network image
         return Image.network(
-          organizer.profileImage!,
+          staff.profileImage!,
           fit: BoxFit.cover,
           width: double.infinity,
           height: double.infinity,
@@ -116,7 +112,7 @@ class StaffProfileHeaderCard extends StatelessWidget {
       } else {
         // Assume it's just base64 without data URL prefix
         try {
-          Uint8List imageBytes = base64Decode(organizer.profileImage!);
+          Uint8List imageBytes = base64Decode(staff.profileImage!);
           return Image.memory(
             imageBytes,
             fit: BoxFit.cover,
@@ -139,11 +135,7 @@ class StaffProfileHeaderCard extends StatelessWidget {
       width: double.infinity,
       height: double.infinity,
       color: Colors.white.withOpacity(0.2),
-      child: const Icon(
-        Icons.person,
-        size: 45,
-        color: Colors.white,
-      ),
+      child: const Icon(Icons.person, size: 45, color: Colors.white),
     );
   }
 }
