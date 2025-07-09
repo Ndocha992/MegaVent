@@ -51,8 +51,10 @@ class LatestAttendeesCard extends StatelessWidget {
     // FIXED: Create registration map using the composite ID
     final Map<String, Registration> userRegistrationMap = {};
     for (final registration in registrations) {
-      // Use composite key to match with attendee.id
-      final compositeId = '${registration.userId}_${registration.eventId}';
+      final compositeId = Registration.getCompositeId(
+        registration.userId, 
+        registration.eventId
+      );
       userRegistrationMap[compositeId] = registration;
     }
 

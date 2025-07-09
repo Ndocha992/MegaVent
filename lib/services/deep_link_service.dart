@@ -53,15 +53,46 @@ class DeepLinkService {
   void _handleDeepLink(Uri link) {
     if (_context == null) return;
 
-    print('Processing deep link: $link');
-
-    // Parse the link parameters
+    // Parse parameters
     final String? eventId = link.queryParameters['eventId'];
     final bool autoRegister = link.queryParameters['autoRegister'] == 'true';
 
     if (eventId != null && link.path.contains('register')) {
       _handleEventRegistration(eventId, autoRegister);
+    } else if (link.path.contains('download')) {
+      _handleAppDownload();
     }
+  }
+
+  void _handleAppDownload() {
+    const appUrl = 'https://mediafire.com/app-download-link';
+    if (_context != null) {
+      _showDialog(
+        title: 'Download MegaVent',
+        content: 'You need to install the MegaVent app to use this feature',
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(_context!).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(_context!).pop();
+              launchURL(appUrl);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppConstants.primaryColor,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Download App'),
+          ),
+        ],
+      );
+    }
+  }
+
+  void launchURL(String url) async {
+    // Implementation to launch URL
   }
 
   void _handleEventRegistration(String eventId, bool autoRegister) async {
@@ -103,7 +134,7 @@ class DeepLinkService {
     if (autoRegister) {
       await _attemptAutoRegistration(eventId, authService, databaseService);
     } else {
-      _navigateToEventRegistration(eventId);
+      _navigateToEventDetails(eventId);
     }
   }
 
@@ -232,7 +263,7 @@ class DeepLinkService {
           'An error occurred during registration. Please try manual registration.',
           isError: true,
         );
-        _navigateToEventRegistration(eventId);
+        _navigateToEventDetails(eventId);
       }
     }
   }
@@ -356,14 +387,6 @@ class DeepLinkService {
     );
   }
 
-  // Navigation methods
-  void _navigateToEventRegistration(String eventId) {
-    Navigator.of(_context!).pushNamed(
-      '/attendee-event-registration',
-      arguments: {'eventId': eventId},
-    );
-  }
-
   void _navigateToEventDetails(String eventId) {
     Navigator.of(
       _context!,
@@ -459,7 +482,7 @@ class DeepLinkService {
               databaseService,
             );
           } else {
-            _navigateToEventRegistration(eventId);
+            _navigateToEventDetails(eventId);
           }
         } else {
           _showEventDetailsForNonAttendee(eventId, userType);

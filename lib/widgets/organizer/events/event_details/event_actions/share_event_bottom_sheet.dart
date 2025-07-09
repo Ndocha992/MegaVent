@@ -207,15 +207,11 @@ class _ShareEventBottomSheetState extends State<ShareEventBottomSheet> {
   }
 
   void _generateRegistrationLink() {
-    // Generate a deep link that will be handled by your app
-    // This creates a fallback URL that redirects to MediaFire if app isn't installed
-
+    // Generate deep link that opens app or download page
     final String appDeepLink =
         'megavent://register?eventId=${widget.event.id}&autoRegister=true';
 
     setState(() {
-      // Use the app deep link directly for QR code
-      // Android will handle the fallback automatically
       _registrationLink = appDeepLink;
     });
   }

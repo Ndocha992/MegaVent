@@ -10,7 +10,7 @@ class Registration {
   final bool hasAttended;
   final DateTime? attendedAt;
   final String qrCode;
-  final String confirmedBy;
+  final String? confirmedBy; // Made nullable
 
   Registration({
     required this.id,
@@ -20,7 +20,7 @@ class Registration {
     this.hasAttended = false,
     this.attendedAt,
     required this.qrCode,
-    required this.confirmedBy,
+    this.confirmedBy, // Made optional
   });
 
   // Create Registration from Firestore document
@@ -36,7 +36,7 @@ class Registration {
       hasAttended: data['attended'] ?? false,
       attendedAt: (data['attendedAt'] as Timestamp?)?.toDate(),
       qrCode: data['qrCode'] ?? '',
-      confirmedBy: data['confirmedBy'],
+      confirmedBy: data['confirmedBy'], // This can be null
     );
   }
 
@@ -49,7 +49,7 @@ class Registration {
       'attended': hasAttended,
       'attendedAt': attendedAt != null ? Timestamp.fromDate(attendedAt!) : null,
       'qrCode': qrCode,
-      'confirmedBy': confirmedBy,
+      'confirmedBy': confirmedBy, // This can be null
     };
   }
 
@@ -58,9 +58,10 @@ class Registration {
     String userId,
     String eventId,
     DateTime registeredAt,
+    String organizerId,
   ) {
     final timestamp = registeredAt.millisecondsSinceEpoch.toString();
-    final rawData = '$userId|$eventId|$timestamp';
+    final rawData = '$userId|$eventId|$timestamp|$organizerId';
 
     // Create a hash to make it more secure and consistent length
     final bytes = utf8.encode(rawData);
@@ -94,6 +95,11 @@ class Registration {
     } catch (e) {
       return false;
     }
+  }
+
+  // Method to get composite ID
+  static String getCompositeId(String userId, String eventId) {
+    return '${userId}_$eventId';
   }
 
   // Extract data from QR code
