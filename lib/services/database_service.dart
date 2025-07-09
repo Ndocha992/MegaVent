@@ -134,9 +134,10 @@ class DatabaseService extends ChangeNotifier {
   // Get current staff data as a one-time fetch
   Future<Staff?> getCurrentStaffData() => _staffService.getCurrentStaffData();
 
-  // Update current staff profile
-  Future<void> updateCurrentStaffProfile(Staff staff) =>
-      _staffService.updateCurrentStaffProfile(staff);
+  Future<void> updateStaffProfileFields(
+    String staffId,
+    Map<String, dynamic> fields,
+  ) => _staffService.updateStaffProfileFields(staffId, fields);
 
   /**
    * ====== ATTENDEE METHODS ======

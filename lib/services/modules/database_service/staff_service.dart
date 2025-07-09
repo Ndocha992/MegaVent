@@ -223,38 +223,24 @@ class StaffService {
     }
   }
 
-  // Update current staff profile
-  Future<void> updateCurrentStaffProfile(Staff staff) async {
+  Future<void> updateStaffProfileFields(
+    String staffId,
+    Map<String, dynamic> fields,
+  ) async {
     try {
-      final user = _auth.currentUser;
-      if (user == null) {
-        throw Exception('User not authenticated');
-      }
+      if (fields.isEmpty) return;
 
-      // Verify the staff member is the current user
-      if (staff.email != user.email) {
-        throw Exception('Unauthorized: You can only update your own profile');
-      }
-
-      Map<String, dynamic> updateData = {
-        'fullName': staff.fullName,
-        'email': staff.email,
-        'phone': staff.phone,
-        'role': staff.role,
-        'department': staff.department,
+      // Add updatedAt timestamp
+      final cleanFields = {
+        ...fields,
         'updatedAt': FieldValue.serverTimestamp(),
       };
 
-      // Only add profileImage if it's not null
-      if (staff.profileImage != null) {
-        updateData['profileImage'] = staff.profileImage;
-      }
-
-      await _firestore.collection('staff').doc(staff.id).update(updateData);
+      await _firestore.collection('staff').doc(staffId).update(cleanFields);
 
       _notifier.notifyListeners();
     } catch (e) {
-      throw Exception('Failed to update profile: $e');
+      throw Exception('Failed to update staff profile: $e');
     }
   }
 }

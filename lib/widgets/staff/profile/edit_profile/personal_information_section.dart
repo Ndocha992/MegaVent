@@ -3,13 +3,11 @@ import 'package:megavent/utils/constants.dart';
 
 class StaffPersonalInformationSection extends StatelessWidget {
   final TextEditingController fullNameController;
-  final TextEditingController bioController;
   final VoidCallback onFieldChanged;
 
   const StaffPersonalInformationSection({
     super.key,
     required this.fullNameController,
-    required this.bioController,
     required this.onFieldChanged,
   });
 
@@ -117,14 +115,6 @@ class StaffPersonalInformationSection extends StatelessWidget {
             }
             return null;
           },
-        ),
-        const SizedBox(height: 16),
-        _buildTextField(
-          controller: bioController,
-          label: 'Bio',
-          icon: Icons.info_outline,
-          hint: 'Tell us about yourself',
-          maxLines: 3,
         ),
       ],
     );
