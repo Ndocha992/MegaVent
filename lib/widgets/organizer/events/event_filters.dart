@@ -26,7 +26,7 @@ class _EventFiltersState extends State<EventFilters> {
     _selectedCategory = widget.selectedCategory;
   }
 
-  // Helper method to get category icon
+  // Helper method to get category color
   Color _getCategoryColor(String category) {
     switch (category.toLowerCase()) {
       case 'all':
@@ -384,6 +384,9 @@ class _EventFiltersState extends State<EventFilters> {
       ),
       content: SizedBox(
         width: double.maxFinite,
+        // Add constraints to prevent overflow
+        height:
+            MediaQuery.of(context).size.height * 0.6, // 60% of screen height
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -395,69 +398,76 @@ class _EventFiltersState extends State<EventFilters> {
               ),
             ),
             const SizedBox(height: 16),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children:
-                  widget.categories.map((category) {
-                    final isSelected = _selectedCategory == category;
-                    final categoryColor = _getCategoryColor(category);
-                    final categoryIcon = _getCategoryIcon(category);
+            // Wrap the categories in a scrollable container
+            Expanded(
+              child: SingleChildScrollView(
+                child: Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children:
+                      widget.categories.map((category) {
+                        final isSelected = _selectedCategory == category;
+                        final categoryColor = _getCategoryColor(category);
+                        final categoryIcon = _getCategoryIcon(category);
 
-                    return GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _selectedCategory = category;
-                        });
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                        decoration: BoxDecoration(
-                          color:
-                              isSelected
-                                  ? categoryColor.withOpacity(0.15)
-                                  : Colors.grey[100],
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color:
-                                isSelected ? categoryColor : Colors.transparent,
-                            width: 2,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              categoryIcon,
-                              size: 18,
+                        return GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _selectedCategory = category;
+                            });
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            decoration: BoxDecoration(
                               color:
                                   isSelected
-                                      ? categoryColor
-                                      : AppConstants.textSecondaryColor,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              category,
-                              style: TextStyle(
+                                      ? categoryColor.withOpacity(0.15)
+                                      : Colors.grey[100],
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
                                 color:
                                     isSelected
                                         ? categoryColor
-                                        : AppConstants.textSecondaryColor,
-                                fontWeight:
-                                    isSelected
-                                        ? FontWeight.w600
-                                        : FontWeight.normal,
-                                fontSize: 14,
+                                        : Colors.transparent,
+                                width: 2,
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }).toList(),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  categoryIcon,
+                                  size: 18,
+                                  color:
+                                      isSelected
+                                          ? categoryColor
+                                          : AppConstants.textSecondaryColor,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  category,
+                                  style: TextStyle(
+                                    color:
+                                        isSelected
+                                            ? categoryColor
+                                            : AppConstants.textSecondaryColor,
+                                    fontWeight:
+                                        isSelected
+                                            ? FontWeight.w600
+                                            : FontWeight.normal,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                ),
+              ),
             ),
           ],
         ),
@@ -475,6 +485,7 @@ class _EventFiltersState extends State<EventFilters> {
         ElevatedButton(
           onPressed: () {
             widget.onCategoryChanged(_selectedCategory);
+            Navigator.pop(context);
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: AppConstants.primaryColor,
