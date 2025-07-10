@@ -4,22 +4,17 @@ import 'package:megavent/models/dashboard_stats.dart';
 import 'package:megavent/models/staff.dart';
 import 'package:megavent/models/attendee.dart';
 import 'package:megavent/models/registration.dart';
-import 'package:megavent/screens/organizer/create_events.dart';
-import 'package:megavent/screens/organizer/create_staff.dart';
-import 'package:megavent/screens/organizer/qr_scanner.dart';
+import 'package:megavent/screens/admin/organizer.dart';
+import 'package:megavent/widgets/admin/dashboard/admin_quick_actions_grid.dart';
+import 'package:megavent/widgets/admin/dashboard/admin_stats_overview.dart';
+import 'package:megavent/widgets/admin/dashboard/admin_welcome_card.dart';
+import 'package:megavent/widgets/admin/dashboard/latest_organizer_card.dart';
+import 'package:megavent/widgets/admin/sidebar.dart';
 import 'package:provider/provider.dart';
-import 'package:megavent/screens/organizer/events_details.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/models/event.dart';
 import 'package:megavent/services/database_service.dart';
 import 'package:megavent/widgets/app_bar.dart';
-import 'package:megavent/widgets/organizer/dashboard/latest_attendees_card.dart';
-import 'package:megavent/widgets/organizer/dashboard/latest_events_card.dart';
-import 'package:megavent/widgets/organizer/dashboard/latest_staff_card.dart';
-import 'package:megavent/widgets/organizer/dashboard/quick_actions_grid.dart';
-import 'package:megavent/widgets/organizer/sidebar.dart';
-import 'package:megavent/widgets/organizer/dashboard/stats_overview.dart';
-import 'package:megavent/widgets/organizer/dashboard/welcome_card.dart';
 
 class AdminDashboard extends StatefulWidget {
   const AdminDashboard({super.key});
@@ -34,8 +29,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
   late DatabaseService _databaseService;
   List<Event> _events = [];
   List<Attendee> _attendees = [];
-  List<Registration> _registrations = [];
-  Map<String, String> _eventIdToNameMap = {};
   List<Staff> _staff = [];
   DashboardStats _dashboardStats = DashboardStats(
     totalEvents: 0,
@@ -105,12 +98,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
           completedEvents: statsData['completedEvents'] ?? 0,
         );
 
-        // Get all registrations for activity tracking
-        _registrations = allRegistrations;
-
-        // Get event ID to name mapping
-        _eventIdToNameMap = results[5] as Map<String, String>;
-
         _isLoading = false;
       });
     } catch (e) {
@@ -148,20 +135,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   void _handleQuickAction(String action) {
     switch (action) {
-      case 'create_event':
-        Navigator.of(
-          context,
-        ).push(MaterialPageRoute(builder: (context) => const CreateEvents()));
-        break;
-      case 'add_staff':
-        Navigator.of(
-          context,
-        ).push(MaterialPageRoute(builder: (context) => const CreateStaff()));
-        break;
-      case 'scan_qr':
-        Navigator.of(
-          context,
-        ).push(MaterialPageRoute(builder: (context) => const QRScanner()));
+      case 'organizers':
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (context) => const OrganizerScreen()),
+        );
         break;
     }
   }
@@ -175,7 +152,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         title: 'MegaVent',
         onMenuPressed: () => _scaffoldKey.currentState?.openDrawer(),
       ),
-      drawer: OrganizerSidebar(currentRoute: '/organizer-dashboard'),
+      drawer: AdminSidebar(currentRoute: '/admin-dashboard'),
       body:
           _isLoading
               ? _buildLoadingState()
@@ -242,25 +219,15 @@ class _AdminDashboardState extends State<AdminDashboard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const WelcomeCard(),
+            const AdminWelcomeCard(),
             const SizedBox(height: 24),
-            StatsOverview(stats: _dashboardStats),
+            AdminStatsOverview(stats: _dashboardStats),
             const SizedBox(height: 24),
-            LatestEventsCard(limit: 5),
+            LatestOrganizerCard(staff: _staff),
             const SizedBox(height: 24),
-            LatestAttendeesCard(
-              attendees: _attendees,
-              registrations: _registrations,
-              eventNames: _eventIdToNameMap,
-            ),
-            const SizedBox(height: 24),
-            LatestStaffCard(staff: _staff),
-            const SizedBox(height: 24),
-            QuickActionsGrid(onNavigate: _handleQuickAction),
+            AdminQuickActionsGrid(onNavigate: _handleQuickAction),
             const SizedBox(height: 24),
             _buildRecentActivity(),
-            const SizedBox(height: 24),
-            _buildUpcomingEvents(),
           ],
         ),
       ),
@@ -347,216 +314,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 color: AppConstants.textSecondaryColor,
               ),
             ),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.of(context).pushReplacementNamed('/organizer-events');
-              },
-              icon: const Icon(Icons.event),
-              label: const Text('View Events'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppConstants.primaryColor,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 10,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildUpcomingEvents() {
-    final upcomingEvents =
-        _events
-            .where((event) => event.startDate.isAfter(DateTime.now()))
-            .toList()
-          ..sort((a, b) => a.startDate.compareTo(b.startDate))
-          ..take(3).toList();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text('Upcoming Events', style: AppConstants.headlineSmall),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pushReplacementNamed('/organizer-events');
-              },
-              child: const Text('View All Events'),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        upcomingEvents.isEmpty
-            ? _buildEmptyUpcomingEventsState()
-            : ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: upcomingEvents.length,
-              separatorBuilder: (context, index) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                final event = upcomingEvents[index];
-                return GestureDetector(
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => EventsDetails(event: event),
-                      ),
-                    );
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: AppConstants.cardDecoration,
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 60,
-                          height: 60,
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: AppConstants.primaryGradient,
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                event.startDate.day.toString(),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              Text(
-                                _getMonthName(event.startDate.month),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                event.name,
-                                style: AppConstants.titleMedium,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                '${event.startTime} - ${event.endTime}',
-                                style: AppConstants.bodySmall.copyWith(
-                                  color: AppConstants.primaryColor,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.location_on,
-                                    size: 14,
-                                    color: AppConstants.textSecondaryColor,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Expanded(
-                                    child: Text(
-                                      event.location,
-                                      style: AppConstants.bodySmall,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppConstants.secondaryColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Text(
-                            '${event.registeredCount}/${event.capacity}',
-                            style: AppConstants.bodySmall.copyWith(
-                              color: AppConstants.secondaryColor,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-      ],
-    );
-  }
-
-  Widget _buildEmptyUpcomingEventsState() {
-    return Container(
-      padding: const EdgeInsets.all(32),
-      decoration: AppConstants.cardDecoration,
-      child: Center(
-        child: Column(
-          children: [
-            Icon(
-              Icons.event_available,
-              size: 48,
-              color: AppConstants.primaryColor,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No Upcoming Events',
-              style: AppConstants.titleMedium.copyWith(
-                color: AppConstants.textSecondaryColor,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Create your first event to get started',
-              textAlign: TextAlign.center,
-              style: AppConstants.bodySmall.copyWith(
-                color: AppConstants.textSecondaryColor,
-              ),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (context) => const CreateEvents()),
-                );
-              },
-              icon: const Icon(Icons.add),
-              label: const Text('Create Event'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppConstants.primaryColor,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 10,
-                ),
-              ),
-            ),
           ],
         ),
       ),
@@ -570,7 +327,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
     List<Map<String, dynamic>> activities = [];
 
-    // Add recent event-related activities
+    // Add recent organizer-related activities
     for (final event in _events.take(2)) {
       activities.add({
         'title': 'Event "${event.name}" created',
@@ -579,49 +336,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
         'color': AppConstants.primaryColor,
         'isNew': _isRecent(event.createdAt),
         'dateTime': event.createdAt,
-      });
-    }
-
-    // Add recent attendee activities - use registeredAt from Registration model
-    for (final attendee in _attendees.take(2)) {
-      // Find the registration for this attendee using composite ID
-      final registration = _registrations.firstWhere(
-        (reg) => '${reg.userId}_${reg.eventId}' == attendee.id,
-        orElse:
-            () => Registration(
-              id: '',
-              userId: attendee.id.split('_').first,
-              eventId: attendee.id.split('_').last,
-              registeredAt: attendee.createdAt,
-              hasAttended: false,
-              qrCode: '',
-              confirmedBy: '',
-            ),
-      );
-
-      // Get event name for the activity
-      final eventName =
-          _eventIdToNameMap[registration.eventId] ?? 'Unknown Event';
-
-      activities.add({
-        'title': '${attendee.fullName} registered for "$eventName"',
-        'time': _getTimeAgo(registration.registeredAt),
-        'icon': Icons.person_add,
-        'color': AppConstants.successColor,
-        'isNew': _isRecent(registration.registeredAt),
-        'dateTime': registration.registeredAt,
-      });
-    }
-
-    // Add recent staff activities
-    for (final staff in _staff.take(2)) {
-      activities.add({
-        'title': 'Staff member ${staff.name} joined',
-        'time': _getTimeAgo(staff.hiredAt),
-        'icon': Icons.badge,
-        'color': AppConstants.accentColor,
-        'isNew': _isRecent(staff.hiredAt),
-        'dateTime': staff.hiredAt,
       });
     }
 
@@ -657,23 +371,5 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final now = DateTime.now();
     final difference = now.difference(dateTime);
     return difference.inHours < 6;
-  }
-
-  String _getMonthName(int month) {
-    const months = [
-      'JAN',
-      'FEB',
-      'MAR',
-      'APR',
-      'MAY',
-      'JUN',
-      'JUL',
-      'AUG',
-      'SEP',
-      'OCT',
-      'NOV',
-      'DEC',
-    ];
-    return months[month - 1];
   }
 }
