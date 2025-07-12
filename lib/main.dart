@@ -22,6 +22,7 @@ import 'package:megavent/screens/staff/events_details.dart';
 import 'package:megavent/screens/staff/profile.dart';
 import 'package:megavent/screens/staff/qr_scanner.dart';
 import 'package:megavent/screens/staff/staff_dashboard.dart';
+import 'package:megavent/services/admin_init_service.dart';
 import 'package:megavent/services/auth_service.dart';
 import 'package:megavent/services/database_service.dart';
 import 'package:megavent/services/deep_link_service.dart';
@@ -36,6 +37,9 @@ void main() async {
 
   // Initialize Firebase
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Initialize admin (runs only once)
+  await AdminInitService.initializeAdmin();
 
   runApp(
     MultiProvider(
