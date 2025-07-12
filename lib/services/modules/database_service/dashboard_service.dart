@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:megavent/models/admin_dashboard_stats.dart';
 import 'package:megavent/models/event.dart';
 import 'package:megavent/models/registration.dart';
 
@@ -376,5 +377,55 @@ class DashboardService {
     } catch (e) {
       throw Exception('Failed to get staff stats: $e');
     }
+  }
+
+  /**
+ * ====== ADMIN STATS METHOD ======
+ */
+  Future<AdminDashboardStats> getAdminDashboardStats() async {
+    try {
+      final organizers = await _getCollectionCount('organizers');
+      final events = await _getCollectionCount('events');
+      final staff = await _getCollectionCount('staff');
+      final attendees = await _getCollectionCount('attendees');
+
+      final registrations = await _getCollectionCount('registrations');
+      final attended = await _getCountByQuery(
+        _firestore
+            .collection('registrations')
+            .where('attended', isEqualTo: true),
+      );
+
+      return AdminDashboardStats(
+        totalOrganizers: organizers!,
+        totalEvents: events!,
+        totalStaff: staff!,
+        totalAttendees: attendees!,
+        totalRegistrations: registrations!,
+        attendedRegistrations: attended!,
+        notAttendedRegistrations: registrations - attended,
+      );
+    } catch (e) {
+      return AdminDashboardStats(
+        totalOrganizers: 0,
+        totalEvents: 0,
+        totalStaff: 0,
+        totalAttendees: 0,
+        totalRegistrations: 0,
+        attendedRegistrations: 0,
+        notAttendedRegistrations: 0,
+      );
+    }
+  }
+
+  // Helper methods
+  Future<int?> _getCollectionCount(String collection) async {
+    final snapshot = await _firestore.collection(collection).count().get();
+    return snapshot.count;
+  }
+
+  Future<int?> _getCountByQuery(Query query) async {
+    final snapshot = await query.count().get();
+    return snapshot.count;
   }
 }

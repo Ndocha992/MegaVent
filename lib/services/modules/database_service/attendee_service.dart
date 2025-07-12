@@ -646,4 +646,18 @@ class AttendeeService {
       throw Exception('Failed to get staff attendees: $e');
     }
   }
+
+  /**
+ * ====== ADMIN METHODS ======
+ */
+
+  // Get all attendees
+  Future<List<Attendee>> getAdminAllAttendees() async {
+    try {
+      final snapshot = await _firestore.collection('attendees').get();
+      return snapshot.docs.map((doc) => Attendee.fromFirestore(doc)).toList();
+    } catch (e) {
+      throw Exception('Failed to get attendees: $e');
+    }
+  }
 }

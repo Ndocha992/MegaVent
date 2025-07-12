@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:megavent/screens/admin/admin_dashboard.dart';
+import 'package:megavent/screens/admin/organizer.dart';
+import 'package:megavent/screens/admin/profile.dart';
 import 'package:megavent/screens/attendee/attendee_dashboard.dart';
 import 'package:megavent/screens/attendee/events.dart';
 import 'package:megavent/screens/attendee/my_events.dart';
@@ -159,6 +161,8 @@ class _MyAppState extends State<MyApp> {
         '/staff-event-details': (context) => const StaffEventsDetails(),
         // Admin routes
         '/admin-dashboard': (context) => const AdminDashboard(),
+        '/admin-organizers': (context) => const OrganizerScreen(),
+        '/admin-profile': (context) => const AdminProfile(),
       },
     );
   }

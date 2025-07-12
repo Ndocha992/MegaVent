@@ -1,14 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
-import 'package:megavent/models/dashboard_stats.dart';
+import 'package:megavent/models/admin_dashboard_stats.dart';
+import 'package:megavent/models/organizer.dart';
 import 'package:megavent/models/staff.dart';
 import 'package:megavent/models/attendee.dart';
 import 'package:megavent/models/registration.dart';
 import 'package:megavent/screens/admin/organizer.dart';
 import 'package:megavent/widgets/admin/dashboard/admin_quick_actions_grid.dart';
-import 'package:megavent/widgets/admin/dashboard/admin_stats_overview.dart';
 import 'package:megavent/widgets/admin/dashboard/admin_welcome_card.dart';
-import 'package:megavent/widgets/admin/dashboard/latest_organizer_card.dart';
+import 'package:megavent/widgets/admin/dashboard/admin_system_overview.dart';
+import 'package:megavent/widgets/admin/dashboard/admin_organizers_section.dart';
+import 'package:megavent/widgets/admin/dashboard/admin_events_section.dart';
+import 'package:megavent/widgets/admin/dashboard/admin_staff_section.dart';
+import 'package:megavent/widgets/admin/dashboard/admin_attendees_section.dart';
+import 'package:megavent/widgets/admin/dashboard/admin_registrations_section.dart';
+import 'package:megavent/widgets/admin/dashboard/admin_recent_activity.dart';
 import 'package:megavent/widgets/admin/sidebar.dart';
 import 'package:provider/provider.dart';
 import 'package:megavent/utils/constants.dart';
@@ -27,19 +33,16 @@ class _AdminDashboardState extends State<AdminDashboard> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   late DatabaseService _databaseService;
-  List<Event> _events = [];
-  List<Attendee> _attendees = [];
-  List<Staff> _staff = [];
-  DashboardStats _dashboardStats = DashboardStats(
-    totalEvents: 0,
-    totalAttendees: 0,
-    totalStaff: 0,
-    activeEvents: 0,
-    upcomingEvents: 0,
-    completedEvents: 0,
-  );
   bool _isLoading = true;
   String? _error;
+
+  // Admin dashboard data
+  AdminDashboardStats? _adminDashboardStats;
+  List<Organizer> _organizers = [];
+  List<Event> _events = [];
+  List<Staff> _staff = [];
+  List<Attendee> _attendees = [];
+  List<Registration> _registrations = [];
 
   @override
   void initState() {
@@ -57,46 +60,28 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
       // Load all required data in parallel
       final results = await Future.wait([
-        _databaseService.getEvents(),
-        _databaseService
-            .getAllAttendees(), // Get all attendees instead of just latest
-        _databaseService.getAllStaff(),
-        _databaseService.getOrganizerDashboardStats(),
-        _databaseService.getAllRegistrations(),
-        _databaseService.getEventIdToNameMap(), // Get event ID to name mapping
+        _databaseService.getAdminDashboardStats(),
+        _databaseService.getAdminAllOrganizers(),
+        _databaseService.getAdminAllEvents(),
+        _databaseService.getAdminAllStaff(),
+        _databaseService.getAdminAllAttendees(),
+        _databaseService.getAdminAllRegistrations(),
       ]);
 
       setState(() {
-        _events = results[0] as List<Event>;
+        _adminDashboardStats = results[0] as AdminDashboardStats;
+        _organizers = results[1] as List<Organizer>;
+        _events = results[2] as List<Event>;
+        _staff = results[3] as List<Staff>;
+        _attendees = results[4] as List<Attendee>;
+        _registrations = results[5] as List<Registration>;
 
-        // Get all attendees and then sort by registration date to get latest
-        final allAttendees = results[1] as List<Attendee>;
-        final allRegistrations = results[4] as List<Registration>;
-
-        // Sort attendees by registration date (most recent first) and take top 5
-        _attendees =
-            _sortAttendeesByRegistrationDate(
-              allAttendees,
-              allRegistrations,
-            ).take(5).toList();
-
-        // Get only the latest 5 staff members, sorted by hire date
-        final allStaff = results[2] as List<Staff>;
-        _staff =
-            allStaff
-              ..sort((a, b) => b.hiredAt.compareTo(a.hiredAt))
-              ..take(5).toList();
-
-        // Convert Map data to DashboardStats object
-        final statsData = results[3] as Map<String, dynamic>;
-        _dashboardStats = DashboardStats(
-          totalEvents: statsData['totalEvents'] ?? 0,
-          totalAttendees: statsData['totalAttendees'] ?? 0,
-          totalStaff: statsData['totalStaff'] ?? 0,
-          activeEvents: statsData['activeEvents'] ?? 0,
-          upcomingEvents: statsData['upcomingEvents'] ?? 0,
-          completedEvents: statsData['completedEvents'] ?? 0,
-        );
+        // Sort data by most recent
+        _organizers.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        _events.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        _staff.sort((a, b) => b.hiredAt.compareTo(a.hiredAt));
+        _attendees.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        _registrations.sort((a, b) => b.registeredAt.compareTo(a.registeredAt));
 
         _isLoading = false;
       });
@@ -110,29 +95,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
     }
   }
 
-  // Helper method to sort attendees by registration date
-  List<Attendee> _sortAttendeesByRegistrationDate(
-    List<Attendee> attendees,
-    List<Registration> registrations,
-  ) {
-    // Create a map of composite ID to registration date for quick lookup
-    final registrationDateMap = <String, DateTime>{};
-
-    for (final registration in registrations) {
-      final compositeId = '${registration.userId}_${registration.eventId}';
-      registrationDateMap[compositeId] = registration.registeredAt;
-    }
-
-    // Sort attendees by registration date (most recent first)
-    attendees.sort((a, b) {
-      final dateA = registrationDateMap[a.id] ?? a.createdAt;
-      final dateB = registrationDateMap[b.id] ?? b.createdAt;
-      return dateB.compareTo(dateA);
-    });
-
-    return attendees;
-  }
-
   void _handleQuickAction(String action) {
     switch (action) {
       case 'organizers':
@@ -140,6 +102,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
           MaterialPageRoute(builder: (context) => const OrganizerScreen()),
         );
         break;
+      // Add more quick actions as needed
     }
   }
 
@@ -221,155 +184,62 @@ class _AdminDashboardState extends State<AdminDashboard> {
           children: [
             const AdminWelcomeCard(),
             const SizedBox(height: 24),
-            AdminStatsOverview(stats: _dashboardStats),
+            AdminSystemOverview(
+              organizers: _organizers,
+              events: _events,
+              staff: _staff,
+              attendees: _attendees,
+              registrations: _registrations,
+            ),
             const SizedBox(height: 24),
-            LatestOrganizerCard(staff: _staff),
+            AdminOrganizersSection(
+              organizers: _organizers,
+              onViewAll:
+                  () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const OrganizerScreen(),
+                    ),
+                  ),
+            ),
+            const SizedBox(height: 24),
+            AdminEventsSection(
+              events: _events,
+              onViewAll: () {
+                // Navigate to events screen
+              },
+            ),
+            const SizedBox(height: 24),
+            AdminStaffSection(
+              staff: _staff,
+              onViewAll: () {
+                // Navigate to staff screen
+              },
+            ),
+            const SizedBox(height: 24),
+            AdminAttendeesSection(
+              attendees: _attendees,
+              onViewAll: () {
+                // Navigate to attendees screen
+              },
+            ),
+            const SizedBox(height: 24),
+            AdminRegistrationsSection(
+              registrations: _registrations,
+              onViewAll: () {
+                // Navigate to registrations screen
+              },
+            ),
             const SizedBox(height: 24),
             AdminQuickActionsGrid(onNavigate: _handleQuickAction),
             const SizedBox(height: 24),
-            _buildRecentActivity(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRecentActivity() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Recent Activity', style: AppConstants.headlineSmall),
-        const SizedBox(height: 16),
-        Container(
-          decoration: AppConstants.cardDecoration,
-          child:
-              _events.isEmpty
-                  ? _buildEmptyActivityState()
-                  : ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: _getRecentActivities().length,
-                    separatorBuilder:
-                        (context, index) => const Divider(height: 1),
-                    itemBuilder: (context, index) {
-                      final activities = _getRecentActivities();
-                      final activity = activities[index];
-
-                      return ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: activity['color'].withOpacity(0.1),
-                          child: Icon(
-                            activity['icon'],
-                            color: activity['color'],
-                            size: 20,
-                          ),
-                        ),
-                        title: Text(
-                          activity['title'],
-                          style: AppConstants.titleMedium,
-                        ),
-                        subtitle: Text(
-                          activity['time'],
-                          style: AppConstants.bodySmall,
-                        ),
-                        trailing:
-                            activity['isNew']
-                                ? Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: const BoxDecoration(
-                                    color: AppConstants.successColor,
-                                    shape: BoxShape.circle,
-                                  ),
-                                )
-                                : null,
-                      );
-                    },
-                  ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildEmptyActivityState() {
-    return Container(
-      padding: const EdgeInsets.all(32),
-      decoration: AppConstants.cardDecoration,
-      child: Center(
-        child: Column(
-          children: [
-            Icon(Icons.history, size: 48, color: AppConstants.primaryColor),
-            const SizedBox(height: 16),
-            Text(
-              'No Recent Activity',
-              style: AppConstants.titleMedium.copyWith(
-                color: AppConstants.textSecondaryColor,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Activity will appear here as you manage your events',
-              textAlign: TextAlign.center,
-              style: AppConstants.bodySmall.copyWith(
-                color: AppConstants.textSecondaryColor,
-              ),
+            AdminRecentActivity(
+              events: _events,
+              organizers: _organizers,
+              registrations: _registrations,
             ),
           ],
         ),
       ),
     );
-  }
-
-  List<Map<String, dynamic>> _getRecentActivities() {
-    if (_events.isEmpty && _attendees.isEmpty && _staff.isEmpty) {
-      return [];
-    }
-
-    List<Map<String, dynamic>> activities = [];
-
-    // Add recent organizer-related activities
-    for (final event in _events.take(2)) {
-      activities.add({
-        'title': 'Event "${event.name}" created',
-        'time': _getTimeAgo(event.createdAt),
-        'icon': Icons.event,
-        'color': AppConstants.primaryColor,
-        'isNew': _isRecent(event.createdAt),
-        'dateTime': event.createdAt,
-      });
-    }
-
-    // Sort by most recent
-    activities.sort((a, b) => b['dateTime'].compareTo(a['dateTime']));
-
-    // Remove the dateTime field after sorting
-    for (var activity in activities) {
-      activity.remove('dateTime');
-    }
-
-    return activities.take(6).toList();
-  }
-
-  String _getTimeAgo(DateTime dateTime) {
-    final now = DateTime.now();
-    final difference = now.difference(dateTime);
-
-    if (difference.inMinutes < 1) {
-      return 'Just now';
-    } else if (difference.inMinutes < 60) {
-      return '${difference.inMinutes} minutes ago';
-    } else if (difference.inHours < 24) {
-      return '${difference.inHours} hours ago';
-    } else if (difference.inDays < 7) {
-      return '${difference.inDays} days ago';
-    } else {
-      return '${(difference.inDays / 7).floor()} weeks ago';
-    }
-  }
-
-  bool _isRecent(DateTime dateTime) {
-    final now = DateTime.now();
-    final difference = now.difference(dateTime);
-    return difference.inHours < 6;
   }
 }

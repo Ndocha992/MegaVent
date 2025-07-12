@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:megavent/models/admin_dashboard_stats.dart';
 import 'package:megavent/models/attendee_stats.dart';
 import 'package:megavent/models/event.dart';
 import 'package:megavent/models/attendee.dart';
@@ -315,4 +316,22 @@ class DatabaseService extends ChangeNotifier {
  */
   Future<List<Registration>> getAllRegistrations() =>
       _registrationService.getAllRegistrations();
+
+  /**
+   * ====== ADMIN METHODS ======
+   */
+  // Admin stats
+  Future<AdminDashboardStats> getAdminDashboardStats() async {
+    return _dashboardService.getAdminDashboardStats();
+  }
+
+  //get all data
+  Future<List<Organizer>> getAdminAllOrganizers() =>
+      _organizerService.getAdminAllOrganizers();
+  Future<List<Event>> getAdminAllEvents() => _eventService.getAdminAllEvents();
+  Future<List<Staff>> getAdminAllStaff() => _staffService.getAdminAllStaff();
+  Future<List<Attendee>> getAdminAllAttendees() =>
+      _attendeeService.getAdminAllAttendees();
+  Future<List<Registration>> getAdminAllRegistrations() =>
+      _registrationService.getAdminAllRegistrations();
 }

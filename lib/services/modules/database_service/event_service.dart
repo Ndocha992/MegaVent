@@ -369,4 +369,18 @@ class EventService {
       throw Exception('Failed to get events: $e');
     }
   }
+
+  /**
+   * ====== ADMIN METHODS ======
+   */
+
+  // Get all events
+  Future<List<Event>> getAdminAllEvents() async {
+    try {
+      final snapshot = await _firestore.collection('events').get();
+      return snapshot.docs.map((doc) => Event.fromFirestore(doc)).toList();
+    } catch (e) {
+      throw Exception('Failed to get events: $e');
+    }
+  }
 }
