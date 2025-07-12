@@ -18,7 +18,8 @@ class RegistrationService {
 
     try {
       // First check if user is an organizer
-      final organizerDoc = await _firestore.collection('organizers').doc(user.uid).get();
+      final organizerDoc =
+          await _firestore.collection('organizers').doc(user.uid).get();
       if (organizerDoc.exists) {
         return user.uid; // User is an organizer
       }
@@ -220,7 +221,9 @@ class RegistrationService {
 
       // Check if current user can manage this event
       if (!await _canManageEvent(eventId)) {
-        throw Exception('Unauthorized: You can only mark attendance for your organizer\'s events');
+        throw Exception(
+          'Unauthorized: You can only mark attendance for your organizer\'s events',
+        );
       }
 
       // Find the registration using QR code
@@ -281,7 +284,9 @@ class RegistrationService {
 
       // Check if current user can manage this event
       if (!await _canManageEvent(eventId)) {
-        throw Exception('Unauthorized: You can only mark attendance for your organizer\'s events');
+        throw Exception(
+          'Unauthorized: You can only mark attendance for your organizer\'s events',
+        );
       }
 
       // Find the registration
@@ -477,7 +482,9 @@ class RegistrationService {
 
       // Check if current user can manage this event
       if (!await _canManageEvent(eventId)) {
-        throw Exception('Unauthorized: You can only access attendees for your organizer\'s events');
+        throw Exception(
+          'Unauthorized: You can only access attendees for your organizer\'s events',
+        );
       }
 
       // Get registration record
@@ -557,7 +564,9 @@ class RegistrationService {
 
       // Check if current user can manage this event
       if (!await _canManageEvent(eventId)) {
-        throw Exception('Unauthorized: You can only check in attendees for your organizer\'s events');
+        throw Exception(
+          'Unauthorized: You can only check in attendees for your organizer\'s events',
+        );
       }
 
       // Find the registration
@@ -654,6 +663,21 @@ class RegistrationService {
       _notifier.notifyListeners();
     } catch (e) {
       throw Exception('Failed to unregister from event: $e');
+    }
+  }
+
+  /**
+   * ====== ADMIN METHODS ======
+   */
+  // Get all registrations
+  Future<List<Registration>> getAdminAllRegistrations() async {
+    try {
+      final snapshot = await _firestore.collection('registrations').get();
+      return snapshot.docs
+          .map((doc) => Registration.fromFirestore(doc))
+          .toList();
+    } catch (e) {
+      throw Exception('Failed to get registrations: $e');
     }
   }
 }

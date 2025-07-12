@@ -13,7 +13,7 @@ class OrganizerService {
   /**
    * ====== ORGANIZER METHODS ======
    */
-  
+
   // Stream current organizer data for real-time updates
   Stream<Organizer?> streamCurrentOrganizerData() {
     final user = _auth.currentUser;
@@ -45,7 +45,10 @@ class OrganizerService {
   }
 
   // New method to update only specific fields
-  Future<void> updateOrganizerProfileFields(String organizerId, Map<String, dynamic> fields) async {
+  Future<void> updateOrganizerProfileFields(
+    String organizerId,
+    Map<String, dynamic> fields,
+  ) async {
     try {
       // Validate that the fields map is not empty
       if (fields.isEmpty) {
@@ -54,7 +57,7 @@ class OrganizerService {
 
       // Clean the fields map to ensure no invalid values
       final cleanFields = <String, dynamic>{};
-      
+
       fields.forEach((key, value) {
         // Skip null values for optional fields, but allow them for clearing fields
         if (value != null || _isOptionalField(key)) {
@@ -72,7 +75,7 @@ class OrganizerService {
           .collection('organizers')
           .doc(organizerId)
           .update(cleanFields);
-      
+
       _notifier.notifyListeners();
     } catch (e) {
       print('Error updating organizer profile fields: $e');
@@ -93,5 +96,18 @@ class OrganizerService {
       'profileImage',
     ];
     return optionalFields.contains(fieldName);
+  }
+
+  /**
+   * ====== ORGANIZER METHODS ======
+   */
+  // Get all Organizers
+  Future<List<Organizer>> getAdminAllOrganizers() async {
+    try {
+      final snapshot = await _firestore.collection('organizers').get();
+      return snapshot.docs.map((doc) => Organizer.fromFirestore(doc)).toList();
+    } catch (e) {
+      throw Exception('Failed to get organizers: $e');
+    }
   }
 }

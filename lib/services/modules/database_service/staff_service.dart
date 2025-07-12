@@ -243,4 +243,18 @@ class StaffService {
       throw Exception('Failed to update staff profile: $e');
     }
   }
+
+  /**
+   * ====== ADMIN METHODS ======
+   */
+
+  // Get all staff
+  Future<List<Staff>> getAdminAllStaff() async {
+    try {
+      final snapshot = await _firestore.collection('staff').get();
+      return snapshot.docs.map((doc) => Staff.fromFirestore(doc)).toList();
+    } catch (e) {
+      throw Exception('Failed to get staff: $e');
+    }
+  }
 }
