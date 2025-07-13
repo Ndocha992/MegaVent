@@ -34,7 +34,7 @@ class AdminSystemOverview extends StatelessWidget {
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           crossAxisCount: 2,
-          childAspectRatio: 1.8,
+          childAspectRatio: 1.4, // Reduced from 1.8 to make cards taller
           crossAxisSpacing: 16,
           mainAxisSpacing: 16,
           children: [
@@ -82,7 +82,7 @@ class AdminSystemOverview extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(icon, size: 32, color: color),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12), // Increased spacing
           Text(
             value.toString(),
             style: AppConstants.headlineMedium.copyWith(
@@ -90,13 +90,17 @@ class AdminSystemOverview extends StatelessWidget {
               color: color,
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            title,
-            style: AppConstants.bodyMedium.copyWith(
-              color: AppConstants.textSecondaryColor,
+          const SizedBox(height: 8), // Increased spacing
+          Flexible(
+            // Added to prevent overflow
+            child: Text(
+              title,
+              style: AppConstants.bodyMedium.copyWith(
+                color: AppConstants.textSecondaryColor,
+              ),
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis, // Handle long text gracefully
             ),
-            textAlign: TextAlign.center,
           ),
         ],
       ),
