@@ -320,14 +320,13 @@ class DatabaseService extends ChangeNotifier {
   /**
    * ====== ADMIN METHODS ======
    */
-  // Admin stats
   Future<AdminDashboardStats> getAdminDashboardStats() async {
     return _dashboardService.getAdminDashboardStats();
   }
-
-  //get all data
   Future<List<Organizer>> getAdminAllOrganizers() =>
       _organizerService.getAdminAllOrganizers();
+  Stream<List<Organizer>> streamOrganizers() =>
+      _organizerService.streamOrganizers();
   Future<List<Event>> getAdminAllEvents() => _eventService.getAdminAllEvents();
   Future<List<Staff>> getAdminAllStaff() => _staffService.getAdminAllStaff();
   Future<List<Attendee>> getAdminAllAttendees() =>

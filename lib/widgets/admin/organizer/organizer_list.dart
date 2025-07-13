@@ -1,41 +1,38 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
-import 'package:megavent/models/staff.dart';
+import 'package:megavent/models/organizer.dart';
 import 'package:megavent/utils/constants.dart';
-import 'package:megavent/utils/organizer/staff/staff_utils.dart';
 
 class OrganizerList extends StatelessWidget {
-  final List<Staff> staffList;
-  final Function(Staff) onStaffTap;
-  final VoidCallback onAddStaff;
+  final List<Organizer> organizersList;
+  final Function(Organizer) onOrganizerTap;
   final String searchQuery;
 
   const OrganizerList({
     super.key,
-    required this.staffList,
-    required this.onStaffTap,
-    required this.onAddStaff,
+    required this.organizersList,
+    required this.onOrganizerTap,
     required this.searchQuery,
   });
 
   @override
   Widget build(BuildContext context) {
-    if (staffList.isEmpty) {
-      return OrganizerEmptyState(searchQuery: searchQuery, onAddStaff: onAddStaff);
+    if (organizersList.isEmpty) {
+      return OrganizerEmptyState(searchQuery: searchQuery);
     }
 
     return Container(
       color: AppConstants.backgroundColor,
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
-        itemCount: staffList.length,
+        itemCount: organizersList.length,
         itemBuilder: (context, index) {
           return Padding(
             padding: const EdgeInsets.only(bottom: 16),
-            child: StaffCard(
-              staff: staffList[index],
-              onTap: () => onStaffTap(staffList[index]),
+            child: OrganizerCard(
+              organizer: organizersList[index],
+              onTap: () => onOrganizerTap(organizersList[index]),
             ),
           );
         },
@@ -44,11 +41,15 @@ class OrganizerList extends StatelessWidget {
   }
 }
 
-class StaffCard extends StatelessWidget {
-  final Staff staff;
+class OrganizerCard extends StatelessWidget {
+  final Organizer organizer;
   final VoidCallback onTap;
 
-  const StaffCard({super.key, required this.staff, required this.onTap});
+  const OrganizerCard({
+    super.key,
+    required this.organizer,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -62,9 +63,9 @@ class StaffCard extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              OrganizerAvatar(staff: staff),
+              OrganizerAvatar(organizer: organizer),
               const SizedBox(width: 16),
-              Expanded(child: OrganizerInfo(staff: staff)),
+              Expanded(child: OrganizerInfo(organizer: organizer)),
               Icon(
                 Icons.arrow_forward_ios,
                 size: 16,
@@ -79,9 +80,9 @@ class StaffCard extends StatelessWidget {
 }
 
 class OrganizerAvatar extends StatefulWidget {
-  final Staff staff;
+  final Organizer organizer;
 
-  const OrganizerAvatar({super.key, required this.staff});
+  const OrganizerAvatar({super.key, required this.organizer});
 
   @override
   State<OrganizerAvatar> createState() => _OrganizerAvatarState();
@@ -112,8 +113,10 @@ class _OrganizerAvatarState extends State<OrganizerAvatar> {
             shape: BoxShape.circle,
             gradient: LinearGradient(
               colors: [
-                _getDepartmentColor(widget.staff.department).withOpacity(0.8),
-                _getDepartmentColor(widget.staff.department),
+                _getStatusColor(
+                  widget.organizer.approvalStatus,
+                ).withOpacity(0.8),
+                _getStatusColor(widget.organizer.approvalStatus),
               ],
             ),
           ),
@@ -122,7 +125,7 @@ class _OrganizerAvatarState extends State<OrganizerAvatar> {
                   ? _buildLoadingIndicator()
                   : _buildAvatarContent(),
         ),
-        if (widget.staff.isNew)
+        if (widget.organizer.isApproved == false)
           Positioned(
             top: 0,
             right: 0,
@@ -148,11 +151,10 @@ class _OrganizerAvatarState extends State<OrganizerAvatar> {
   }
 
   Widget _buildAvatarContent() {
-    final profileImage = widget.staff.profileImage;
+    final profileImage = widget.organizer.profileImage;
 
     if (profileImage != null && profileImage.isNotEmpty && !_hasImageError) {
       if (_isBase64(profileImage)) {
-        // Base64 images load instantly, no loading builder needed
         return ClipOval(
           child: Image.memory(
             base64Decode(profileImage),
@@ -172,7 +174,6 @@ class _OrganizerAvatarState extends State<OrganizerAvatar> {
           ),
         );
       } else {
-        // Network images need loading builder
         return ClipOval(
           child: Image.network(
             profileImage,
@@ -221,7 +222,7 @@ class _OrganizerAvatarState extends State<OrganizerAvatar> {
   Widget _buildInitialsAvatar() {
     return Center(
       child: Text(
-        StaffUtils.getInitials(widget.staff.name),
+        _getInitials(widget.organizer.fullName),
         style: const TextStyle(
           color: Colors.white,
           fontWeight: FontWeight.bold,
@@ -231,15 +232,36 @@ class _OrganizerAvatarState extends State<OrganizerAvatar> {
     );
   }
 
-  Color _getDepartmentColor(String department) {
-    return StaffUtils.getDepartmentColor(department);
+  String _getInitials(String name) {
+    final words = name.trim().split(' ');
+    if (words.length >= 2) {
+      return '${words[0][0]}${words[1][0]}'.toUpperCase();
+    } else if (words.isNotEmpty) {
+      return words[0][0].toUpperCase();
+    }
+    return '?';
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'approved':
+      case 'active':
+        return AppConstants.successColor;
+      case 'pending':
+        return AppConstants.warningColor;
+      case 'rejected':
+      case 'inactive':
+        return AppConstants.errorColor;
+      default:
+        return AppConstants.primaryColor;
+    }
   }
 }
 
 class OrganizerInfo extends StatelessWidget {
-  final Staff staff;
+  final Organizer organizer;
 
-  const OrganizerInfo({super.key, required this.staff});
+  const OrganizerInfo({super.key, required this.organizer});
 
   @override
   Widget build(BuildContext context) {
@@ -250,60 +272,84 @@ class OrganizerInfo extends StatelessWidget {
           children: [
             Expanded(
               child: Text(
-                staff.fullName,
+                organizer.fullName,
                 style: AppConstants.titleMedium.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
               ),
             ),
-            OrganizerDepartmentChip(department: staff.department),
+            OrganizerStatusChip(status: organizer.approvalStatus),
           ],
         ),
         const SizedBox(height: 4),
         Text(
-          staff.role,
+          organizer.organization ?? 'No Organization',
           style: AppConstants.bodyMedium.copyWith(
             color: AppConstants.primaryColor,
             fontWeight: FontWeight.w500,
           ),
         ),
         const SizedBox(height: 4),
-        OrganizerInfoRow(icon: Icons.email_outlined, text: staff.email),
+        OrganizerInfoRow(icon: Icons.email_outlined, text: organizer.email),
+        const SizedBox(height: 4),
+        OrganizerInfoRow(icon: Icons.phone_outlined, text: organizer.phone),
         const SizedBox(height: 4),
         OrganizerInfoRow(
           icon: Icons.access_time,
-          text: 'Hired ${StaffUtils.formatHireDate(staff.hiredAt)}',
+          text: 'Registered ${_formatDate(organizer.createdAt)}',
         ),
       ],
     );
   }
+
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final difference = now.difference(date);
+
+    if (difference.inDays < 1) {
+      return 'Today';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays} days ago';
+    } else if (difference.inDays < 30) {
+      return '${(difference.inDays / 7).floor()} weeks ago';
+    } else {
+      return '${date.day}/${date.month}/${date.year}';
+    }
+  }
 }
 
-class OrganizerDepartmentChip extends StatelessWidget {
-  final String department;
+class OrganizerStatusChip extends StatelessWidget {
+  final String status;
 
-  const OrganizerDepartmentChip({super.key, required this.department});
+  const OrganizerStatusChip({super.key, required this.status});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: _getDepartmentColor(department).withOpacity(0.1),
+        color: _getStatusColor(status).withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
-        department,
+        status.toUpperCase(),
         style: AppConstants.bodySmall.copyWith(
-          color: _getDepartmentColor(department),
+          color: _getStatusColor(status),
           fontWeight: FontWeight.w600,
         ),
       ),
     );
   }
 
-  Color _getDepartmentColor(String department) {
-    return StaffUtils.getDepartmentColor(department);
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'approved':
+        return AppConstants.successColor;
+      case 'pending':
+        return AppConstants.warningColor;
+      default:
+        return AppConstants.primaryColor;
+    }
   }
 }
 
@@ -334,13 +380,8 @@ class OrganizerInfoRow extends StatelessWidget {
 
 class OrganizerEmptyState extends StatelessWidget {
   final String searchQuery;
-  final VoidCallback onAddStaff;
 
-  const OrganizerEmptyState({
-    super.key,
-    required this.searchQuery,
-    required this.onAddStaff,
-  });
+  const OrganizerEmptyState({super.key, required this.searchQuery});
 
   @override
   Widget build(BuildContext context) {
@@ -358,14 +399,14 @@ class OrganizerEmptyState extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                Icons.people_outline,
+                Icons.business_center_outlined,
                 size: 60,
                 color: AppConstants.primaryColor,
               ),
             ),
             const SizedBox(height: 24),
             Text(
-              'No organizer found',
+              'No organizers found',
               style: AppConstants.titleLarge.copyWith(
                 color: AppConstants.textSecondaryColor,
               ),
