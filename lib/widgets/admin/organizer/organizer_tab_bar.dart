@@ -22,10 +22,18 @@ class OrganizerTabBar extends StatelessWidget {
         unselectedLabelColor: AppConstants.textSecondaryColor,
         indicatorColor: AppConstants.primaryColor,
         indicatorWeight: 3,
+        labelStyle: const TextStyle(
+          fontWeight: FontWeight.w600,
+          fontSize: 14,
+        ),
+        unselectedLabelStyle: const TextStyle(
+          fontWeight: FontWeight.w500,
+          fontSize: 14,
+        ),
         tabs: const [
-          Tab(text: 'All Organizers'),
-          Tab(text: 'New'),
-          Tab(text: 'Active'),
+          Tab(text: 'All'),
+          Tab(text: 'Pending'),
+          Tab(text: 'Approved'),
         ],
       ),
     );

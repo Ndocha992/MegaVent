@@ -1,18 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
-import 'package:megavent/models/staff.dart';
-import 'package:megavent/screens/organizer/create_staff.dart';
-import 'package:megavent/screens/organizer/staff_details.dart';
+import 'package:megavent/models/organizer.dart';
+import 'package:megavent/screens/admin/organizer_details.dart';
 import 'package:megavent/services/database_service.dart';
 import 'package:megavent/utils/constants.dart';
+import 'package:megavent/widgets/admin/organizer/organizer_header.dart';
+import 'package:megavent/widgets/admin/organizer/organizer_list.dart';
+import 'package:megavent/widgets/admin/organizer/organizer_search_filters.dart';
+import 'package:megavent/widgets/admin/organizer/organizer_tab_bar.dart';
+import 'package:megavent/widgets/admin/sidebar.dart';
 import 'package:megavent/widgets/app_bar.dart';
-import 'package:megavent/widgets/organizer/sidebar.dart';
-import 'package:megavent/widgets/organizer/staff/staff_filters.dart';
-import 'package:megavent/widgets/organizer/staff/staff_header.dart';
-import 'package:megavent/widgets/organizer/staff/staff_tab_bar.dart';
-import 'package:megavent/widgets/organizer/staff/staff_search_filters.dart';
-import 'package:megavent/widgets/organizer/staff/staff_list.dart';
-import 'package:megavent/utils/organizer/staff/staff_utils.dart';
 import 'package:provider/provider.dart';
 
 class OrganizerScreen extends StatefulWidget {
@@ -28,12 +25,11 @@ class _OrganizerScreenState extends State<OrganizerScreen>
   String currentRoute = '/admin-organizer';
 
   late TabController _tabController;
-  String _selectedDepartment = 'All';
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
 
   // Data management
-  List<Staff> _allStaff = [];
+  List<Organizer> _allOrganizers = [];
   bool _isLoading = true;
   String? _error;
 
@@ -41,7 +37,7 @@ class _OrganizerScreenState extends State<OrganizerScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    _loadStaffData();
+    _loadOrganizersData();
   }
 
   @override
@@ -51,8 +47,8 @@ class _OrganizerScreenState extends State<OrganizerScreen>
     super.dispose();
   }
 
-  // Load staff data using DatabaseService
-  Future<void> _loadStaffData() async {
+  // Load organizers data using DatabaseService
+  Future<void> _loadOrganizersData() async {
     try {
       setState(() {
         _isLoading = true;
@@ -69,65 +65,66 @@ class _OrganizerScreenState extends State<OrganizerScreen>
         throw Exception('User not authenticated');
       }
 
-      // Fetch all staff for current organizer
-      final List<Staff> staffList = await databaseService.getAllStaff();
+      // Fetch all organizers
+      final List<Organizer> organizersList =
+          await databaseService.getAdminAllOrganizers();
 
       setState(() {
-        _allStaff = staffList;
+        _allOrganizers = organizersList;
         _isLoading = false;
       });
     } catch (e) {
       setState(() {
-        _error = 'Failed to load staff: $e';
+        _error = 'Failed to load organizers: $e';
         _isLoading = false;
       });
     }
   }
 
-  List<Staff> get _filteredStaff {
-    List<Staff> staffList = List.from(_allStaff);
+  List<Organizer> get _filteredOrganizers {
+    List<Organizer> organizersList = List.from(_allOrganizers);
 
-    // Apply filters using utility functions
-    staffList = StaffUtils.filterStaffBySearch(staffList, _searchQuery);
-    staffList = StaffUtils.filterStaffByDepartment(
-      staffList,
-      _selectedDepartment,
-    );
-    staffList = StaffUtils.filterStaffByTab(staffList, _tabController.index);
+    // Apply search filter
+    if (_searchQuery.isNotEmpty) {
+      organizersList =
+          organizersList.where((organizer) {
+            final searchLower = _searchQuery.toLowerCase();
+            return organizer.fullName.toLowerCase().contains(searchLower) ||
+                organizer.email.toLowerCase().contains(searchLower) ||
+                (organizer.organization ?? '').toLowerCase().contains(
+                  searchLower,
+                );
+          }).toList();
+    }
 
-    return staffList;
+    // Apply tab filter
+    switch (_tabController.index) {
+      case 0: // All Organizers
+        break;
+      case 1: // Pending
+        organizersList =
+            organizersList.where((organizer) {
+              return organizer.isApproved == false;
+            }).toList();
+        break;
+      case 2: // Approved
+        organizersList =
+            organizersList.where((organizer) {
+              return organizer.isApproved == true;
+            }).toList();
+        break;
+    }
+
+    return organizersList;
   }
 
-  void _showFilterDialog() {
-    showDialog(
-      context: context,
-      builder:
-          (context) => StaffFilters(
-            selectedDepartment: _selectedDepartment,
-            onDepartmentChanged: (department) {
-              setState(() => _selectedDepartment = department);
-              Navigator.pop(context);
-            },
-          ),
-    );
-  }
-
-  void _onStaffTap(Staff staff) {
+  void _onOrganizerTap(Organizer organizer) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => StaffDetails(staff: staff)),
+      MaterialPageRoute(
+        builder: (context) => OrganizerDetails(organizer: organizer),
+      ),
     );
-  }
-
-  void _navigateToCreateStaff() async {
-    final result = await Navigator.of(
-      context,
-    ).push(MaterialPageRoute(builder: (context) => const CreateStaff()));
-
-    // Refresh data if staff was created
-    if (result == true) {
-      _loadStaffData();
-    }
   }
 
   Widget _buildLoadingState() {
@@ -152,7 +149,7 @@ class _OrganizerScreenState extends State<OrganizerScreen>
           ),
           const SizedBox(height: 16),
           ElevatedButton(
-            onPressed: _loadStaffData,
+            onPressed: _loadOrganizersData,
             style: ElevatedButton.styleFrom(
               backgroundColor: AppConstants.primaryColor,
               foregroundColor: Colors.white,
@@ -170,30 +167,17 @@ class _OrganizerScreenState extends State<OrganizerScreen>
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            Icons.people_outline,
+            Icons.business_center_outlined,
             size: 64,
             color: AppConstants.textSecondaryColor,
           ),
           const SizedBox(height: 16),
-          Text('No staff members found', style: AppConstants.headlineMedium),
+          Text('No organizers found', style: AppConstants.headlineMedium),
           const SizedBox(height: 8),
           Text(
-            'Add your first staff member to get started',
+            'Approve your first organizer to get started',
             style: AppConstants.bodyMedium.copyWith(
               color: AppConstants.textSecondaryColor,
-            ),
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: _navigateToCreateStaff,
-            icon: const Icon(Icons.person_add),
-            label: const Text('Add Staff'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppConstants.primaryColor,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
             ),
           ),
         ],
@@ -210,59 +194,43 @@ class _OrganizerScreenState extends State<OrganizerScreen>
         title: 'MegaVent',
         onMenuPressed: () => _scaffoldKey.currentState?.openDrawer(),
       ),
-      drawer: OrganizerSidebar(currentRoute: currentRoute),
+      drawer: AdminSidebar(currentRoute: currentRoute),
       body: Column(
         children: [
-          StaffHeader(),
-          StaffTabBar(
+          OrganizerHeader(),
+          OrganizerTabBar(
             tabController: _tabController,
             onTabChanged: (index) => setState(() {}),
           ),
           if (!_isLoading) ...[
-            StaffSearchFilters(
+            OrganizerSearchFilters(
               searchController: _searchController,
               searchQuery: _searchQuery,
-              selectedDepartment: _selectedDepartment,
-              filteredStaffCount: _filteredStaff.length,
               onSearchChanged: (value) => setState(() => _searchQuery = value),
               onClearSearch: () {
                 _searchController.clear();
                 setState(() => _searchQuery = '');
               },
-              onFilterPressed: _showFilterDialog,
-              onDepartmentCleared:
-                  () => setState(() => _selectedDepartment = 'All'),
             ),
           ],
           Expanded(
             child: RefreshIndicator(
-              onRefresh: _loadStaffData,
+              onRefresh: _loadOrganizersData,
               child:
                   _isLoading
                       ? _buildLoadingState()
                       : _error != null
                       ? _buildErrorState()
-                      : _allStaff.isEmpty
+                      : _allOrganizers.isEmpty
                       ? _buildEmptyState()
-                      : StaffList(
-                        staffList: _filteredStaff,
-                        onStaffTap: _onStaffTap,
-                        onAddStaff: _navigateToCreateStaff,
+                      : OrganizerList(
+                        organizersList: _filteredOrganizers,
+                        onOrganizerTap: _onOrganizerTap,
                         searchQuery: _searchQuery,
                       ),
             ),
           ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _navigateToCreateStaff,
-        backgroundColor: AppConstants.primaryColor,
-        icon: const Icon(Icons.person_add, color: Colors.white),
-        label: const Text(
-          'Add Staff',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-        ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
     );
   }

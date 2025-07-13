@@ -104,10 +104,27 @@ class OrganizerService {
   // Get all Organizers
   Future<List<Organizer>> getAdminAllOrganizers() async {
     try {
-      final snapshot = await _firestore.collection('organizers').get();
+      final snapshot =
+          await _firestore
+              .collection('organizers')
+              .orderBy('createdAt', descending: true)
+              .get();
       return snapshot.docs.map((doc) => Organizer.fromFirestore(doc)).toList();
     } catch (e) {
       throw Exception('Failed to get organizers: $e');
     }
+  }
+
+  // Stream all organizers
+  Stream<List<Organizer>> streamOrganizers() {
+    return _firestore
+        .collection('organizers')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+          return snapshot.docs
+              .map((doc) => Organizer.fromFirestore(doc))
+              .toList();
+        });
   }
 }

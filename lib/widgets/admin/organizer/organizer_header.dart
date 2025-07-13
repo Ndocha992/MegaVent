@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:megavent/utils/admin/organizer/organizer_utils.dart';
 import 'package:megavent/utils/constants.dart';
-import 'package:megavent/utils/organizer/staff/staff_utils.dart';
 import 'package:megavent/services/database_service.dart';
-import 'package:megavent/models/staff.dart';
+import 'package:megavent/models/organizer.dart';
 import 'package:provider/provider.dart';
 
 class OrganizerHeader extends StatelessWidget {
@@ -46,21 +46,21 @@ class OrganizerHeader extends StatelessWidget {
                   ),
                 ],
               ),
-              StreamBuilder<List<Staff>>(
-                stream: databaseService.streamStaff(),
+              StreamBuilder<List<Organizer>>(
+                stream: databaseService.streamOrganizers(),
                 builder: (context, snapshot) {
-                  final staffCount = snapshot.data?.length ?? 0;
-                  return OrganizerCountBadge(count: staffCount);
+                  final organizerCount = snapshot.data?.length ?? 0;
+                  return OrganizerCountBadge(count: organizerCount);
                 },
               ),
             ],
           ),
           const SizedBox(height: 16),
-          StreamBuilder<List<Staff>>(
-            stream: databaseService.streamStaff(),
+          StreamBuilder<List<Organizer>>(
+            stream: databaseService.streamOrganizers(),
             builder: (context, snapshot) {
-              final staffList = snapshot.data ?? [];
-              return OrganizerStatsRow(staffList: staffList);
+              final organizerList = snapshot.data ?? [];
+              return OrganizerStatsRow(organizerList: organizerList);
             },
           ),
         ],
@@ -85,7 +85,7 @@ class OrganizerCountBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.people, color: Colors.white, size: 16),
+          const Icon(Icons.business_center, color: Colors.white, size: 16),
           const SizedBox(width: 8),
           Text(
             '$count Organizers',
@@ -101,32 +101,32 @@ class OrganizerCountBadge extends StatelessWidget {
 }
 
 class OrganizerStatsRow extends StatelessWidget {
-  final List<Staff> staffList;
+  final List<Organizer> organizerList;
 
-  const OrganizerStatsRow({super.key, required this.staffList});
+  const OrganizerStatsRow({super.key, required this.organizerList});
 
   @override
   Widget build(BuildContext context) {
-    final stats = StaffUtils.getStaffStats(staffList);
+    final stats = OrganizerUtils.getOrganizerStats(organizerList);
 
     return Row(
       children: [
         OrganizerStatCard(
           label: 'New',
-          count: stats.newStaff,
+          count: stats.newOrganizers,
           color: AppConstants.successColor,
         ),
         const SizedBox(width: 12),
         OrganizerStatCard(
-          label: 'Active',
-          count: stats.activeStaff,
+          label: 'Approved',
+          count: stats.activeOrganizers,
           color: AppConstants.primaryColor,
         ),
         const SizedBox(width: 12),
         OrganizerStatCard(
-          label: 'Departments',
-          count: stats.departments,
-          color: AppConstants.secondaryColor,
+          label: 'Pending',
+          count: stats.pendingOrganizers,
+          color: AppConstants.warningColor,
         ),
       ],
     );

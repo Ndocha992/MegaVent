@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:megavent/models/organizer.dart';
 import 'package:megavent/models/staff.dart';
 import 'package:megavent/screens/organizer/edit_staff.dart';
 import 'package:megavent/services/auth_service.dart';
@@ -18,10 +19,10 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class OrganizerDetails extends StatefulWidget {
-  final Staff? staff;
-  final String? staffId;
+  final Organizer? organizer;
+  final String? organizerId;
 
-  const OrganizerDetails({super.key, this.staff, this.staffId});
+  const OrganizerDetails({super.key, this.organizer, this.organizerId});
 
   @override
   State<OrganizerDetails> createState() => _OrganizerDetailsState();
@@ -31,6 +32,7 @@ class _OrganizerDetailsState extends State<OrganizerDetails> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   String currentRoute = '/admin-organizer';
   Staff? currentStaff;
+  Organizer? currentOrganizer;
   bool isLoading = true;
   String? error;
 
@@ -41,19 +43,19 @@ class _OrganizerDetailsState extends State<OrganizerDetails> {
   }
 
   void _initializeStaff() {
-    if (widget.staff != null) {
-      currentStaff = widget.staff;
+    if (widget.organizer != null) {
+      currentOrganizer = widget.organizer;
       setState(() {
         isLoading = false;
       });
-    } else if (widget.staffId != null) {
-      _loadStaffById(widget.staffId!);
+    } else if (widget.organizerId != null) {
+      _loadOrganizerById(widget.organizerId!);
     } else {
-      _loadFirstStaff();
+      _loadFirstOrganizer();
     }
   }
 
-  Future<void> _loadStaffById(String staffId) async {
+  Future<void> _loadOrganizerById(String staffId) async {
     try {
       setState(() {
         isLoading = true;
@@ -89,7 +91,7 @@ class _OrganizerDetailsState extends State<OrganizerDetails> {
     }
   }
 
-  Future<void> _loadFirstStaff() async {
+  Future<void> _loadFirstOrganizer() async {
     try {
       setState(() {
         isLoading = true;
@@ -129,7 +131,7 @@ class _OrganizerDetailsState extends State<OrganizerDetails> {
 
   Future<void> _refreshStaffData() async {
     if (currentStaff != null) {
-      await _loadStaffById(currentStaff!.id);
+      await _loadOrganizerById(currentStaff!.id);
     }
   }
 
