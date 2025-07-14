@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:megavent/models/staff.dart';
+import 'package:megavent/models/organizer.dart';
 import 'package:megavent/utils/constants.dart';
 
 class OrganizerContactSectionWidget extends StatelessWidget {
-  final Staff staff;
+  final Organizer organizer;
   final Function(String) onEmailTap;
   final Function(String) onPhoneTap;
 
   const OrganizerContactSectionWidget({
     super.key,
-    required this.staff,
+    required this.organizer,
     required this.onEmailTap,
     required this.onPhoneTap,
   });
@@ -61,15 +61,21 @@ class OrganizerContactSectionWidget extends StatelessWidget {
           _buildContactRow(
             Icons.email_outlined,
             'Email',
-            staff.email,
-            onTap: () => onEmailTap(staff.email),
+            organizer.email,
+            onTap: () => onEmailTap(organizer.email),
           ),
           _buildContactRow(
             Icons.phone_outlined,
             'Phone',
-            staff.phone,
-            onTap: () => onPhoneTap(staff.phone),
+            organizer.phone,
+            onTap: () => onPhoneTap(organizer.phone),
           ),
+          if (organizer.address != null && organizer.address!.isNotEmpty)
+            _buildContactRow(
+              Icons.location_on_outlined,
+              'Address',
+              organizer.address!,
+            ),
         ],
       ),
     );
@@ -96,26 +102,27 @@ class OrganizerContactSectionWidget extends StatelessWidget {
             children: [
               Icon(icon, color: AppConstants.primaryColor, size: 20),
               const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: AppConstants.bodySmall.copyWith(
-                      color: AppConstants.textSecondaryColor,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: AppConstants.bodySmall.copyWith(
+                        color: AppConstants.textSecondaryColor,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    value,
-                    style: AppConstants.bodyMedium.copyWith(
-                      color: AppConstants.primaryColor,
-                      fontWeight: FontWeight.w500,
+                    const SizedBox(height: 2),
+                    Text(
+                      value,
+                      style: AppConstants.bodyMedium.copyWith(
+                        color: AppConstants.primaryColor,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-              const Spacer(),
               if (onTap != null)
                 Icon(
                   Icons.arrow_forward_ios,

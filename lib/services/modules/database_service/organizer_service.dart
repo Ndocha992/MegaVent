@@ -127,4 +127,62 @@ class OrganizerService {
               .toList();
         });
   }
+
+  // Update organizer approval
+  Future<void> updateOrganizerApproval(
+    String organizerId,
+    bool isApproved,
+  ) async {
+    try {
+      await _firestore.collection('organizers').doc(organizerId).update({
+        'isApproved': isApproved,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      _notifier.notifyListeners();
+    } catch (e) {
+      throw Exception('Failed to update organizer approval: $e');
+    }
+  }
+
+  Future<AdminOrganizerStats> getAdminOrganizerStats(String organizerId) async {
+    try {
+      final eventsCount = await _firestore
+          .collection('events')
+          .where('organizerId', isEqualTo: organizerId)
+          .count()
+          .get()
+          .then((value) => value.count);
+
+      final totalStaff = await _firestore
+          .collection('staff')
+          .where('organizerId', isEqualTo: organizerId)
+          .count()
+          .get()
+          .then((value) => value.count);
+
+      final eventIds = await _firestore
+          .collection('events')
+          .where('organizerId', isEqualTo: organizerId)
+          .get()
+          .then((snapshot) => snapshot.docs.map((doc) => doc.id).toList());
+
+      int totalAttendees = 0;
+      if (eventIds.isNotEmpty) {
+        totalAttendees = await _firestore
+            .collection('registrations')
+            .where('eventId', whereIn: eventIds)
+            .count()
+            .get()
+            .then((value) => value.count ?? 0);
+      }
+
+      return AdminOrganizerStats(
+        eventsCount: eventsCount ?? 0,
+        totalStaff: totalStaff ?? 0,
+        totalAttendees: totalAttendees,
+      );
+    } catch (e) {
+      throw Exception('Failed to get organizer stats: $e');
+    }
+  }
 }

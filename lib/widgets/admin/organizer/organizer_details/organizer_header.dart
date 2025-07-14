@@ -2,13 +2,13 @@ import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
-import 'package:megavent/models/staff.dart';
+import 'package:megavent/models/organizer.dart';
 import 'package:megavent/utils/constants.dart';
 
 class OrganizerHeaderWidget extends StatefulWidget {
-  final Staff staff;
+  final Organizer organizer;
 
-  const OrganizerHeaderWidget({super.key, required this.staff});
+  const OrganizerHeaderWidget({super.key, required this.organizer});
 
   @override
   State<OrganizerHeaderWidget> createState() => _OrganizerHeaderWidgetState();
@@ -26,7 +26,7 @@ class _OrganizerHeaderWidgetState extends State<OrganizerHeaderWidget> {
   }
 
   void _loadBackgroundImage() {
-    final profileImage = widget.staff.profileImage;
+    final profileImage = widget.organizer.profileImage;
     if (profileImage != null && profileImage.isNotEmpty) {
       try {
         if (_isBase64(profileImage)) {
@@ -54,10 +54,7 @@ class _OrganizerHeaderWidgetState extends State<OrganizerHeaderWidget> {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      constraints: const BoxConstraints(
-        minHeight: 280,
-        maxHeight: 320, // Allow some flexibility for content
-      ),
+      constraints: const BoxConstraints(minHeight: 280, maxHeight: 320),
       child: Stack(
         children: [
           // Blurred background image
@@ -139,10 +136,10 @@ class _OrganizerHeaderWidgetState extends State<OrganizerHeaderWidget> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Staff Name
+                    // Organizer Name
                     Flexible(
                       child: Text(
-                        widget.staff.name,
+                        widget.organizer.fullName,
                         style: const TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -162,56 +159,65 @@ class _OrganizerHeaderWidgetState extends State<OrganizerHeaderWidget> {
                     ),
                     const SizedBox(height: 8),
 
-                    // Role
-                    Flexible(
-                      child: Text(
-                        widget.staff.role,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          color: Colors.white70,
-                          shadows: [
-                            Shadow(
-                              offset: Offset(0, 1),
-                              blurRadius: 2,
-                              color: Colors.black26,
-                            ),
-                          ],
+                    // Organization Name
+                    if (widget.organizer.organization != null)
+                      Flexible(
+                        child: Text(
+                          widget.organizer.organization!,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: Colors.white70,
+                            shadows: [
+                              Shadow(
+                                offset: Offset(0, 1),
+                                blurRadius: 2,
+                                color: Colors.black26,
+                              ),
+                            ],
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        textAlign: TextAlign.center,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
 
-                    // New Badge
-                    if (widget.staff.isNew) ...[
-                      const SizedBox(height: 12),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppConstants.successColor,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.2),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
+                    // Status Badge
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color:
+                                widget.organizer.isApproved
+                                    ? AppConstants.successColor
+                                    : AppConstants.warningColor,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.2),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Text(
+                            widget.organizer.isApproved
+                                ? 'APPROVED'
+                                : 'PENDING',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
                             ),
-                          ],
-                        ),
-                        child: const Text(
-                          'NEW',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -237,11 +243,10 @@ class _OrganizerHeaderWidgetState extends State<OrganizerHeaderWidget> {
   }
 
   Widget _buildProfileImage() {
-    final profileImage = widget.staff.profileImage;
+    final profileImage = widget.organizer.profileImage;
 
     if (profileImage != null && profileImage.isNotEmpty && !_hasImageError) {
       if (_isBase64(profileImage)) {
-        // Base64 images load instantly, no loading builder needed
         return ClipRRect(
           borderRadius: BorderRadius.circular(58),
           child: Image.memory(
@@ -262,7 +267,6 @@ class _OrganizerHeaderWidgetState extends State<OrganizerHeaderWidget> {
           ),
         );
       } else {
-        // Network images need loading builder
         return ClipRRect(
           borderRadius: BorderRadius.circular(58),
           child: Image.network(
@@ -314,7 +318,7 @@ class _OrganizerHeaderWidgetState extends State<OrganizerHeaderWidget> {
       radius: 58,
       backgroundColor: Colors.white,
       child: Text(
-        _getInitials(widget.staff.name),
+        _getInitials(widget.organizer.fullName),
         style: const TextStyle(
           fontSize: 40,
           fontWeight: FontWeight.bold,

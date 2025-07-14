@@ -2,15 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:megavent/models/organizer.dart';
 import 'package:megavent/utils/constants.dart';
 
-class OrganizerInfoSectionWidget extends StatelessWidget {
+class OrganizerRegistrationSectionWidget extends StatelessWidget {
   final Organizer organizer;
 
-  const OrganizerInfoSectionWidget({super.key, required this.organizer});
+  const OrganizerRegistrationSectionWidget({
+    super.key,
+    required this.organizer,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.all(20),
+      margin: const EdgeInsets.symmetric(horizontal: 20),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -35,14 +38,14 @@ class OrganizerInfoSectionWidget extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
-                  Icons.person_outline,
+                  Icons.date_range_outlined,
                   color: AppConstants.primaryColor,
                   size: 20,
                 ),
               ),
               const SizedBox(width: 12),
               Text(
-                'Personal Information',
+                'Registration Details',
                 style: AppConstants.bodySmall.copyWith(
                   color: AppConstants.primaryColor,
                 ),
@@ -51,9 +54,15 @@ class OrganizerInfoSectionWidget extends StatelessWidget {
           ),
           const SizedBox(height: 16),
 
-          _buildInfoRow('Full Name', organizer.fullName),
-          if (organizer.bio != null && organizer.bio!.isNotEmpty)
-            _buildInfoRow('Bio', organizer.bio!),
+          _buildInfoRow('Registration Date', _formatDate(organizer.createdAt)),
+          _buildInfoRow(
+            'Time Since Registration',
+            _getTimeSinceRegistration(organizer.createdAt),
+          ),
+          _buildInfoRow(
+            'Status',
+            organizer.isApproved ? 'Approved' : 'Pending Approval',
+          ),
         ],
       ),
     );
@@ -87,5 +96,28 @@ class OrganizerInfoSectionWidget extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
+  }
+
+  String _getTimeSinceRegistration(DateTime registrationDate) {
+    final now = DateTime.now();
+    final difference = now.difference(registrationDate);
+
+    if (difference.inDays >= 365) {
+      final years = (difference.inDays / 365).floor();
+      return '$years year${years > 1 ? 's' : ''}';
+    } else if (difference.inDays >= 30) {
+      final months = (difference.inDays / 30).floor();
+      return '$months month${months > 1 ? 's' : ''}';
+    } else if (difference.inDays > 0) {
+      return '${difference.inDays} day${difference.inDays > 1 ? 's' : ''}';
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours} hour${difference.inHours > 1 ? 's' : ''}';
+    } else {
+      return '${difference.inMinutes} minute${difference.inMinutes > 1 ? 's' : ''}';
+    }
   }
 }
