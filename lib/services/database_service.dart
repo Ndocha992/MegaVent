@@ -323,6 +323,7 @@ class DatabaseService extends ChangeNotifier {
   Future<AdminDashboardStats> getAdminDashboardStats() async {
     return _dashboardService.getAdminDashboardStats();
   }
+
   Future<List<Organizer>> getAdminAllOrganizers() =>
       _organizerService.getAdminAllOrganizers();
   Stream<List<Organizer>> streamOrganizers() =>
@@ -333,4 +334,8 @@ class DatabaseService extends ChangeNotifier {
       _attendeeService.getAdminAllAttendees();
   Future<List<Registration>> getAdminAllRegistrations() =>
       _registrationService.getAdminAllRegistrations();
+  Future<void> updateOrganizerApproval(String organizerId, bool isApproved) =>
+      _organizerService.updateOrganizerApproval(organizerId, isApproved);
+  Future<AdminOrganizerStats> getAdminOrganizerStats(String organizerId) =>
+      _organizerService.getAdminOrganizerStats(organizerId);
 }

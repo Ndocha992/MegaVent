@@ -173,3 +173,24 @@ class Organizer {
   @override
   int get hashCode => id.hashCode;
 }
+
+// Admin organizer stats
+class AdminOrganizerStats {
+  final int eventsCount;
+  final int totalStaff;
+  final int totalAttendees;
+
+  AdminOrganizerStats({
+    required this.eventsCount,
+    required this.totalStaff,
+    required this.totalAttendees,
+  });
+
+  factory AdminOrganizerStats.fromMap(Map<String, dynamic> map) {
+    return AdminOrganizerStats(
+      eventsCount: map['eventsCount'] ?? 0,
+      totalStaff: map['totalStaff'] ?? 0,
+      totalAttendees: map['totalAttendees'] ?? 0,
+    );
+  }
+}

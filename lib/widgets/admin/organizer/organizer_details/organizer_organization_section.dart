@@ -2,15 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:megavent/models/organizer.dart';
 import 'package:megavent/utils/constants.dart';
 
-class OrganizerInfoSectionWidget extends StatelessWidget {
+class OrganizerOrganizationSectionWidget extends StatelessWidget {
   final Organizer organizer;
 
-  const OrganizerInfoSectionWidget({super.key, required this.organizer});
+  const OrganizerOrganizationSectionWidget({
+    super.key,
+    required this.organizer,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.all(20),
+      margin: const EdgeInsets.symmetric(horizontal: 20),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -35,14 +38,14 @@ class OrganizerInfoSectionWidget extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
-                  Icons.person_outline,
+                  Icons.business_outlined,
                   color: AppConstants.primaryColor,
                   size: 20,
                 ),
               ),
               const SizedBox(width: 12),
               Text(
-                'Personal Information',
+                'Organization Information',
                 style: AppConstants.bodySmall.copyWith(
                   color: AppConstants.primaryColor,
                 ),
@@ -51,9 +54,13 @@ class OrganizerInfoSectionWidget extends StatelessWidget {
           ),
           const SizedBox(height: 16),
 
-          _buildInfoRow('Full Name', organizer.fullName),
-          if (organizer.bio != null && organizer.bio!.isNotEmpty)
-            _buildInfoRow('Bio', organizer.bio!),
+          if (organizer.organization != null)
+            _buildInfoRow('Organization Name', organizer.organization!),
+          if (organizer.website != null)
+            _buildInfoRow('Website', organizer.website!),
+
+          // If no organization info is available
+          if (organizer.organization == null) _buildNoOrganizationInfo(),
         ],
       ),
     );
@@ -81,6 +88,37 @@ class OrganizerInfoSectionWidget extends StatelessWidget {
               value,
               style: AppConstants.bodyMedium.copyWith(
                 color: AppConstants.primaryColor,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNoOrganizationInfo() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppConstants.backgroundColor,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: AppConstants.textSecondaryColor.withOpacity(0.2),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.info_outline,
+            color: AppConstants.textSecondaryColor,
+            size: 20,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'No organization information provided',
+              style: AppConstants.bodyMedium.copyWith(
+                color: AppConstants.textSecondaryColor,
               ),
             ),
           ),

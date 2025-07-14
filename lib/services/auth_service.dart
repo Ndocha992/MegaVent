@@ -1213,4 +1213,206 @@ class AuthService extends ChangeNotifier {
       };
     }
   }
+
+  // Delete organizer (only callable by admin)
+  Future<Map<String, dynamic>> deleteOrganizer(String organizerId) async {
+    _setLoading(true);
+    try {
+      // Check if current user is an admin
+      final currentUserData = await getUserData();
+      if (!currentUserData['success'] || currentUserData['role'] != 'admin') {
+        return {
+          'success': false,
+          'message': 'Only admins can delete organizers',
+        };
+      }
+
+      // Check if admin is approved and active
+      final admin = currentUserData['user'] as Admin;
+      if (!admin.isApproved) {
+        return {
+          'success': false,
+          'message': 'Your admin account must be approved first',
+        };
+      }
+
+      // Get organizer data first to verify they exist
+      DocumentSnapshot organizerDoc =
+          await _firestore.collection('organizers').doc(organizerId).get();
+
+      if (!organizerDoc.exists) {
+        return {'success': false, 'message': 'Organizer not found'};
+      }
+
+      Map<String, dynamic> organizerData =
+          organizerDoc.data() as Map<String, dynamic>;
+
+      // Start a batch write for atomic operations
+      WriteBatch batch = _firestore.batch();
+
+      // Add organizer document deletion to batch
+      DocumentReference organizerRef = _firestore
+          .collection('organizers')
+          .doc(organizerId);
+      batch.delete(organizerRef);
+
+      // Add user document deletion to batch
+      DocumentReference userRef = _firestore
+          .collection('users')
+          .doc(organizerId);
+      batch.delete(userRef);
+
+      // Delete all staff members created by this organizer
+      QuerySnapshot staffMembers =
+          await _firestore
+              .collection('staff')
+              .where('organizerId', isEqualTo: organizerId)
+              .get();
+
+      for (DocumentSnapshot staffDoc in staffMembers.docs) {
+        batch.delete(staffDoc.reference);
+        // Also delete from users collection
+        batch.delete(_firestore.collection('users').doc(staffDoc.id));
+      }
+
+      // Delete any organizer-related event assignments
+      QuerySnapshot eventAssignments =
+          await _firestore
+              .collection('event_assignments')
+              .where('organizerId', isEqualTo: organizerId)
+              .get();
+
+      for (DocumentSnapshot doc in eventAssignments.docs) {
+        batch.delete(doc.reference);
+      }
+
+      // Delete any events created by this organizer
+      QuerySnapshot events =
+          await _firestore
+              .collection('events')
+              .where('organizerId', isEqualTo: organizerId)
+              .get();
+
+      for (DocumentSnapshot doc in events.docs) {
+        batch.delete(doc.reference);
+      }
+
+      // Delete any organizer-related notifications
+      QuerySnapshot notifications =
+          await _firestore
+              .collection('notifications')
+              .where('userId', isEqualTo: organizerId)
+              .get();
+
+      for (DocumentSnapshot doc in notifications.docs) {
+        batch.delete(doc.reference);
+      }
+
+      // Delete any organizer-related activity logs
+      QuerySnapshot activityLogs =
+          await _firestore
+              .collection('activity_logs')
+              .where('userId', isEqualTo: organizerId)
+              .get();
+
+      for (DocumentSnapshot doc in activityLogs.docs) {
+        batch.delete(doc.reference);
+      }
+
+      // Execute all deletions atomically
+      await batch.commit();
+
+      // Add a deletion record for audit trail
+      await _firestore.collection('deleted_users').add({
+        'deletedUserId': organizerId,
+        'deletedUserEmail': organizerData['email'],
+        'deletedUserName': organizerData['fullName'],
+        'deletedUserRole': 'organizer',
+        'deletedBy': admin.id,
+        'deletedByName': admin.fullName,
+        'deletedByRole': 'admin',
+        'organizationName': organizerData['organization'],
+        'deletedAt': DateTime.now(),
+        'reason': 'Organizer deleted by admin',
+        'authUserStatus': 'requires_manual_cleanup', // Flag for Auth cleanup
+        'staffDeletedCount': staffMembers.docs.length,
+      });
+
+      // Log the successful deletion
+      await _firestore.collection('activity_logs').add({
+        'userId': admin.id,
+        'userRole': 'admin',
+        'action': 'organizer_deleted',
+        'targetUserId': organizerId,
+        'targetUserEmail': organizerData['email'],
+        'details': {
+          'organizerName': organizerData['fullName'],
+          'organizationName': organizerData['organization'],
+          'staffDeletedCount': staffMembers.docs.length,
+          'eventsDeletedCount': events.docs.length,
+        },
+        'timestamp': DateTime.now(),
+        'success': true,
+      });
+
+      return {
+        'success': true,
+        'message': 'Organizer and all related data deleted successfully',
+        'warning': 'Firebase Auth account cleanup may be required',
+        'deletedOrganizerInfo': {
+          'name': organizerData['fullName'],
+          'email': organizerData['email'],
+          'organization': organizerData['organization'],
+          'staffDeletedCount': staffMembers.docs.length,
+          'eventsDeletedCount': events.docs.length,
+        },
+      };
+    } on FirebaseException catch (e) {
+      // Log the failed deletion attempt
+      try {
+        await _firestore.collection('activity_logs').add({
+          'userId': currentUser?.uid ?? 'unknown',
+          'userRole': 'admin',
+          'action': 'organizer_deletion_failed',
+          'targetUserId': organizerId,
+          'error': e.message,
+          'errorCode': e.code,
+          'timestamp': DateTime.now(),
+          'success': false,
+        });
+      } catch (logError) {
+        print('Failed to log deletion error: $logError');
+      }
+
+      if (e.code == 'unavailable') {
+        return {'success': false, 'message': 'No internet connection'};
+      }
+      return {
+        'success': false,
+        'message': 'Failed to delete organizer: ${e.message}',
+      };
+    } catch (e) {
+      // Log the failed deletion attempt
+      try {
+        await _firestore.collection('activity_logs').add({
+          'userId': currentUser?.uid ?? 'unknown',
+          'userRole': 'admin',
+          'action': 'organizer_deletion_failed',
+          'targetUserId': organizerId,
+          'error': e.toString(),
+          'timestamp': DateTime.now(),
+          'success': false,
+        });
+      } catch (logError) {
+        print('Failed to log deletion error: $logError');
+      }
+
+      return {
+        'success': false,
+        'message': 'Failed to delete organizer. Please try again later.',
+      };
+    } finally {
+      _setLoading(false);
+    }
+  }
 }

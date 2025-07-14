@@ -22,7 +22,7 @@ class OrganizerScreen extends StatefulWidget {
 class _OrganizerScreenState extends State<OrganizerScreen>
     with TickerProviderStateMixin {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  String currentRoute = '/admin-organizer';
+  String currentRoute = '/admin-organizers';
 
   late TabController _tabController;
   String _searchQuery = '';
