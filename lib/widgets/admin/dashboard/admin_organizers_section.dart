@@ -8,11 +8,13 @@ import 'package:megavent/utils/admin/dashboard/time_utils.dart';
 class AdminOrganizersSection extends StatelessWidget {
   final List<Organizer> organizers;
   final VoidCallback onViewAll;
+  final Function(Organizer) onOrganizerTap;
 
   const AdminOrganizersSection({
     super.key,
     required this.organizers,
     required this.onViewAll,
+    required this.onOrganizerTap,
   });
 
   @override
@@ -57,6 +59,7 @@ class AdminOrganizersSection extends StatelessWidget {
                           organizer.email,
                           style: AppConstants.bodySmall,
                         ),
+                        onTap: () => onOrganizerTap(organizer),
                         trailing: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.end,

@@ -24,7 +24,7 @@ class AdminProfile extends StatefulWidget {
 
 class _AdminProfileState extends State<AdminProfile> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  String currentRoute = '/organizer-profile';
+  String currentRoute = '/admin-profile';
   bool _isLoading = false;
   // Add a key to force StreamBuilder rebuild
   Key _streamBuilderKey = UniqueKey();
