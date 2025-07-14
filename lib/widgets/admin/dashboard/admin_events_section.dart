@@ -6,13 +6,8 @@ import 'package:megavent/utils/admin/dashboard/time_utils.dart';
 
 class AdminEventsSection extends StatelessWidget {
   final List<Event> events;
-  final VoidCallback onViewAll;
 
-  const AdminEventsSection({
-    super.key,
-    required this.events,
-    required this.onViewAll,
-  });
+  const AdminEventsSection({super.key, required this.events});
 
   @override
   Widget build(BuildContext context) {
@@ -26,59 +21,57 @@ class AdminEventsSection extends StatelessWidget {
               'Recent Events (${events.length})',
               style: AppConstants.headlineSmall,
             ),
-            TextButton(
-              onPressed: onViewAll,
-              child: const Text('View All'),
-            ),
           ],
         ),
         const SizedBox(height: 16),
         Container(
           decoration: AppConstants.cardDecoration,
-          child: events.isEmpty
-              ? const AdminEmptyState(
-                  message: 'No events yet',
-                  icon: Icons.event,
-                )
-              : ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: events.take(5).length,
-                  separatorBuilder: (context, index) => const Divider(height: 1),
-                  itemBuilder: (context, index) {
-                    final event = events[index];
-                    return ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: AppConstants.secondaryColor.withOpacity(0.1),
-                        child: Icon(
-                          Icons.event,
-                          color: AppConstants.secondaryColor,
-                        ),
-                      ),
-                      title: Text(
-                        event.name,
-                        style: AppConstants.titleMedium,
-                      ),
-                      subtitle: Text(
-                        '${event.location} • ${TimeUtils.formatDate(event.startDate)}',
-                        style: AppConstants.bodySmall,
-                      ),
-                      trailing: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            TimeUtils.getTimeAgo(event.createdAt),
-                            style: AppConstants.bodySmall.copyWith(
-                              color: AppConstants.textSecondaryColor,
-                            ),
+          child:
+              events.isEmpty
+                  ? const AdminEmptyState(
+                    message: 'No events yet',
+                    icon: Icons.event,
+                  )
+                  : ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: events.take(5).length,
+                    separatorBuilder:
+                        (context, index) => const Divider(height: 1),
+                    itemBuilder: (context, index) {
+                      final event = events[index];
+                      return ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: AppConstants.secondaryColor
+                              .withOpacity(0.1),
+                          child: Icon(
+                            Icons.event,
+                            color: AppConstants.secondaryColor,
                           ),
-                          const Icon(Icons.chevron_right),
-                        ],
-                      ),
-                    );
-                  },
-                ),
+                        ),
+                        title: Text(
+                          event.name,
+                          style: AppConstants.titleMedium,
+                        ),
+                        subtitle: Text(
+                          '${event.location} • ${TimeUtils.formatDate(event.startDate)}',
+                          style: AppConstants.bodySmall,
+                        ),
+                        trailing: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              TimeUtils.getTimeAgo(event.createdAt),
+                              style: AppConstants.bodySmall.copyWith(
+                                color: AppConstants.textSecondaryColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
         ),
       ],
     );

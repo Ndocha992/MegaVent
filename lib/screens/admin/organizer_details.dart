@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:megavent/models/event.dart';
 import 'package:megavent/models/organizer.dart';
 import 'package:megavent/services/auth_service.dart';
 import 'package:megavent/services/database_service.dart';
 import 'package:megavent/utils/constants.dart';
+import 'package:megavent/widgets/admin/organizer/organizer_details/event_details_modal.dart';
+import 'package:megavent/widgets/admin/organizer/organizer_details/organizer_actions_section/organizer_events_bottom_sheet.dart';
 import 'package:megavent/widgets/nested_app_bar.dart';
 import 'package:megavent/widgets/admin/sidebar.dart';
 import 'package:megavent/widgets/admin/organizer/organizer_details/organizer_actions_section.dart';
@@ -13,6 +16,7 @@ import 'package:megavent/widgets/admin/organizer/organizer_details/organizer_hea
 import 'package:megavent/widgets/admin/organizer/organizer_details/organizer_registration_section.dart';
 import 'package:megavent/widgets/admin/organizer/organizer_details/organizer_info_section.dart';
 import 'package:megavent/widgets/admin/organizer/organizer_details/organizer_approval_section.dart';
+import 'package:megavent/widgets/admin/organizer/organizer_details/organizer_stats_section.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -337,6 +341,13 @@ class _OrganizerDetailsState extends State<OrganizerDetails> {
               // Organizer Header with Profile Image
               OrganizerHeaderWidget(organizer: currentOrganizer!),
 
+              const SizedBox(height: 20),
+
+              // Organizer Stats Section - NEW POSITION
+              OrganizerStatsSectionWidget(stats: adminOrganizerStats),
+
+              const SizedBox(height: 20),
+
               // Organizer Info Section
               OrganizerInfoSectionWidget(organizer: currentOrganizer!),
 
@@ -349,11 +360,17 @@ class _OrganizerDetailsState extends State<OrganizerDetails> {
                 onPhoneTap: _launchPhone,
               ),
 
+              const SizedBox(height: 20),
+
               // Organization Info
               OrganizerOrganizationSectionWidget(organizer: currentOrganizer!),
 
+              const SizedBox(height: 20),
+
               // Registration Date & Status
               OrganizerRegistrationSectionWidget(organizer: currentOrganizer!),
+
+              const SizedBox(height: 20),
 
               // Approval Section
               OrganizerApprovalSectionWidget(
@@ -361,10 +378,11 @@ class _OrganizerDetailsState extends State<OrganizerDetails> {
                 onApprovalToggle: _handleApprovalToggle,
               ),
 
-              // Action Buttons
+              const SizedBox(height: 20),
+
+              // Action Buttons - Stats removed from here
               OrganizerActionsSectionWidget(
                 organizer: currentOrganizer!,
-                stats: adminOrganizerStats,
                 onDelete: _handleDeleteOrganizer,
                 onViewEvents: _handleViewEvents,
               ),
@@ -462,16 +480,85 @@ class _OrganizerDetailsState extends State<OrganizerDetails> {
     _showDeleteConfirmationDialog();
   }
 
-  void _handleViewEvents() {
-    // Navigate to organizer's events
-    // You can implement this based on your event management system
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Viewing events for ${currentOrganizer!.fullName}'),
-        backgroundColor: AppConstants.primaryColor,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
+  void _handleViewEvents() async {
+    try {
+      // Show loading indicator while fetching events
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder:
+            (context) => Center(
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const SpinKitThreeBounce(
+                  color: AppConstants.primaryColor,
+                  size: 20.0,
+                ),
+              ),
+            ),
+      );
+
+      final databaseService = Provider.of<DatabaseService>(
+        context,
+        listen: false,
+      );
+
+      // Fetch organizer's events
+      final events = await databaseService.getAdminOrganizerEvents(
+        currentOrganizer!.id,
+      );
+
+      // Hide loading indicator
+      if (mounted) Navigator.of(context).pop();
+
+      // Show the bottom sheet with events
+      if (mounted) {
+        showOrganizerEventsBottomSheet(
+          context: context,
+          organizer: currentOrganizer!,
+          events: events,
+          onEventTap: (event) {
+            // Close the bottom sheet first
+            Navigator.of(context).pop();
+
+            // Show event details modal
+            _showEventDetailsModal(event);
+          },
+        );
+      }
+    } catch (e) {
+      // Hide loading indicator
+      if (mounted) Navigator.of(context).pop();
+
+      // Show error message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load events: $e'),
+            backgroundColor: AppConstants.errorColor,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  void _showEventDetailsModal(Event event) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return EventDetailsModal(
+          event: event,
+          organizerName: currentOrganizer!.fullName,
+        );
+      },
     );
   }
 

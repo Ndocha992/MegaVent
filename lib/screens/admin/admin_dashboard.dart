@@ -6,6 +6,7 @@ import 'package:megavent/models/staff.dart';
 import 'package:megavent/models/attendee.dart';
 import 'package:megavent/models/registration.dart';
 import 'package:megavent/screens/admin/organizer.dart';
+import 'package:megavent/screens/admin/organizer_details.dart';
 import 'package:megavent/widgets/admin/dashboard/admin_quick_actions_grid.dart';
 import 'package:megavent/widgets/admin/dashboard/admin_welcome_card.dart';
 import 'package:megavent/widgets/admin/dashboard/admin_system_overview.dart';
@@ -200,35 +201,22 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       builder: (context) => const OrganizerScreen(),
                     ),
                   ),
+              onOrganizerTap:
+                  (Organizer organizer) => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder:
+                          (context) => OrganizerDetails(organizer: organizer),
+                    ),
+                  ),
             ),
             const SizedBox(height: 24),
-            AdminEventsSection(
-              events: _events,
-              onViewAll: () {
-                // Navigate to events screen
-              },
-            ),
+            AdminEventsSection(events: _events),
             const SizedBox(height: 24),
-            AdminStaffSection(
-              staff: _staff,
-              onViewAll: () {
-                // Navigate to staff screen
-              },
-            ),
+            AdminStaffSection(staff: _staff),
             const SizedBox(height: 24),
-            AdminAttendeesSection(
-              attendees: _attendees,
-              onViewAll: () {
-                // Navigate to attendees screen
-              },
-            ),
+            AdminAttendeesSection(attendees: _attendees),
             const SizedBox(height: 24),
-            AdminRegistrationsSection(
-              registrations: _registrations,
-              onViewAll: () {
-                // Navigate to registrations screen
-              },
-            ),
+            AdminRegistrationsSection(registrations: _registrations),
             const SizedBox(height: 24),
             AdminQuickActionsGrid(onNavigate: _handleQuickAction),
             const SizedBox(height: 24),

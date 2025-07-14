@@ -6,13 +6,8 @@ import 'package:megavent/utils/admin/dashboard/time_utils.dart';
 
 class AdminStaffSection extends StatelessWidget {
   final List<Staff> staff;
-  final VoidCallback onViewAll;
 
-  const AdminStaffSection({
-    super.key,
-    required this.staff,
-    required this.onViewAll,
-  });
+  const AdminStaffSection({super.key, required this.staff});
 
   @override
   Widget build(BuildContext context) {
@@ -26,59 +21,58 @@ class AdminStaffSection extends StatelessWidget {
               'Recent Staff (${staff.length})',
               style: AppConstants.headlineSmall,
             ),
-            TextButton(
-              onPressed: onViewAll,
-              child: const Text('View All'),
-            ),
           ],
         ),
         const SizedBox(height: 16),
         Container(
           decoration: AppConstants.cardDecoration,
-          child: staff.isEmpty
-              ? const AdminEmptyState(
-                  message: 'No staff yet',
-                  icon: Icons.people,
-                )
-              : ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: staff.take(5).length,
-                  separatorBuilder: (context, index) => const Divider(height: 1),
-                  itemBuilder: (context, index) {
-                    final staffMember = staff[index];
-                    return ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: AppConstants.accentColor.withOpacity(0.1),
-                        child: Icon(
-                          Icons.person,
-                          color: AppConstants.accentColor,
-                        ),
-                      ),
-                      title: Text(
-                        staffMember.name,
-                        style: AppConstants.titleMedium,
-                      ),
-                      subtitle: Text(
-                        '${staffMember.email} • ${staffMember.role}',
-                        style: AppConstants.bodySmall,
-                      ),
-                      trailing: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            TimeUtils.getTimeAgo(staffMember.hiredAt),
-                            style: AppConstants.bodySmall.copyWith(
-                              color: AppConstants.textSecondaryColor,
-                            ),
+          child:
+              staff.isEmpty
+                  ? const AdminEmptyState(
+                    message: 'No staff yet',
+                    icon: Icons.people,
+                  )
+                  : ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: staff.take(5).length,
+                    separatorBuilder:
+                        (context, index) => const Divider(height: 1),
+                    itemBuilder: (context, index) {
+                      final staffMember = staff[index];
+                      return ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: AppConstants.accentColor.withOpacity(
+                            0.1,
                           ),
-                          const Icon(Icons.chevron_right),
-                        ],
-                      ),
-                    );
-                  },
-                ),
+                          child: Icon(
+                            Icons.person,
+                            color: AppConstants.accentColor,
+                          ),
+                        ),
+                        title: Text(
+                          staffMember.name,
+                          style: AppConstants.titleMedium,
+                        ),
+                        subtitle: Text(
+                          '${staffMember.email} • ${staffMember.role}',
+                          style: AppConstants.bodySmall,
+                        ),
+                        trailing: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              TimeUtils.getTimeAgo(staffMember.hiredAt),
+                              style: AppConstants.bodySmall.copyWith(
+                                color: AppConstants.textSecondaryColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
         ),
       ],
     );

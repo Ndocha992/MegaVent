@@ -338,4 +338,7 @@ class DatabaseService extends ChangeNotifier {
       _organizerService.updateOrganizerApproval(organizerId, isApproved);
   Future<AdminOrganizerStats> getAdminOrganizerStats(String organizerId) =>
       _organizerService.getAdminOrganizerStats(organizerId);
+  Future<List<Event>> getAdminOrganizerEvents(String organizerId) {
+  return _eventService.getAdminOrganizerEvents(organizerId);
+}
 }

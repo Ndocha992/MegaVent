@@ -4,14 +4,12 @@ import 'package:megavent/utils/constants.dart';
 
 class OrganizerActionsSectionWidget extends StatelessWidget {
   final Organizer organizer;
-  final AdminOrganizerStats? stats;
   final VoidCallback onDelete;
   final VoidCallback onViewEvents;
 
   const OrganizerActionsSectionWidget({
     super.key,
     required this.organizer,
-    this.stats,
     required this.onDelete,
     required this.onViewEvents,
   });
@@ -21,105 +19,96 @@ class OrganizerActionsSectionWidget extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.all(20),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Primary Actions Row
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: onViewEvents,
-                  icon: const Icon(Icons.event_outlined),
-                  label: const Text('View Events'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppConstants.primaryColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: onDelete,
-                  icon: const Icon(Icons.person_remove_outlined),
-                  label: const Text('Remove'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppConstants.errorColor,
-                    side: BorderSide(color: AppConstants.errorColor),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ),
-            ],
+          Text(
+            'Quick Actions',
+            style: AppConstants.headlineMedium.copyWith(
+              color: AppConstants.primaryColor,
+            ),
           ),
+          const SizedBox(height: 16),
 
-          const SizedBox(height: 12),
-
-          // Quick Stats Row
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppConstants.backgroundColor,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: AppConstants.primaryColor.withOpacity(0.1),
+          // Primary View Events Button
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: onViewEvents,
+              icon: const Icon(Icons.event_outlined),
+              label: const Text('View Events'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppConstants.primaryColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
+          ),
+
+          const SizedBox(height: 32),
+
+          // Danger Zone Section
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppConstants.errorColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: AppConstants.errorColor.withOpacity(0.3),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildStatItem(
-                  icon: Icons.event,
-                  label: 'Events',
-                  value: stats?.eventsCount.toString() ?? '0',
+                Row(
+                  children: [
+                    Icon(
+                      Icons.warning_amber_rounded,
+                      color: AppConstants.errorColor,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Danger Zone',
+                      style: AppConstants.bodyLarge.copyWith(
+                        color: AppConstants.errorColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
-                _buildStatItem(
-                  icon: Icons.people,
-                  label: 'Staff',
-                  value: stats?.totalStaff.toString() ?? '0',
+                const SizedBox(height: 8),
+                Text(
+                  'Actions in this section cannot be undone.',
+                  style: AppConstants.bodyMedium.copyWith(
+                    color: AppConstants.errorColor.withOpacity(0.8),
+                  ),
                 ),
-                _buildStatItem(
-                  icon: Icons.people,
-                  label: 'Attendees',
-                  value: stats?.totalAttendees.toString() ?? '0',
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: onDelete,
+                    icon: const Icon(Icons.delete_outline),
+                    label: const Text('Delete Organizer'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppConstants.errorColor,
+                      side: BorderSide(color: AppConstants.errorColor),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildStatItem({
-    required IconData icon,
-    required String label,
-    required String value,
-  }) {
-    return Column(
-      children: [
-        Icon(icon, color: AppConstants.primaryColor, size: 24),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: AppConstants.bodyMedium.copyWith(
-            color: AppConstants.primaryColor,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        Text(
-          label,
-          style: AppConstants.bodySmall.copyWith(
-            color: AppConstants.textSecondaryColor,
-          ),
-        ),
-      ],
     );
   }
 }
