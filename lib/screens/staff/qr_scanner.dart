@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:crypto/crypto.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -30,7 +29,7 @@ class StaffQRScanner extends StatefulWidget {
 class _StaffQRScannerState extends State<StaffQRScanner>
     with WidgetsBindingObserver {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  late MobileScannerController _scannerController;
+  MobileScannerController? _scannerController;
   bool _isProcessing = false;
   String _scanResult = '';
   List<Event> _availableEvents = [];
@@ -40,34 +39,35 @@ class _StaffQRScannerState extends State<StaffQRScanner>
   bool _isFlashOn = false;
   bool _isCameraPermissionGranted = false;
   bool _isCheckingPermissions = true;
+  bool _isInitializingCamera = false;
+  bool _isScannerReady = false;
   String? _organizerId;
+  String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _databaseService = Provider.of<DatabaseService>(context, listen: false);
-    _checkAndRequestPermissions();
-    _loadStaffOrganizerId();
+    _initializeApp();
+  }
+
+  Future<void> _initializeApp() async {
+    await _loadStaffOrganizerId();
+    await _checkAndRequestPermissions();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (!_scannerController.value.isInitialized) {
-      return;
-    }
-
     switch (state) {
       case AppLifecycleState.detached:
       case AppLifecycleState.hidden:
       case AppLifecycleState.paused:
-        _scannerController.stop();
+        _stopScanner();
         break;
       case AppLifecycleState.resumed:
-        // Check permissions again when app resumes
-        _checkAndRequestPermissions();
-        if (_isCameraPermissionGranted) {
-          _scannerController.start();
+        if (_isCameraPermissionGranted && !_isInitializingCamera) {
+          _reinitializeScanner();
         }
         break;
       case AppLifecycleState.inactive:
@@ -90,7 +90,7 @@ class _StaffQRScannerState extends State<StaffQRScanner>
           setState(() {
             _organizerId = staffDoc.data()?['organizerId'];
           });
-          await _loadAvailableEvents(); // Then load events
+          await _loadAvailableEvents();
         }
       }
     } catch (e) {
@@ -130,38 +130,48 @@ class _StaffQRScannerState extends State<StaffQRScanner>
   Future<void> _checkAndRequestPermissions() async {
     setState(() {
       _isCheckingPermissions = true;
+      _errorMessage = null;
     });
 
     try {
       // Check current camera permission status
       PermissionStatus cameraStatus = await Permission.camera.status;
 
+      print('Initial camera permission status: $cameraStatus');
+
+      // If permission is denied, request it
       if (cameraStatus.isDenied) {
-        // Request camera permission
         cameraStatus = await Permission.camera.request();
+        print('After request camera permission status: $cameraStatus');
       }
 
       if (cameraStatus.isGranted) {
         setState(() {
           _isCameraPermissionGranted = true;
+          _errorMessage = null;
         });
-        _initializeScanner();
+        // Add longer delay to ensure permission is fully processed on real devices
+        await Future.delayed(const Duration(milliseconds: 1000));
+        await _initializeScanner();
       } else if (cameraStatus.isPermanentlyDenied) {
         setState(() {
           _isCameraPermissionGranted = false;
+          _errorMessage =
+              'Camera permission is permanently denied. Please enable it in app settings.';
         });
         _showPermissionDialog();
       } else {
         setState(() {
           _isCameraPermissionGranted = false;
+          _errorMessage = 'Camera permission is required to scan QR codes.';
         });
-        _showErrorSnackBar('Camera permission is required to scan QR codes');
       }
     } catch (e) {
+      print('Error checking camera permission: $e');
       setState(() {
         _isCameraPermissionGranted = false;
+        _errorMessage = 'Error checking camera permission: ${e.toString()}';
       });
-      _showErrorSnackBar('Error checking camera permission: ${e.toString()}');
     } finally {
       setState(() {
         _isCheckingPermissions = false;
@@ -203,24 +213,124 @@ class _StaffQRScannerState extends State<StaffQRScanner>
     );
   }
 
-  void _initializeScanner() {
-    if (!_isCameraPermissionGranted) return;
+  Future<void> _initializeScanner() async {
+    if (!_isCameraPermissionGranted || _isInitializingCamera) return;
 
-    _scannerController = MobileScannerController(
-      detectionSpeed: DetectionSpeed.noDuplicates,
-      facing: CameraFacing.back,
-      torchEnabled: false,
-    );
-
-    // Start the scanner
-    _scannerController.start().catchError((error) {
-      if (mounted) {
-        setState(() {
-          _isCameraPermissionGranted = false;
-        });
-        _showErrorSnackBar('Failed to start camera: ${error.toString()}');
-      }
+    setState(() {
+      _isInitializingCamera = true;
+      _isScannerReady = false;
+      _errorMessage = null;
     });
+
+    try {
+      // Dispose existing controller if any
+      await _disposeScanner();
+
+      // Wait a bit before creating new controller
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      // Create new controller with more specific configuration for real devices
+      _scannerController = MobileScannerController(
+        detectionSpeed: DetectionSpeed.noDuplicates,
+        facing: CameraFacing.back,
+        torchEnabled: false,
+        returnImage: false,
+        // Add formats for better compatibility
+        formats: [BarcodeFormat.qrCode],
+        // Add detection timeout
+        detectionTimeoutMs: 2500,
+        // Use normal scanning mode for better compatibility
+        autoStart: false,
+      );
+
+      print('Scanner controller created, waiting for initialization...');
+
+      // Wait for controller to be ready before starting
+      await Future.delayed(const Duration(milliseconds: 1000));
+
+      // Start the scanner with proper error handling
+      await _scannerController!.start();
+
+      print('Scanner started successfully');
+
+      // Wait a bit more to ensure scanner is fully ready
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      setState(() {
+        _isInitializingCamera = false;
+        _isScannerReady = true;
+      });
+    } catch (e) {
+      print('Failed to initialize scanner: $e');
+      setState(() {
+        _isInitializingCamera = false;
+        _isScannerReady = false;
+        _errorMessage = 'Failed to start camera: ${e.toString()}';
+      });
+
+      // Dispose failed controller
+      await _disposeScanner();
+
+      // Try to reinitialize after a longer delay for real devices
+      Future.delayed(const Duration(seconds: 3), () {
+        if (mounted && _isCameraPermissionGranted) {
+          _reinitializeScanner();
+        }
+      });
+    }
+  }
+
+  Future<void> _reinitializeScanner() async {
+    if (_isInitializingCamera) return;
+
+    print('Reinitializing scanner...');
+    await _disposeScanner();
+    await Future.delayed(const Duration(milliseconds: 1000));
+    await _initializeScanner();
+  }
+
+  Future<void> _disposeScanner() async {
+    if (_scannerController != null) {
+      try {
+        await _scannerController!.stop();
+        await _scannerController!.dispose();
+        _scannerController = null;
+        setState(() {
+          _isScannerReady = false;
+        });
+      } catch (e) {
+        print('Error disposing scanner: $e');
+      }
+    }
+  }
+
+  Future<void> _stopScanner() async {
+    if (_scannerController != null && _isScannerReady) {
+      try {
+        await _scannerController!.stop();
+        setState(() {
+          _isScannerReady = false;
+        });
+      } catch (e) {
+        print('Error stopping scanner: $e');
+      }
+    }
+  }
+
+  Future<void> _startScanner() async {
+    if (_scannerController != null &&
+        !_isScannerReady &&
+        !_isInitializingCamera) {
+      try {
+        await _scannerController!.start();
+        setState(() {
+          _isScannerReady = true;
+        });
+      } catch (e) {
+        print('Error starting scanner: $e');
+        _reinitializeScanner();
+      }
+    }
   }
 
   @override
@@ -239,7 +349,12 @@ class _StaffQRScannerState extends State<StaffQRScanner>
         actions: [
           // Flash toggle button
           IconButton(
-            onPressed: _isCameraPermissionGranted ? _toggleFlash : null,
+            onPressed:
+                _isCameraPermissionGranted &&
+                        _scannerController != null &&
+                        _isScannerReady
+                    ? _toggleFlash
+                    : null,
             icon: Icon(
               _isFlashOn ? Icons.flash_on : Icons.flash_off,
               color: _isFlashOn ? AppConstants.warningColor : Colors.white,
@@ -248,7 +363,12 @@ class _StaffQRScannerState extends State<StaffQRScanner>
           ),
           // Camera switch button
           IconButton(
-            onPressed: _isCameraPermissionGranted ? _switchCamera : null,
+            onPressed:
+                _isCameraPermissionGranted &&
+                        _scannerController != null &&
+                        _isScannerReady
+                    ? _switchCamera
+                    : null,
             icon: const Icon(Icons.cameraswitch, color: Colors.white),
             tooltip: 'Switch Camera',
           ),
@@ -267,13 +387,13 @@ class _StaffQRScannerState extends State<StaffQRScanner>
                 onEventChanged: (Event? newEvent) {
                   setState(() {
                     _selectedEvent = newEvent;
-                    _scanResult = ''; // Reset scan result when changing event
+                    _scanResult = '';
                   });
                 },
               ),
 
               // Permission checking state
-              if (_isCheckingPermissions)
+              if (_isCheckingPermissions || _isInitializingCamera)
                 Container(
                   height: screenWidth * 0.8,
                   margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -288,17 +408,28 @@ class _StaffQRScannerState extends State<StaffQRScanner>
                         const CircularProgressIndicator(),
                         const SizedBox(height: 16),
                         Text(
-                          'Checking Camera Permission...',
+                          _isCheckingPermissions
+                              ? 'Checking Camera Permission...'
+                              : 'Initializing Camera...',
                           style: AppConstants.headlineSmall.copyWith(
                             color: Colors.grey[700],
                           ),
                         ),
+                        if (_isInitializingCamera) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            'This may take a moment on real devices',
+                            style: AppConstants.bodySmall.copyWith(
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
                 )
-              // Camera permission not granted
-              else if (!_isCameraPermissionGranted)
+              // Camera permission not granted or error
+              else if (!_isCameraPermissionGranted || _errorMessage != null)
                 Container(
                   height: screenWidth * 0.8,
                   margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -324,7 +455,8 @@ class _StaffQRScannerState extends State<StaffQRScanner>
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Please enable camera access to scan QR codes',
+                          _errorMessage ??
+                              'Please enable camera access to scan QR codes',
                           style: AppConstants.bodyMedium.copyWith(
                             color: Colors.grey[600],
                           ),
@@ -337,7 +469,7 @@ class _StaffQRScannerState extends State<StaffQRScanner>
                             backgroundColor: AppConstants.primaryColor,
                             foregroundColor: Colors.white,
                           ),
-                          child: const Text('Grant Permission'),
+                          child: const Text('Try Again'),
                         ),
                         const SizedBox(height: 8),
                         TextButton(
@@ -350,13 +482,53 @@ class _StaffQRScannerState extends State<StaffQRScanner>
                     ),
                   ),
                 )
-              else
-                // QR Scanner View - Fixed height based on screen size
+              else if (_scannerController != null && _isScannerReady)
+                // QR Scanner View - Only show if controller exists and is ready
                 StaffQRScannerView(
                   isProcessing: _isProcessing,
                   screenWidth: screenWidth,
-                  controller: _scannerController,
+                  controller: _scannerController!,
                   onDetect: _onDetect,
+                )
+              else
+                Container(
+                  height: screenWidth * 0.8,
+                  margin: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    color: Colors.grey[200],
+                  ),
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const CircularProgressIndicator(),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Starting Camera...',
+                          style: AppConstants.headlineSmall.copyWith(
+                            color: Colors.grey[700],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Please wait while we initialize the camera',
+                          style: AppConstants.bodySmall.copyWith(
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: _reinitializeScanner,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppConstants.primaryColor,
+                            foregroundColor: Colors.white,
+                          ),
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
 
               const SizedBox(height: 16),
@@ -380,7 +552,7 @@ class _StaffQRScannerState extends State<StaffQRScanner>
                       onManualEntry: _manualEntry,
                     ),
 
-                    const SizedBox(height: 16), // Bottom padding
+                    const SizedBox(height: 16),
                   ],
                 ),
               ),
@@ -393,7 +565,10 @@ class _StaffQRScannerState extends State<StaffQRScanner>
 
   void _onDetect(BarcodeCapture capture) {
     final List<Barcode> barcodes = capture.barcodes;
-    if (barcodes.isNotEmpty && !_isProcessing && _selectedEvent != null) {
+    if (barcodes.isNotEmpty &&
+        !_isProcessing &&
+        _selectedEvent != null &&
+        _isScannerReady) {
       final String? code = barcodes.first.rawValue;
       if (code != null && code.isNotEmpty) {
         _processQRCode(code);
@@ -410,7 +585,7 @@ class _StaffQRScannerState extends State<StaffQRScanner>
 
     try {
       // Pause camera during processing
-      await _scannerController.stop();
+      await _stopScanner();
 
       // Haptic feedback
       HapticFeedback.mediumImpact();
@@ -426,8 +601,8 @@ class _StaffQRScannerState extends State<StaffQRScanner>
 
       // Resume camera after a short delay
       await Future.delayed(const Duration(seconds: 3));
-      if (mounted && _isCameraPermissionGranted) {
-        await _scannerController.start();
+      if (mounted && _isCameraPermissionGranted && _scannerController != null) {
+        await _startScanner();
       }
     }
   }
@@ -438,7 +613,7 @@ class _StaffQRScannerState extends State<StaffQRScanner>
     setState(() => _isProcessing = true);
 
     try {
-      await _scannerController.stop();
+      await _stopScanner();
       HapticFeedback.mediumImpact();
 
       // Parse QR code using new format
@@ -500,20 +675,25 @@ class _StaffQRScannerState extends State<StaffQRScanner>
     } finally {
       setState(() => _isProcessing = false);
       await Future.delayed(const Duration(seconds: 3));
-      if (mounted && _isCameraPermissionGranted)
-        await _scannerController.start();
+      if (mounted && _isCameraPermissionGranted && _scannerController != null) {
+        await _startScanner();
+      }
     }
   }
 
   void _toggleFlash() {
-    setState(() {
-      _isFlashOn = !_isFlashOn;
-    });
-    _scannerController.toggleTorch();
+    if (_scannerController != null && _isScannerReady) {
+      setState(() {
+        _isFlashOn = !_isFlashOn;
+      });
+      _scannerController!.toggleTorch();
+    }
   }
 
   void _switchCamera() {
-    _scannerController.switchCamera();
+    if (_scannerController != null && _isScannerReady) {
+      _scannerController!.switchCamera();
+    }
   }
 
   void _manualEntry() {
@@ -582,8 +762,8 @@ class _StaffQRScannerState extends State<StaffQRScanner>
       _scanResult = '';
       _isProcessing = false;
     });
-    if (_isCameraPermissionGranted) {
-      _scannerController.start();
+    if (_isCameraPermissionGranted && _scannerController != null) {
+      _startScanner();
     }
   }
 
@@ -602,9 +782,7 @@ class _StaffQRScannerState extends State<StaffQRScanner>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    if (_isCameraPermissionGranted) {
-      _scannerController.dispose();
-    }
+    _disposeScanner();
     super.dispose();
   }
 }
