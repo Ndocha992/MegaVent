@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:megavent/models/admin.dart';
 import 'package:megavent/models/admin_dashboard_stats.dart';
 import 'package:megavent/models/attendee_stats.dart';
 import 'package:megavent/models/event.dart';
@@ -9,6 +10,7 @@ import 'package:megavent/models/organizer_attendee_stats.dart';
 import 'package:megavent/models/organizer.dart';
 import 'package:megavent/models/staff.dart';
 import 'package:megavent/models/registration.dart';
+import 'package:megavent/services/modules/database_service/admin_service.dart';
 import 'package:megavent/services/modules/database_service/attendee_service.dart';
 import 'package:megavent/services/modules/database_service/attendee_stats.dart';
 import 'package:megavent/services/modules/database_service/event_service.dart';
@@ -31,6 +33,7 @@ class DatabaseService extends ChangeNotifier {
   late final RegistrationService _registrationService;
   late final DashboardService _dashboardService;
   late final StatsService _statsService;
+  late final AdminService _adminService;
 
   DatabaseService() {
     // Initialize service modules with shared dependencies
@@ -42,6 +45,7 @@ class DatabaseService extends ChangeNotifier {
     _registrationService = RegistrationService(_firestore, _auth, this);
     _dashboardService = DashboardService(_firestore, _auth, this);
     _statsService = StatsService(_firestore, _auth, this);
+    _adminService = AdminService(_firestore, _auth, this);
   }
 
   /**
@@ -339,6 +343,13 @@ class DatabaseService extends ChangeNotifier {
   Future<AdminOrganizerStats> getAdminOrganizerStats(String organizerId) =>
       _organizerService.getAdminOrganizerStats(organizerId);
   Future<List<Event>> getAdminOrganizerEvents(String organizerId) {
-  return _eventService.getAdminOrganizerEvents(organizerId);
-}
+    return _eventService.getAdminOrganizerEvents(organizerId);
+  }
+
+  Stream<Admin?> streamCurrentAdminData() =>
+      _adminService.streamCurrentAdminData();
+  Future<void> updateAdminProfileFields(
+    String adminId,
+    Map<String, dynamic> fields,
+  ) => _adminService.updateAdminProfileFields(adminId, fields);
 }

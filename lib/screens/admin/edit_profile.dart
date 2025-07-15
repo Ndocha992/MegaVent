@@ -1,17 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:megavent/models/admin.dart';
 import 'package:megavent/screens/loading_screen.dart';
 import 'package:megavent/services/auth_service.dart';
 import 'package:megavent/utils/constants.dart';
+import 'package:megavent/widgets/admin/profile/edit_profile/action_buttons_section.dart';
+import 'package:megavent/widgets/admin/profile/edit_profile/contact_information_section.dart';
+import 'package:megavent/widgets/admin/profile/edit_profile/personal_information_section.dart';
+import 'package:megavent/widgets/admin/profile/edit_profile/profile_image_section.dart';
+import 'package:megavent/widgets/admin/sidebar.dart';
 import 'package:megavent/widgets/nested_app_bar.dart';
-import 'package:megavent/widgets/organizer/profile/edit_profile/action_buttons_section.dart';
-import 'package:megavent/widgets/organizer/profile/edit_profile/contact_information_section.dart';
-import 'package:megavent/widgets/organizer/profile/edit_profile/location_info_section.dart';
-import 'package:megavent/widgets/organizer/profile/edit_profile/personal_information_section.dart';
-import 'package:megavent/widgets/organizer/profile/edit_profile/professional_info_section.dart';
-import 'package:megavent/widgets/organizer/profile/edit_profile/profile_image_section.dart';
-import 'package:megavent/widgets/organizer/sidebar.dart';
-import 'package:megavent/models/organizer.dart';
 import 'package:megavent/services/database_service.dart';
 import 'package:provider/provider.dart';
 
@@ -25,19 +23,12 @@ class EditProfile extends StatefulWidget {
 class _EditProfileState extends State<EditProfile> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  String currentRoute = '/organizer-profile';
+  String currentRoute = '/admin-profile';
 
   // Form controllers
   final TextEditingController _fullNameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
-  final TextEditingController _organizationController = TextEditingController();
-  final TextEditingController _jobTitleController = TextEditingController();
-  final TextEditingController _bioController = TextEditingController();
-  final TextEditingController _websiteController = TextEditingController();
-  final TextEditingController _addressController = TextEditingController();
-  final TextEditingController _cityController = TextEditingController();
-  final TextEditingController _countryController = TextEditingController();
   final TextEditingController _currentPasswordController =
       TextEditingController();
   final TextEditingController _newPasswordController = TextEditingController();
@@ -50,7 +41,7 @@ class _EditProfileState extends State<EditProfile> {
   bool _hasChanges = false;
   bool _isInitialized = false;
   String? _selectedImageBase64;
-  Organizer? _currentOrganizer;
+  Admin? _currentAdmin;
 
   // Store original values for comparison
   Map<String, dynamic> _originalValues = {};
@@ -60,46 +51,25 @@ class _EditProfileState extends State<EditProfile> {
     _fullNameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
-    _organizationController.dispose();
-    _jobTitleController.dispose();
-    _bioController.dispose();
-    _websiteController.dispose();
-    _addressController.dispose();
-    _cityController.dispose();
-    _countryController.dispose();
     super.dispose();
   }
 
-  void _populateFields(Organizer organizer) {
-    if (_currentOrganizer?.id != organizer.id) {
-      _currentOrganizer = organizer;
+  void _populateFields(Admin admin) {
+    if (_currentAdmin?.id != admin.id) {
+      _currentAdmin = admin;
 
       // Store original values
       _originalValues = {
-        'fullName': organizer.fullName,
-        'email': organizer.email,
-        'phone': organizer.phone,
-        'organization': organizer.organization,
-        'jobTitle': organizer.jobTitle,
-        'bio': organizer.bio,
-        'website': organizer.website,
-        'address': organizer.address,
-        'city': organizer.city,
-        'country': organizer.country,
-        'profileImage': organizer.profileImage,
+        'fullName': admin.fullName,
+        'email': admin.email,
+        'phone': admin.phone,
+        'profileImage': admin.profileImage,
       };
 
-      _fullNameController.text = organizer.fullName;
-      _emailController.text = organizer.email;
-      _phoneController.text = organizer.phone;
-      _organizationController.text = organizer.organization ?? '';
-      _jobTitleController.text = organizer.jobTitle ?? '';
-      _bioController.text = organizer.bio ?? '';
-      _websiteController.text = organizer.website ?? '';
-      _addressController.text = organizer.address ?? '';
-      _cityController.text = organizer.city ?? '';
-      _countryController.text = organizer.country ?? '';
-      _selectedImageBase64 = organizer.profileImage;
+      _fullNameController.text = admin.fullName;
+      _emailController.text = admin.email;
+      _phoneController.text = admin.phone;
+      _selectedImageBase64 = admin.profileImage;
 
       _hasChanges = false;
       _isInitialized = true;
@@ -119,12 +89,6 @@ class _EditProfileState extends State<EditProfile> {
       _selectedImageBase64 = imageBase64;
       _hasChanges = true;
     });
-  }
-
-  // Helper method to get safe string value
-  String? _getSafeStringValue(String value) {
-    final trimmed = value.trim();
-    return trimmed.isEmpty ? null : trimmed;
   }
 
   // Helper method to check if a field has changed
@@ -150,43 +114,6 @@ class _EditProfileState extends State<EditProfile> {
     final String phone = _phoneController.text.trim();
     if (_hasFieldChanged('phone', phone) && phone.isNotEmpty) {
       updateMap['phone'] = phone;
-    }
-
-    final String? organization = _getSafeStringValue(
-      _organizationController.text,
-    );
-    if (_hasFieldChanged('organization', organization)) {
-      updateMap['organization'] = organization;
-    }
-
-    final String? jobTitle = _getSafeStringValue(_jobTitleController.text);
-    if (_hasFieldChanged('jobTitle', jobTitle)) {
-      updateMap['jobTitle'] = jobTitle;
-    }
-
-    final String? bio = _getSafeStringValue(_bioController.text);
-    if (_hasFieldChanged('bio', bio)) {
-      updateMap['bio'] = bio;
-    }
-
-    final String? website = _getSafeStringValue(_websiteController.text);
-    if (_hasFieldChanged('website', website)) {
-      updateMap['website'] = website;
-    }
-
-    final String? address = _getSafeStringValue(_addressController.text);
-    if (_hasFieldChanged('address', address)) {
-      updateMap['address'] = address;
-    }
-
-    final String? city = _getSafeStringValue(_cityController.text);
-    if (_hasFieldChanged('city', city)) {
-      updateMap['city'] = city;
-    }
-
-    final String? country = _getSafeStringValue(_countryController.text);
-    if (_hasFieldChanged('country', country)) {
-      updateMap['country'] = country;
     }
 
     // Check profile image
@@ -569,7 +496,7 @@ class _EditProfileState extends State<EditProfile> {
   }
 
   Future<void> _saveProfile() async {
-    if (!_formKey.currentState!.validate() || _currentOrganizer == null) {
+    if (!_formKey.currentState!.validate() || _currentAdmin == null) {
       return;
     }
 
@@ -599,8 +526,8 @@ class _EditProfileState extends State<EditProfile> {
       );
 
       // Use the new update method that only updates changed fields
-      await databaseService.updateOrganizerProfileFields(
-        _currentOrganizer!.id,
+      await databaseService.updateAdminProfileFields(
+        _currentAdmin!.id,
         updateMap,
       );
 
@@ -700,12 +627,12 @@ class _EditProfileState extends State<EditProfile> {
   Widget build(BuildContext context) {
     return WillPopScope(
       onWillPop: _onWillPop,
-      child: StreamBuilder<Organizer?>(
+      child: StreamBuilder<Admin?>(
         stream:
             Provider.of<DatabaseService>(
               context,
               listen: false,
-            ).streamCurrentOrganizerData(),
+            ).streamCurrentAdminData(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting &&
               !_isInitialized) {
@@ -713,7 +640,7 @@ class _EditProfileState extends State<EditProfile> {
               key: _scaffoldKey,
               backgroundColor: AppConstants.backgroundColor,
               appBar: NestedScreenAppBar(screenTitle: 'Edit Profile'),
-              drawer: OrganizerSidebar(currentRoute: currentRoute),
+              drawer: AdminSidebar(currentRoute: currentRoute),
               body: Container(
                 color: AppConstants.primaryColor.withOpacity(0.1),
                 child: const Center(
@@ -731,7 +658,7 @@ class _EditProfileState extends State<EditProfile> {
               key: _scaffoldKey,
               backgroundColor: AppConstants.backgroundColor,
               appBar: NestedScreenAppBar(screenTitle: 'Edit Profile'),
-              drawer: OrganizerSidebar(currentRoute: currentRoute),
+              drawer: AdminSidebar(currentRoute: currentRoute),
               body: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -756,29 +683,29 @@ class _EditProfileState extends State<EditProfile> {
             );
           }
 
-          final organizer = snapshot.data;
-          if (organizer == null) {
+          final admin = snapshot.data;
+          if (admin == null) {
             return Scaffold(
               key: _scaffoldKey,
               backgroundColor: AppConstants.backgroundColor,
               appBar: NestedScreenAppBar(screenTitle: 'Edit Profile'),
-              drawer: OrganizerSidebar(currentRoute: currentRoute),
-              body: const Center(child: Text('No organizer data available')),
+              drawer: AdminSidebar(currentRoute: currentRoute),
+              body: const Center(child: Text('No admin data available')),
             );
           }
 
           // Populate fields when data is available
-          if (!_isInitialized || _currentOrganizer?.id != organizer.id) {
+          if (!_isInitialized || _currentAdmin?.id != admin.id) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              _populateFields(organizer);
+              _populateFields(admin);
             });
           }
 
           return Scaffold(
             key: _scaffoldKey,
             backgroundColor: AppConstants.backgroundColor,
-            appBar: NestedScreenAppBar(screenTitle: organizer.fullName),
-            drawer: OrganizerSidebar(currentRoute: currentRoute),
+            appBar: NestedScreenAppBar(screenTitle: admin.fullName),
+            drawer: AdminSidebar(currentRoute: currentRoute),
             body: Form(
               key: _formKey,
               child: SingleChildScrollView(
@@ -787,44 +714,25 @@ class _EditProfileState extends State<EditProfile> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Profile Image Section
-                    ProfileImageSection(
+                    AdminProfileImageSection(
                       selectedImageBase64:
-                          _selectedImageBase64 ?? organizer.profileImage,
-                      fullName: organizer.fullName,
+                          _selectedImageBase64 ?? admin.profileImage,
+                      fullName: admin.fullName,
                       onImageChanged: _onImageChanged,
                     ),
                     const SizedBox(height: 32),
 
                     // Personal Information Section
-                    PersonalInformationSection(
+                    AdminPersonalInformationSection(
                       fullNameController: _fullNameController,
-                      bioController: _bioController,
                       onFieldChanged: _onFieldChanged,
                     ),
                     const SizedBox(height: 24),
 
                     // Contact Information Section
-                    ContactInformationSection(
+                    AdminContactInformationSection(
                       emailController: _emailController,
                       phoneController: _phoneController,
-                      onFieldChanged: _onFieldChanged,
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Professional Information Section
-                    ProfessionalInformationSection(
-                      organizationController: _organizationController,
-                      jobTitleController: _jobTitleController,
-                      websiteController: _websiteController,
-                      onFieldChanged: _onFieldChanged,
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Location Information Section
-                    LocationInformationSection(
-                      addressController: _addressController,
-                      cityController: _cityController,
-                      countryController: _countryController,
                       onFieldChanged: _onFieldChanged,
                     ),
                     const SizedBox(height: 24),
@@ -835,7 +743,7 @@ class _EditProfileState extends State<EditProfile> {
                     const SizedBox(height: 32),
 
                     // Action Buttons
-                    ActionButtonsSection(
+                    AdminActionButtonsSection(
                       isLoading: _isLoading,
                       onCancel: () => Navigator.of(context).pop(),
                       onSave: _saveProfile,

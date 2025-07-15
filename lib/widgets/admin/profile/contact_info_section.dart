@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:megavent/models/admin.dart';
 import 'package:megavent/utils/constants.dart';
-import 'package:megavent/models/organizer.dart';
 
-class ContactInfoSection extends StatelessWidget {
-  final Organizer organizer;
+class AdminContactInfoSection extends StatelessWidget {
+  final Admin admin;
   final Function(String) onEmailTap;
   final Function(String) onPhoneTap;
 
-  const ContactInfoSection({
+  const AdminContactInfoSection({
     super.key,
-    required this.organizer,
+    required this.admin,
     required this.onEmailTap,
     required this.onPhoneTap,
   });
@@ -22,22 +22,15 @@ class ContactInfoSection extends StatelessWidget {
       [
         _buildInfoRow(
           'Email',
-          organizer.email,
+          admin.email,
           Icons.email_outlined,
-          onTap: () => onEmailTap(organizer.email),
+          onTap: () => onEmailTap(admin.email),
         ),
         _buildInfoRow(
           'Phone',
-          organizer.phone,
+          admin.phone,
           Icons.phone_outlined,
-          onTap: () => onPhoneTap(organizer.phone),
-        ),
-        _buildInfoRow(
-          'Address',
-          organizer.fullAddress.isEmpty
-              ? 'No address added'
-              : organizer.fullAddress,
-          Icons.location_on_outlined,
+          onTap: () => onPhoneTap(admin.phone),
         ),
       ],
     );
@@ -62,7 +55,8 @@ class ContactInfoSection extends StatelessWidget {
                   child: Icon(icon, color: AppConstants.primaryColor, size: 20),
                 ),
                 const SizedBox(width: 12),
-                Expanded( // Added to prevent overflow
+                Expanded(
+                  // Added to prevent overflow
                   child: Text(
                     title,
                     style: AppConstants.titleLarge,

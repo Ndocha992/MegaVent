@@ -1,17 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:megavent/models/admin.dart';
+import 'package:megavent/screens/admin/edit_profile.dart';
 import 'package:megavent/screens/loading_screen.dart';
 import 'package:megavent/utils/constants.dart';
+import 'package:megavent/widgets/admin/profile/action_buttons.dart';
+import 'package:megavent/widgets/admin/profile/contact_info_section.dart';
+import 'package:megavent/widgets/admin/profile/personal_info_section.dart';
+import 'package:megavent/widgets/admin/profile/profile_header_card.dart';
+import 'package:megavent/widgets/admin/sidebar.dart';
 import 'package:megavent/widgets/app_bar.dart';
-import 'package:megavent/widgets/organizer/profile/action_buttons.dart';
-import 'package:megavent/widgets/organizer/profile/contact_info_section.dart';
-import 'package:megavent/widgets/organizer/profile/personal_info_section.dart';
-import 'package:megavent/widgets/organizer/profile/professional_info_section.dart';
-import 'package:megavent/widgets/organizer/profile/profile_header_card.dart';
-import 'package:megavent/widgets/organizer/profile/stats_overview.dart';
-import 'package:megavent/widgets/organizer/sidebar.dart';
-import 'package:megavent/models/organizer.dart';
 import 'package:megavent/services/database_service.dart';
-import 'package:megavent/screens/organizer/edit_profile.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -43,12 +41,12 @@ class _AdminProfileState extends State<AdminProfile> {
         title: 'MegaVent',
         onMenuPressed: () => _scaffoldKey.currentState?.openDrawer(),
       ),
-      drawer: OrganizerSidebar(currentRoute: currentRoute),
+      drawer: AdminSidebar(currentRoute: currentRoute),
       body: RefreshIndicator(
         onRefresh: _refreshProfile,
-        child: StreamBuilder<Organizer?>(
+        child: StreamBuilder<Admin?>(
           key: _streamBuilderKey, // Add key to force rebuild
-          stream: databaseService.streamCurrentOrganizerData(),
+          stream: databaseService.streamCurrentAdminData(),
           builder: (context, snapshot) {
             // Handle loading state
             if (snapshot.connectionState == ConnectionState.waiting) {
@@ -78,7 +76,7 @@ class _AdminProfileState extends State<AdminProfile> {
             if (snapshot.hasError) {
               return SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                child: Container(
+                child: SizedBox(
                   height: MediaQuery.of(context).size.height - 200,
                   child: Center(
                     child: Column(
@@ -111,15 +109,13 @@ class _AdminProfileState extends State<AdminProfile> {
               );
             }
 
-            final organizer = snapshot.data;
-            if (organizer == null) {
+            final admin = snapshot.data;
+            if (admin == null) {
               return SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                child: Container(
+                child: SizedBox(
                   height: MediaQuery.of(context).size.height - 200,
-                  child: const Center(
-                    child: Text('No organizer data available'),
-                  ),
+                  child: const Center(child: Text('No admin data available')),
                 ),
               );
             }
@@ -140,35 +136,23 @@ class _AdminProfileState extends State<AdminProfile> {
                   ),
                   const SizedBox(height: 24),
                   // Profile Header Card
-                  ProfileHeaderCard(organizer: organizer),
-                  const SizedBox(height: 20),
-                  // Stats Overview
-                  StatsOverview(
-                    organizer: organizer,
-                    databaseService: databaseService,
-                  ),
+                  AdminProfileHeaderCard(admin: admin),
                   const SizedBox(height: 20),
                   // Personal Information
-                  PersonalInfoSection(
-                    organizer: organizer,
+                  AdminPersonalInfoSection(
+                    admin: admin,
                     databaseService: databaseService,
                   ),
                   const SizedBox(height: 20),
                   // Contact Information
-                  ContactInfoSection(
-                    organizer: organizer,
+                  AdminContactInfoSection(
+                    admin: admin,
                     onEmailTap: _launchEmail,
                     onPhoneTap: _launchPhone,
                   ),
                   const SizedBox(height: 20),
-                  // Professional Information
-                  ProfessionalInfoSection(
-                    organizer: organizer,
-                    onWebsiteTap: _launchUrl,
-                  ),
-                  const SizedBox(height: 20),
                   // Action Buttons
-                  ActionButtons(onEditProfile: _editProfile),
+                  AdminActionButtons(onEditProfile: _editProfile),
                 ],
               ),
             );
@@ -233,26 +217,6 @@ class _AdminProfileState extends State<AdminProfile> {
       }
     } catch (e) {
       _showErrorSnackBar('Error making call: ${e.toString()}');
-    }
-  }
-
-  void _launchUrl(String url) async {
-    try {
-      // Ensure URL has a scheme
-      String formattedUrl = url;
-      if (!url.startsWith('http://') && !url.startsWith('https://')) {
-        formattedUrl = 'https://$url';
-      }
-
-      final Uri uri = Uri.parse(formattedUrl);
-
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        _showErrorSnackBar('Could not launch website');
-      }
-    } catch (e) {
-      _showErrorSnackBar('Error opening website: ${e.toString()}');
     }
   }
 

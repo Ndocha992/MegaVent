@@ -1,4 +1,3 @@
-// widgets/admin/dashboard/admin_system_overview.dart
 import 'package:flutter/material.dart';
 import 'package:megavent/models/organizer.dart';
 import 'package:megavent/models/event.dart';
