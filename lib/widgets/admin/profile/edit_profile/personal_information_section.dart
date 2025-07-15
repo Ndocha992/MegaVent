@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:megavent/utils/constants.dart';
 
-class PersonalInformationSection extends StatelessWidget {
+class AdminPersonalInformationSection extends StatelessWidget {
   final TextEditingController fullNameController;
-  final TextEditingController bioController;
   final VoidCallback onFieldChanged;
 
-  const PersonalInformationSection({
+  const AdminPersonalInformationSection({
     super.key,
     required this.fullNameController,
-    required this.bioController,
     required this.onFieldChanged,
   });
 
@@ -117,14 +115,6 @@ class PersonalInformationSection extends StatelessWidget {
             }
             return null;
           },
-        ),
-        const SizedBox(height: 16),
-        _buildTextField(
-          controller: bioController,
-          label: 'Bio',
-          icon: Icons.info_outline,
-          hint: 'Tell us about yourself',
-          maxLines: 3,
         ),
       ],
     );

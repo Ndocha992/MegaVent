@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:megavent/utils/constants.dart';
 
-class ContactInformationSection extends StatelessWidget {
+class AdminContactInformationSection extends StatelessWidget {
   final TextEditingController emailController;
   final TextEditingController phoneController;
   final VoidCallback onFieldChanged;
 
-  const ContactInformationSection({
+  const AdminContactInformationSection({
     super.key,
     required this.emailController,
     required this.phoneController,

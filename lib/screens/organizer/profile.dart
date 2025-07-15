@@ -78,7 +78,7 @@ class _ProfileState extends State<Profile> {
             if (snapshot.hasError) {
               return SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                child: Container(
+                child: SizedBox(
                   height: MediaQuery.of(context).size.height - 200,
                   child: Center(
                     child: Column(
@@ -115,7 +115,7 @@ class _ProfileState extends State<Profile> {
             if (organizer == null) {
               return SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                child: Container(
+                child: SizedBox(
                   height: MediaQuery.of(context).size.height - 200,
                   child: const Center(
                     child: Text('No organizer data available'),

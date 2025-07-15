@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:megavent/utils/constants.dart';
 
-class ActionButtons extends StatelessWidget {
+class AdminActionButtons extends StatelessWidget {
   final VoidCallback onEditProfile;
 
-  const ActionButtons({
+  const AdminActionButtons({
     super.key,
     required this.onEditProfile,
   });

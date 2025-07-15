@@ -117,11 +117,11 @@ class Admin {
         .join(' ');
   }
 
-  // Getter for status display
-  String get status {
-    if (!isApproved) return 'Suspended';
-    if (!isApproved) return 'Inactive';
-    return 'Active';
+  // Getter for approval status display
+  String get approvalStatus {
+    if (isApproved) return 'Approved';
+    if (!isApproved) return 'Pending';
+    return 'Unknown';
   }
 
   // Check if admin has specific permission
