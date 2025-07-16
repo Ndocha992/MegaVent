@@ -1,26 +1,253 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
-import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:camera/camera.dart';
+import 'package:google_mlkit_barcode_scanning/google_mlkit_barcode_scanning.dart';
 import 'package:megavent/utils/constants.dart';
 
-class StaffQRScannerView extends StatelessWidget {
+class StaffQRScannerView extends StatefulWidget {
   final bool isProcessing;
   final double screenWidth;
-  final MobileScannerController controller;
-  final Function(BarcodeCapture) onDetect;
+  final Function(String) onDetect;
+  final bool isFlashOn;
+  final VoidCallback? onToggleFlash;
 
   const StaffQRScannerView({
     super.key,
     required this.isProcessing,
     required this.screenWidth,
-    required this.controller,
     required this.onDetect,
+    this.isFlashOn = false,
+    this.onToggleFlash,
   });
 
   @override
+  State<StaffQRScannerView> createState() => _StaffQRScannerViewState();
+}
+
+class _StaffQRScannerViewState extends State<StaffQRScannerView> {
+  CameraController? _controller;
+  BarcodeScanner? _barcodeScanner;
+  bool _isDetecting = false;
+  bool _isInitialized = false;
+  List<CameraDescription> _cameras = [];
+  bool _isDisposed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeCamera();
+    _barcodeScanner = BarcodeScanner();
+  }
+
+  Future<void> _initializeCamera() async {
+    try {
+      // Get available cameras
+      _cameras = await availableCameras();
+
+      if (_cameras.isEmpty) {
+        print('No cameras available');
+        return;
+      }
+
+      // Find back camera or use first available
+      CameraDescription camera = _cameras.firstWhere(
+        (camera) => camera.lensDirection == CameraLensDirection.back,
+        orElse: () => _cameras.first,
+      );
+
+      // Initialize camera controller with higher resolution for better QR detection
+      _controller = CameraController(
+        camera,
+        ResolutionPreset.high, // Changed from medium to high
+        enableAudio: false,
+        imageFormatGroup: ImageFormatGroup.yuv420,
+      );
+
+      await _controller!.initialize();
+
+      // Set flash mode if needed
+      if (widget.isFlashOn) {
+        await _controller!.setFlashMode(FlashMode.torch);
+      }
+
+      if (mounted && !_isDisposed) {
+        setState(() {
+          _isInitialized = true;
+        });
+        _startImageStream();
+      }
+    } catch (e) {
+      print('Error initializing camera: $e');
+    }
+  }
+
+  void _startImageStream() {
+    if (_controller == null || !_controller!.value.isInitialized || _isDisposed) return;
+
+    _controller!.startImageStream((CameraImage image) {
+      if (!_isDetecting && mounted && !_isDisposed) {
+        _isDetecting = true;
+        _detectBarcodes(image);
+      }
+    });
+  }
+
+  Future<void> _detectBarcodes(CameraImage image) async {
+    if (_barcodeScanner == null || _isDisposed) {
+      _isDetecting = false;
+      return;
+    }
+
+    try {
+      // Convert CameraImage to InputImage
+      final inputImage = _inputImageFromCameraImage(image);
+      if (inputImage == null) {
+        _isDetecting = false;
+        return;
+      }
+
+      // Detect barcodes
+      final List<Barcode> barcodes = await _barcodeScanner!.processImage(inputImage);
+
+      // Process detected barcodes
+      if (barcodes.isNotEmpty && mounted && !_isDisposed) {
+        for (final barcode in barcodes) {
+          if (barcode.rawValue != null && barcode.rawValue!.isNotEmpty) {
+            print('QR Code detected: ${barcode.rawValue}');
+            widget.onDetect(barcode.rawValue!);
+            break; // Stop after first valid barcode
+          }
+        }
+      }
+    } catch (e) {
+      print('Error detecting barcodes: $e');
+    } finally {
+      if (mounted && !_isDisposed) {
+        _isDetecting = false;
+      }
+    }
+  }
+
+  InputImage? _inputImageFromCameraImage(CameraImage image) {
+    if (_controller == null || _isDisposed) return null;
+
+    final camera = _controller!.description;
+    final sensorOrientation = camera.sensorOrientation;
+
+    // Fix rotation calculation
+    InputImageRotation? rotation;
+    if (camera.lensDirection == CameraLensDirection.front) {
+      switch (sensorOrientation) {
+        case 90:
+          rotation = InputImageRotation.rotation270deg;
+          break;
+        case 270:
+          rotation = InputImageRotation.rotation90deg;
+          break;
+        case 0:
+          rotation = InputImageRotation.rotation0deg;
+          break;
+        case 180:
+          rotation = InputImageRotation.rotation180deg;
+          break;
+        default:
+          rotation = InputImageRotation.rotation0deg;
+      }
+    } else {
+      switch (sensorOrientation) {
+        case 90:
+          rotation = InputImageRotation.rotation90deg;
+          break;
+        case 270:
+          rotation = InputImageRotation.rotation270deg;
+          break;
+        case 0:
+          rotation = InputImageRotation.rotation0deg;
+          break;
+        case 180:
+          rotation = InputImageRotation.rotation180deg;
+          break;
+        default:
+          rotation = InputImageRotation.rotation0deg;
+      }
+    }
+
+    final format = InputImageFormatValue.fromRawValue(image.format.raw);
+    if (format == null) {
+      print('Unsupported image format: ${image.format.raw}');
+      return null;
+    }
+
+    // Handle multiple planes properly
+    if (image.planes.isEmpty) {
+      print('No image planes available');
+      return null;
+    }
+
+    // For YUV420 format, we need to handle multiple planes
+    final plane = image.planes.first;
+    final bytes = plane.bytes;
+
+    return InputImage.fromBytes(
+      bytes: bytes,
+      metadata: InputImageMetadata(
+        size: Size(image.width.toDouble(), image.height.toDouble()),
+        rotation: rotation,
+        format: format,
+        bytesPerRow: plane.bytesPerRow,
+      ),
+    );
+  }
+
+  Future<void> _toggleFlash() async {
+    if (_controller == null || !_controller!.value.isInitialized || _isDisposed) return;
+
+    try {
+      if (widget.isFlashOn) {
+        await _controller!.setFlashMode(FlashMode.off);
+      } else {
+        await _controller!.setFlashMode(FlashMode.torch);
+      }
+
+      if (widget.onToggleFlash != null) {
+        widget.onToggleFlash!();
+      }
+    } catch (e) {
+      print('Error toggling flash: $e');
+    }
+  }
+
+  @override
+  void didUpdateWidget(StaffQRScannerView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    // Handle flash state changes
+    if (widget.isFlashOn != oldWidget.isFlashOn) {
+      _updateFlashMode();
+    }
+  }
+
+  Future<void> _updateFlashMode() async {
+    if (_controller == null || !_controller!.value.isInitialized || _isDisposed) return;
+
+    try {
+      if (widget.isFlashOn) {
+        await _controller!.setFlashMode(FlashMode.torch);
+      } else {
+        await _controller!.setFlashMode(FlashMode.off);
+      }
+    } catch (e) {
+      print('Error updating flash mode: $e');
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final scannerHeight = screenHeight * 0.6; // Make it responsive to screen height
+    
     return Container(
-      height: screenWidth * 0.8, // Square aspect ratio based on screen width
+      height: scannerHeight,
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
@@ -36,11 +263,54 @@ class StaffQRScannerView extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         child: Stack(
           children: [
-            // MobileScanner without overlay parameter
-            MobileScanner(controller: controller, onDetect: onDetect),
-            // Overlay as a separate widget in the Stack
-            _buildScannerOverlay(),
-            if (isProcessing)
+            // Camera Preview
+            if (_isInitialized && _controller != null && !_isDisposed)
+              SizedBox(
+                width: double.infinity,
+                height: double.infinity,
+                child: CameraPreview(_controller!),
+              )
+            else
+              Container(
+                color: Colors.black,
+                child: const Center(
+                  child: CircularProgressIndicator(color: Colors.white),
+                ),
+              ),
+
+            // Custom Overlay with better sizing
+            if (_isInitialized && !_isDisposed)
+              CustomQROverlay(
+                constraints: BoxConstraints(
+                  maxWidth: widget.screenWidth,
+                  maxHeight: scannerHeight,
+                ),
+                cutOutSize: widget.screenWidth * 0.7, // Increased from 0.6 to 0.7
+                borderColor: AppConstants.primaryColor,
+              ),
+
+            // Flash Toggle Button
+            if (widget.onToggleFlash != null && !_isDisposed)
+              Positioned(
+                top: 16,
+                right: 16,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: IconButton(
+                    icon: Icon(
+                      widget.isFlashOn ? Icons.flash_on : Icons.flash_off,
+                      color: Colors.white,
+                    ),
+                    onPressed: _toggleFlash,
+                  ),
+                ),
+              ),
+
+            // Processing Overlay
+            if (widget.isProcessing && !_isDisposed)
               Container(
                 color: Colors.black54,
                 child: Center(
@@ -53,11 +323,9 @@ class StaffQRScannerView extends StatelessWidget {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Center(
-                          child: SpinKitThreeBounce(
-                            color: AppConstants.primaryColor,
-                            size: 20.0,
-                          ),
+                        SpinKitThreeBounce(
+                          color: AppConstants.primaryColor,
+                          size: 20.0,
                         ),
                         const SizedBox(height: 16),
                         Text(
@@ -72,216 +340,182 @@ class StaffQRScannerView extends StatelessWidget {
                   ),
                 ),
               ),
+
+            // Debug info (remove in production)
+            if (_isInitialized && !_isDisposed)
+              Positioned(
+                bottom: 16,
+                left: 16,
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    'Ready to Scan',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildScannerOverlay() {
-    return Container(
-      decoration: ShapeDecoration(
-        shape: QrScannerOverlayShape(
-          borderColor: AppConstants.primaryColor,
-          borderRadius: 20,
-          borderLength: 40,
-          borderWidth: 6,
-          cutOutSize: screenWidth * 0.6,
-        ),
+  @override
+  void dispose() {
+    _isDisposed = true;
+    _controller?.stopImageStream();
+    _controller?.dispose();
+    _barcodeScanner?.close();
+    super.dispose();
+  }
+}
+
+// Custom overlay for the QR scanner
+class CustomQROverlay extends StatelessWidget {
+  final BoxConstraints constraints;
+  final double cutOutSize;
+  final Color borderColor;
+
+  const CustomQROverlay({
+    super.key,
+    required this.constraints,
+    required this.cutOutSize,
+    required this.borderColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      painter: QROverlayPainter(
+        cutOutSize: cutOutSize,
+        borderColor: borderColor,
       ),
+      child: Container(),
     );
   }
 }
 
-// Custom overlay shape for the QR scanner
-class QrScannerOverlayShape extends ShapeBorder {
+class QROverlayPainter extends CustomPainter {
+  final double cutOutSize;
   final Color borderColor;
   final double borderWidth;
-  final Color overlayColor;
-  final double borderRadius;
   final double borderLength;
-  final double cutOutSize;
+  final double borderRadius;
 
-  const QrScannerOverlayShape({
-    this.borderColor = Colors.red,
-    this.borderWidth = 3.0,
-    this.overlayColor = const Color.fromRGBO(0, 0, 0, 80),
-    this.borderRadius = 0,
-    this.borderLength = 40,
-    this.cutOutSize = 250,
+  QROverlayPainter({
+    required this.cutOutSize,
+    required this.borderColor,
+    this.borderWidth = 4.0, // Reduced from 6.0
+    this.borderLength = 30.0, // Reduced from 40.0
+    this.borderRadius = 16.0, // Reduced from 20.0
   });
 
   @override
-  EdgeInsetsGeometry get dimensions => const EdgeInsets.all(10.0);
+  void paint(Canvas canvas, Size size) {
+    // Semi-transparent overlay
+    final overlayColor = Colors.black.withOpacity(0.6);
+    final borderPaint = Paint()
+      ..color = borderColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = borderWidth
+      ..strokeCap = StrokeCap.round;
 
-  @override
-  Path getInnerPath(Rect rect, {TextDirection? textDirection}) {
-    return Path()
-      ..fillType = PathFillType.evenOdd
-      ..addPath(getOuterPath(rect), Offset.zero);
-  }
-
-  @override
-  Path getOuterPath(Rect rect, {TextDirection? textDirection}) {
-    Path _getLeftTopPath(Rect rect) {
-      return Path()
-        ..moveTo(rect.left, rect.bottom)
-        ..lineTo(rect.left, rect.top + borderRadius)
-        ..quadraticBezierTo(
-          rect.left,
-          rect.top,
-          rect.left + borderRadius,
-          rect.top,
-        )
-        ..lineTo(rect.right, rect.top);
-    }
-
-    return _getLeftTopPath(rect)
-      ..lineTo(rect.right, rect.bottom)
-      ..lineTo(rect.left, rect.bottom)
-      ..lineTo(rect.left, rect.top);
-  }
-
-  @override
-  void paint(Canvas canvas, Rect rect, {TextDirection? textDirection}) {
-    final width = rect.width;
-    final borderWidthSize = width / 2;
-    final height = rect.height;
-    final borderOffset = borderWidth / 2;
-    final _borderLength =
-        borderLength > min(cutOutSize / 2, borderWidthSize)
-            ? borderWidthSize
-            : borderLength;
-    final _cutOutSize = cutOutSize < width ? cutOutSize : width - borderOffset;
-
-    final backgroundPaint =
-        Paint()
-          ..color = overlayColor
-          ..style = PaintingStyle.fill;
-
-    final borderPaint =
-        Paint()
-          ..color = borderColor
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = borderWidth;
-
-    final boxPaint =
-        Paint()
-          ..color = borderColor
-          ..style = PaintingStyle.fill
-          ..blendMode = BlendMode.dstOut;
+    final backgroundPaint = Paint()
+      ..color = overlayColor
+      ..style = PaintingStyle.fill;
 
     final cutOutRect = Rect.fromLTWH(
-      rect.left + width / 2 - _cutOutSize / 2 + borderOffset,
-      rect.top + height / 2 - _cutOutSize / 2 + borderOffset,
-      _cutOutSize - borderOffset * 2,
-      _cutOutSize - borderOffset * 2,
+      size.width / 2 - cutOutSize / 2,
+      size.height / 2 - cutOutSize / 2,
+      cutOutSize,
+      cutOutSize,
     );
 
-    // Draw background
-    canvas.saveLayer(rect, backgroundPaint);
-    canvas.drawRect(rect, backgroundPaint);
+    // Draw background with cutout
+    canvas.saveLayer(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      backgroundPaint,
+    );
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      backgroundPaint,
+    );
 
-    // Draw cutout
+    // Clear the scanning area
     canvas.drawRRect(
       RRect.fromRectAndRadius(cutOutRect, Radius.circular(borderRadius)),
-      boxPaint,
+      Paint()..blendMode = BlendMode.clear,
     );
     canvas.restore();
 
-    // Draw corner borders
-    final path =
-        Path()
-          // Top left
-          ..moveTo(
-            cutOutRect.left - borderOffset,
-            cutOutRect.top - borderOffset + _borderLength,
-          )
-          ..lineTo(
-            cutOutRect.left - borderOffset,
-            cutOutRect.top - borderOffset + borderRadius,
-          )
-          ..quadraticBezierTo(
-            cutOutRect.left - borderOffset,
-            cutOutRect.top - borderOffset,
-            cutOutRect.left - borderOffset + borderRadius,
-            cutOutRect.top - borderOffset,
-          )
-          ..lineTo(
-            cutOutRect.left - borderOffset + _borderLength,
-            cutOutRect.top - borderOffset,
-          )
-          // Top right
-          ..moveTo(
-            cutOutRect.right + borderOffset - _borderLength,
-            cutOutRect.top - borderOffset,
-          )
-          ..lineTo(
-            cutOutRect.right + borderOffset - borderRadius,
-            cutOutRect.top - borderOffset,
-          )
-          ..quadraticBezierTo(
-            cutOutRect.right + borderOffset,
-            cutOutRect.top - borderOffset,
-            cutOutRect.right + borderOffset,
-            cutOutRect.top - borderOffset + borderRadius,
-          )
-          ..lineTo(
-            cutOutRect.right + borderOffset,
-            cutOutRect.top - borderOffset + _borderLength,
-          )
-          // Bottom right
-          ..moveTo(
-            cutOutRect.right + borderOffset,
-            cutOutRect.bottom + borderOffset - _borderLength,
-          )
-          ..lineTo(
-            cutOutRect.right + borderOffset,
-            cutOutRect.bottom + borderOffset - borderRadius,
-          )
-          ..quadraticBezierTo(
-            cutOutRect.right + borderOffset,
-            cutOutRect.bottom + borderOffset,
-            cutOutRect.right + borderOffset - borderRadius,
-            cutOutRect.bottom + borderOffset,
-          )
-          ..lineTo(
-            cutOutRect.right + borderOffset - _borderLength,
-            cutOutRect.bottom + borderOffset,
-          )
-          // Bottom left
-          ..moveTo(
-            cutOutRect.left - borderOffset + _borderLength,
-            cutOutRect.bottom + borderOffset,
-          )
-          ..lineTo(
-            cutOutRect.left - borderOffset + borderRadius,
-            cutOutRect.bottom + borderOffset,
-          )
-          ..quadraticBezierTo(
-            cutOutRect.left - borderOffset,
-            cutOutRect.bottom + borderOffset,
-            cutOutRect.left - borderOffset,
-            cutOutRect.bottom + borderOffset - borderRadius,
-          )
-          ..lineTo(
-            cutOutRect.left - borderOffset,
-            cutOutRect.bottom + borderOffset - _borderLength,
-          );
+    // Draw corner borders with better visibility
+    final path = Path()
+      // Top left
+      ..moveTo(cutOutRect.left, cutOutRect.top + borderLength)
+      ..lineTo(cutOutRect.left, cutOutRect.top + borderRadius)
+      ..quadraticBezierTo(
+        cutOutRect.left,
+        cutOutRect.top,
+        cutOutRect.left + borderRadius,
+        cutOutRect.top,
+      )
+      ..lineTo(cutOutRect.left + borderLength, cutOutRect.top)
+      // Top right
+      ..moveTo(cutOutRect.right - borderLength, cutOutRect.top)
+      ..lineTo(cutOutRect.right - borderRadius, cutOutRect.top)
+      ..quadraticBezierTo(
+        cutOutRect.right,
+        cutOutRect.top,
+        cutOutRect.right,
+        cutOutRect.top + borderRadius,
+      )
+      ..lineTo(cutOutRect.right, cutOutRect.top + borderLength)
+      // Bottom right
+      ..moveTo(cutOutRect.right, cutOutRect.bottom - borderLength)
+      ..lineTo(cutOutRect.right, cutOutRect.bottom - borderRadius)
+      ..quadraticBezierTo(
+        cutOutRect.right,
+        cutOutRect.bottom,
+        cutOutRect.right - borderRadius,
+        cutOutRect.bottom,
+      )
+      ..lineTo(cutOutRect.right - borderLength, cutOutRect.bottom)
+      // Bottom left
+      ..moveTo(cutOutRect.left + borderLength, cutOutRect.bottom)
+      ..lineTo(cutOutRect.left + borderRadius, cutOutRect.bottom)
+      ..quadraticBezierTo(
+        cutOutRect.left,
+        cutOutRect.bottom,
+        cutOutRect.left,
+        cutOutRect.bottom - borderRadius,
+      )
+      ..lineTo(cutOutRect.left, cutOutRect.bottom - borderLength);
 
     canvas.drawPath(path, borderPaint);
-  }
 
-  @override
-  ShapeBorder scale(double t) {
-    return QrScannerOverlayShape(
-      borderColor: borderColor,
-      borderWidth: borderWidth,
-      overlayColor: overlayColor,
+    // Add scanning line animation (optional)
+    final scanLinePaint = Paint()
+      ..color = borderColor.withOpacity(0.3)
+      ..style = PaintingStyle.fill;
+
+    canvas.drawRect(
+      Rect.fromLTWH(
+        cutOutRect.left,
+        cutOutRect.center.dy - 1,
+        cutOutSize,
+        2,
+      ),
+      scanLinePaint,
     );
   }
 
-  double min(double x, double y) {
-    return x < y ? x : y;
-  }
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
