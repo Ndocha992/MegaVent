@@ -3,7 +3,6 @@ import 'package:crypto/crypto.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:megavent/widgets/organizer/qrcode/manual_entry_dialog.dart';
 import 'package:megavent/widgets/organizer/qrcode/qr_scanner_action_buttons.dart';
 import 'package:megavent/widgets/organizer/qrcode/qr_scanner_header.dart';
 import 'package:megavent/widgets/organizer/qrcode/qr_scanner_instructions.dart';
@@ -38,14 +37,19 @@ class _QRScannerState extends State<QRScanner> with WidgetsBindingObserver {
   String? _organizerId;
   bool _isDisposed = false;
   bool _scannerPaused = false;
+  bool _canScan = true;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _databaseService = Provider.of<DatabaseService>(context, listen: false);
-    _checkAndRequestPermissions();
-    _loadOrganizerData();
+    _initializeScanner();
+  }
+
+  Future<void> _initializeScanner() async {
+    await _checkAndRequestPermissions();
+    await _loadOrganizerData();
   }
 
   @override
@@ -61,12 +65,9 @@ class _QRScannerState extends State<QRScanner> with WidgetsBindingObserver {
         });
         break;
       case AppLifecycleState.resumed:
-        _checkAndRequestPermissions();
-        if (_isCameraPermissionGranted && !_isDisposed) {
-          setState(() {
-            _scannerPaused = false;
-          });
-        }
+        setState(() {
+          _scannerPaused = false;
+        });
         break;
       case AppLifecycleState.inactive:
         break;
@@ -136,19 +137,14 @@ class _QRScannerState extends State<QRScanner> with WidgetsBindingObserver {
       }
 
       if (mounted) {
-        if (cameraStatus.isGranted) {
-          setState(() {
-            _isCameraPermissionGranted = true;
-          });
-        } else if (cameraStatus.isPermanentlyDenied) {
-          setState(() {
-            _isCameraPermissionGranted = false;
-          });
+        setState(() {
+          _isCameraPermissionGranted = cameraStatus.isGranted;
+          _isCheckingPermissions = false;
+        });
+
+        if (cameraStatus.isPermanentlyDenied) {
           _showPermissionDialog();
-        } else {
-          setState(() {
-            _isCameraPermissionGranted = false;
-          });
+        } else if (!cameraStatus.isGranted) {
           _showErrorSnackBar('Camera permission is required to scan QR codes');
         }
       }
@@ -156,14 +152,9 @@ class _QRScannerState extends State<QRScanner> with WidgetsBindingObserver {
       if (mounted) {
         setState(() {
           _isCameraPermissionGranted = false;
-        });
-        _showErrorSnackBar('Error checking camera permission: ${e.toString()}');
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
           _isCheckingPermissions = false;
         });
+        _showErrorSnackBar('Error checking camera permission: ${e.toString()}');
       }
     }
   }
@@ -182,9 +173,7 @@ class _QRScannerState extends State<QRScanner> with WidgetsBindingObserver {
           ),
           actions: [
             TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
+              onPressed: () => Navigator.of(context).pop(),
               child: const Text('Cancel'),
             ),
             ElevatedButton(
@@ -206,22 +195,22 @@ class _QRScannerState extends State<QRScanner> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
-    final availableHeight =
-        screenHeight - MediaQuery.of(context).padding.top - kToolbarHeight;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final appBarHeight = AppBar().preferredSize.height;
+    final statusBarHeight = MediaQuery.of(context).padding.top;
+    final availableHeight = screenHeight - appBarHeight - statusBarHeight;
 
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: AppConstants.backgroundColor,
       appBar: CustomAppBar(
-        title: 'MegaVent',
+        title: 'QR Scanner',
         onMenuPressed: () => _scaffoldKey.currentState?.openDrawer(),
       ),
       drawer: OrganizerSidebar(currentRoute: currentRoute),
-      body: SingleChildScrollView(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(minHeight: availableHeight),
+      body: SafeArea(
+        child: SingleChildScrollView(
           child: Column(
             children: [
               // Header Section with Event Selection
@@ -232,31 +221,20 @@ class _QRScannerState extends State<QRScanner> with WidgetsBindingObserver {
                   setState(() {
                     _selectedEvent = newEvent;
                     _scanResult = '';
+                    _canScan = true;
                   });
                 },
               ),
 
-              // Permission checking state
-              if (_isCheckingPermissions)
-                _buildPermissionCheckingWidget(screenWidth)
-              // Camera permission not granted
-              else if (!_isCameraPermissionGranted)
-                _buildPermissionDeniedWidget(screenWidth)
-              else
-                // QR Scanner View
-                QRScannerView(
-                  isProcessing: _isProcessing,
-                  screenWidth: screenWidth,
-                  onDetect: _onDetect,
-                  isFlashOn: _isFlashOn,
-                  onToggleFlash: _toggleFlash,
-                ),
-
-              const SizedBox(height: 16),
+              // Scanner Section - Fixed height to 70% of available screen height
+              SizedBox(
+                height: availableHeight * 0.7,
+                child: _buildScannerSection(screenWidth),
+              ),
 
               // Instructions and Result Section
               Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
                     if (_scanResult.isEmpty) ...[
@@ -264,16 +242,14 @@ class _QRScannerState extends State<QRScanner> with WidgetsBindingObserver {
                     ] else ...[
                       QRScannerResult(scanResult: _scanResult),
                     ],
-                    const SizedBox(height: 16),
+
+                    const SizedBox(height: 20),
 
                     // Action Buttons
                     QRScannerActionButtons(
                       selectedEvent: _selectedEvent,
                       onResetScanner: _resetScanner,
-                      onManualEntry: _manualEntry,
                     ),
-
-                    const SizedBox(height: 16),
                   ],
                 ),
               ),
@@ -284,13 +260,28 @@ class _QRScannerState extends State<QRScanner> with WidgetsBindingObserver {
     );
   }
 
+  Widget _buildScannerSection(double screenWidth) {
+    if (_isCheckingPermissions) {
+      return _buildPermissionCheckingWidget(screenWidth);
+    } else if (!_isCameraPermissionGranted) {
+      return _buildPermissionDeniedWidget(screenWidth);
+    } else {
+      return QRScannerView(
+        isProcessing: _isProcessing,
+        screenWidth: screenWidth,
+        onDetect: _onDetect,
+        isFlashOn: _isFlashOn,
+        onToggleFlash: _toggleFlash,
+      );
+    }
+  }
+
   Widget _buildPermissionCheckingWidget(double screenWidth) {
     return Container(
-      height: screenWidth * 0.8,
-      margin: const EdgeInsets.symmetric(horizontal: 16),
+      margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        color: Colors.grey[200],
+        color: Colors.grey[100],
       ),
       child: Center(
         child: Column(
@@ -312,11 +303,10 @@ class _QRScannerState extends State<QRScanner> with WidgetsBindingObserver {
 
   Widget _buildPermissionDeniedWidget(double screenWidth) {
     return Container(
-      height: screenWidth * 0.8,
-      margin: const EdgeInsets.symmetric(horizontal: 16),
+      margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        color: Colors.grey[200],
+        color: Colors.grey[100],
       ),
       child: Center(
         child: Column(
@@ -338,7 +328,9 @@ class _QRScannerState extends State<QRScanner> with WidgetsBindingObserver {
             ),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: _checkAndRequestPermissions,
+              onPressed: () async {
+                await _checkAndRequestPermissions();
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppConstants.primaryColor,
                 foregroundColor: Colors.white,
@@ -347,9 +339,7 @@ class _QRScannerState extends State<QRScanner> with WidgetsBindingObserver {
             ),
             const SizedBox(height: 8),
             TextButton(
-              onPressed: () {
-                openAppSettings();
-              },
+              onPressed: () => openAppSettings(),
               child: const Text('Open Settings'),
             ),
           ],
@@ -362,8 +352,12 @@ class _QRScannerState extends State<QRScanner> with WidgetsBindingObserver {
     if (!_isProcessing &&
         _selectedEvent != null &&
         !_isDisposed &&
-        !_scannerPaused) {
+        !_scannerPaused &&
+        _canScan) {
       if (qrCode.isNotEmpty) {
+        setState(() {
+          _canScan = false;
+        });
         _processQRCode(qrCode);
       }
     }
@@ -372,21 +366,30 @@ class _QRScannerState extends State<QRScanner> with WidgetsBindingObserver {
   Future<void> _processQRCode(String qrCode) async {
     if (_isProcessing || _selectedEvent == null || _isDisposed) return;
 
-    if (mounted) {
-      setState(() {
-        _isProcessing = true;
-        _scannerPaused = true;
-      });
-    }
+    setState(() {
+      _isProcessing = true;
+    });
 
     try {
-      // Haptic feedback
       HapticFeedback.mediumImpact();
 
-      // Process the QR code data
-      await _checkInAttendee(qrCode);
+      // Only process our custom event QR code format
+      final parts = qrCode.split('|');
+      if (parts.length == 5) {
+        // Process as event QR code
+        await _checkInAttendee(qrCode);
+      } else {
+        // Show error for non-event QR codes
+        setState(() {
+          _scanResult = 'Error: Not a valid event QR code';
+        });
+        _showErrorSnackBar('This QR code is not for event check-in');
+      }
     } catch (e) {
       if (mounted) {
+        setState(() {
+          _scanResult = 'Error: ${e.toString()}';
+        });
         _showErrorSnackBar('Failed to process QR code: ${e.toString()}');
       }
     } finally {
@@ -394,13 +397,13 @@ class _QRScannerState extends State<QRScanner> with WidgetsBindingObserver {
         setState(() {
           _isProcessing = false;
         });
-      }
 
-      // Resume scanner after a short delay
-      await Future.delayed(const Duration(seconds: 3));
-      if (mounted && _isCameraPermissionGranted && !_isDisposed) {
-        setState(() {
-          _scannerPaused = false;
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted) {
+            setState(() {
+              _canScan = true;
+            });
+          }
         });
       }
     }
@@ -462,10 +465,10 @@ class _QRScannerState extends State<QRScanner> with WidgetsBindingObserver {
       }
 
       // Check in attendee
-      await _databaseService.checkInAttendee(
-        attendeeId,
-        eventId,
+      await _databaseService.markAttendanceByQRCode(
+        qrCode,
         FirebaseAuth.instance.currentUser!.uid,
+        isOrganizer: false,
       );
 
       if (mounted) {
@@ -474,6 +477,7 @@ class _QRScannerState extends State<QRScanner> with WidgetsBindingObserver {
               _scanResult =
                   '${attendeeData['fullName']} checked in successfully!',
         );
+        _showSuccessSnackBar('Attendee checked in successfully!');
       }
     } catch (e) {
       if (mounted) {
@@ -490,20 +494,6 @@ class _QRScannerState extends State<QRScanner> with WidgetsBindingObserver {
     });
   }
 
-  void _manualEntry() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return ManualEntryDialog(
-          selectedEvent: _selectedEvent,
-          onCheckIn: (String attendeeId) {
-            _processQRCode(attendeeId);
-          },
-        );
-      },
-    );
-  }
-
   void _resetScanner() {
     if (_isDisposed) return;
 
@@ -514,18 +504,48 @@ class _QRScannerState extends State<QRScanner> with WidgetsBindingObserver {
     });
   }
 
-  void _showErrorSnackBar(String message) {
-    if (!mounted) return;
+  void _showSuccessSnackBar(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle, color: Colors.white),
+              const SizedBox(width: 8),
+              Expanded(child: Text(message)),
+            ],
+          ),
+          backgroundColor: AppConstants.successColor,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: AppConstants.errorColor,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        margin: const EdgeInsets.all(16),
-      ),
-    );
+  void _showErrorSnackBar(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.error_outline, color: Colors.white),
+              const SizedBox(width: 8),
+              Expanded(child: Text(message)),
+            ],
+          ),
+          backgroundColor: AppConstants.errorColor,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
   }
 
   @override

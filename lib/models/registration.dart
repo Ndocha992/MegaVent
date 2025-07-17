@@ -75,18 +75,19 @@ class Registration {
   static bool verifyQRCode(String qrCodeData, String userId, String eventId) {
     try {
       final parts = qrCodeData.split('|');
-      if (parts.length != 4) return false;
+      if (parts.length != 5) return false; // Require exactly 5 parts
 
       final qrUserId = parts[0];
       final qrEventId = parts[1];
       final qrTimestamp = parts[2];
-      final qrHash = parts[3];
+      final qrOrganizerId = parts[3];
+      final qrHash = parts[4];
 
       // Verify user and event match
       if (qrUserId != userId || qrEventId != eventId) return false;
 
       // Verify hash
-      final rawData = '$qrUserId|$qrEventId|$qrTimestamp';
+      final rawData = '$qrUserId|$qrEventId|$qrTimestamp|$qrOrganizerId';
       final bytes = utf8.encode(rawData);
       final digest = sha256.convert(bytes);
       final expectedHash = digest.toString().substring(0, 16);
@@ -97,26 +98,26 @@ class Registration {
     }
   }
 
-  // Method to get composite ID
-  static String getCompositeId(String userId, String eventId) {
-    return '${userId}_$eventId';
-  }
-
-  // Extract data from QR code
   static Map<String, String>? parseQRCode(String qrCodeData) {
     try {
       final parts = qrCodeData.split('|');
-      if (parts.length != 4) return null;
+      if (parts.length != 5) return null; // Require exactly 5 parts
 
       return {
         'userId': parts[0],
         'eventId': parts[1],
         'timestamp': parts[2],
-        'hash': parts[3],
+        'organizerId': parts[3],
+        'hash': parts[4],
       };
     } catch (e) {
       return null;
     }
+  }
+
+  // Method to get composite ID
+  static String getCompositeId(String userId, String eventId) {
+    return '${userId}_$eventId';
   }
 
   // Create a copy with updated fields
@@ -135,7 +136,7 @@ class Registration {
       userId: userId ?? this.userId,
       eventId: eventId ?? this.eventId,
       registeredAt: registeredAt ?? this.registeredAt,
-      hasAttended: attended ?? this.hasAttended,
+      hasAttended: attended ?? hasAttended,
       attendedAt: attendedAt ?? this.attendedAt,
       qrCode: qrCode ?? this.qrCode,
       confirmedBy: confirmedBy ?? this.confirmedBy,

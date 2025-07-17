@@ -4,7 +4,6 @@ import 'package:crypto/crypto.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:megavent/widgets/staff/qrcode/manual_entry_dialog.dart';
 import 'package:megavent/widgets/staff/qrcode/qr_scanner_action_buttons.dart';
 import 'package:megavent/widgets/staff/qrcode/qr_scanner_header.dart';
 import 'package:megavent/widgets/staff/qrcode/qr_scanner_instructions.dart';
@@ -38,12 +37,11 @@ class _StaffQRScannerState extends State<StaffQRScanner>
   String currentRoute = '/staff-scanqr';
   bool _isFlashOn = false;
   bool _isCameraPermissionGranted = false;
+  bool _isCheckingPermissions = true;
   String? _organizerId;
   bool _isDisposed = false;
-
-  // Cooldown mechanism
-  DateTime _lastScanTime = DateTime.now();
-  static const Duration _scanCooldown = Duration(seconds: 2);
+  bool _scannerPaused = false;
+  bool _canScan = true;
 
   @override
   void initState() {
@@ -54,8 +52,8 @@ class _StaffQRScannerState extends State<StaffQRScanner>
   }
 
   Future<void> _initializeScanner() async {
-    await _loadStaffOrganizerId();
     await _checkAndRequestPermissions();
+    await _loadStaffOrganizerId();
   }
 
   @override
@@ -63,12 +61,18 @@ class _StaffQRScannerState extends State<StaffQRScanner>
     if (_isDisposed) return;
 
     switch (state) {
-      case AppLifecycleState.resumed:
-        _checkAndRequestPermissions();
-        break;
-      case AppLifecycleState.paused:
       case AppLifecycleState.detached:
       case AppLifecycleState.hidden:
+      case AppLifecycleState.paused:
+        setState(() {
+          _scannerPaused = true;
+        });
+        break;
+      case AppLifecycleState.resumed:
+        setState(() {
+          _scannerPaused = false;
+        });
+        break;
       case AppLifecycleState.inactive:
         break;
     }
@@ -131,41 +135,36 @@ class _StaffQRScannerState extends State<StaffQRScanner>
   }
 
   Future<void> _checkAndRequestPermissions() async {
-    try {
-      final cameraStatus = await Permission.camera.status;
+    if (mounted) {
+      setState(() {
+        _isCheckingPermissions = true;
+      });
+    }
 
-      if (cameraStatus.isGranted) {
-        if (mounted) {
-          setState(() {
-            _isCameraPermissionGranted = true;
-          });
-        }
-        return;
-      }
+    try {
+      PermissionStatus cameraStatus = await Permission.camera.status;
 
       if (cameraStatus.isDenied) {
-        final result = await Permission.camera.request();
-        if (mounted) {
-          setState(() {
-            _isCameraPermissionGranted = result.isGranted;
-          });
-        }
+        cameraStatus = await Permission.camera.request();
+      }
 
-        if (!result.isGranted) {
+      if (mounted) {
+        setState(() {
+          _isCameraPermissionGranted = cameraStatus.isGranted;
+          _isCheckingPermissions = false;
+        });
+
+        if (cameraStatus.isPermanentlyDenied) {
+          _showPermissionDialog();
+        } else if (!cameraStatus.isGranted) {
           _showErrorSnackBar('Camera permission is required to scan QR codes');
         }
-      } else if (cameraStatus.isPermanentlyDenied) {
-        if (mounted) {
-          setState(() {
-            _isCameraPermissionGranted = false;
-          });
-        }
-        _showPermissionDialog();
       }
     } catch (e) {
       if (mounted) {
         setState(() {
           _isCameraPermissionGranted = false;
+          _isCheckingPermissions = false;
         });
         _showErrorSnackBar('Error checking camera permission: ${e.toString()}');
       }
@@ -208,22 +207,22 @@ class _StaffQRScannerState extends State<StaffQRScanner>
 
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
-    final availableHeight =
-        screenHeight - MediaQuery.of(context).padding.top - kToolbarHeight;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final appBarHeight = AppBar().preferredSize.height;
+    final statusBarHeight = MediaQuery.of(context).padding.top;
+    final availableHeight = screenHeight - appBarHeight - statusBarHeight;
 
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: AppConstants.backgroundColor,
       appBar: CustomAppBar(
-        title: 'MegaVent',
+        title: 'QR Scanner',
         onMenuPressed: () => _scaffoldKey.currentState?.openDrawer(),
       ),
       drawer: StaffSidebar(currentRoute: currentRoute),
-      body: SingleChildScrollView(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(minHeight: availableHeight),
+      body: SafeArea(
+        child: SingleChildScrollView(
           child: Column(
             children: [
               // Header Section with Event Selection
@@ -234,21 +233,20 @@ class _StaffQRScannerState extends State<StaffQRScanner>
                   setState(() {
                     _selectedEvent = newEvent;
                     _scanResult = '';
+                    _canScan = true;
                   });
                 },
               ),
 
-              // Scanner Section
-              if (!_isCameraPermissionGranted)
-                _buildPermissionDeniedWidget(screenWidth)
-              else
-                _buildScannerWidget(screenWidth),
-
-              const SizedBox(height: 16),
+              // Scanner Section - Fixed height to 70% of available screen height
+              SizedBox(
+                height: availableHeight * 0.7,
+                child: _buildScannerSection(screenWidth),
+              ),
 
               // Instructions and Result Section
               Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
                     if (_scanResult.isEmpty) ...[
@@ -256,16 +254,14 @@ class _StaffQRScannerState extends State<StaffQRScanner>
                     ] else ...[
                       StaffQRScannerResult(scanResult: _scanResult),
                     ],
-                    const SizedBox(height: 16),
+
+                    const SizedBox(height: 20),
 
                     // Action Buttons
                     StaffQRScannerActionButtons(
                       selectedEvent: _selectedEvent,
                       onResetScanner: _resetScanner,
-                      onManualEntry: _manualEntry,
                     ),
-
-                    const SizedBox(height: 16),
                   ],
                 ),
               ),
@@ -276,23 +272,53 @@ class _StaffQRScannerState extends State<StaffQRScanner>
     );
   }
 
-  Widget _buildScannerWidget(double screenWidth) {
-    return StaffQRScannerView(
-      isProcessing: _isProcessing,
-      screenWidth: screenWidth,
-      onDetect: _onDetect,
-      isFlashOn: _isFlashOn,
-      onToggleFlash: _toggleFlash,
+  Widget _buildScannerSection(double screenWidth) {
+    if (_isCheckingPermissions) {
+      return _buildPermissionCheckingWidget(screenWidth);
+    } else if (!_isCameraPermissionGranted) {
+      return _buildPermissionDeniedWidget(screenWidth);
+    } else {
+      return StaffQRScannerView(
+        isProcessing: _isProcessing,
+        screenWidth: screenWidth,
+        onDetect: _onDetect,
+        isFlashOn: _isFlashOn,
+        onToggleFlash: _toggleFlash,
+      );
+    }
+  }
+
+  Widget _buildPermissionCheckingWidget(double screenWidth) {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        color: Colors.grey[100],
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text(
+              'Checking Camera Permission...',
+              style: AppConstants.headlineSmall.copyWith(
+                color: Colors.grey[700],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
   Widget _buildPermissionDeniedWidget(double screenWidth) {
     return Container(
-      height: screenWidth * 0.8,
-      margin: const EdgeInsets.symmetric(horizontal: 16),
+      margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        color: Colors.grey[200],
+        color: Colors.grey[100],
       ),
       child: Center(
         child: Column(
@@ -314,7 +340,9 @@ class _StaffQRScannerState extends State<StaffQRScanner>
             ),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: _checkAndRequestPermissions,
+              onPressed: () async {
+                await _checkAndRequestPermissions();
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppConstants.primaryColor,
                 foregroundColor: Colors.white,
@@ -333,16 +361,17 @@ class _StaffQRScannerState extends State<StaffQRScanner>
   }
 
   void _onDetect(String qrCode) {
-    if (_isDisposed || _isProcessing) return;
-
-    final now = DateTime.now();
-    if (now.difference(_lastScanTime) < _scanCooldown) {
-      return;
-    }
-
-    if (qrCode.isNotEmpty && _selectedEvent != null) {
-      _lastScanTime = now;
-      _processQRCode(qrCode);
+    if (!_isProcessing &&
+        _selectedEvent != null &&
+        !_isDisposed &&
+        !_scannerPaused &&
+        _canScan) {
+      if (qrCode.isNotEmpty) {
+        setState(() {
+          _canScan = false;
+        });
+        _processQRCode(qrCode);
+      }
     }
   }
 
@@ -355,15 +384,38 @@ class _StaffQRScannerState extends State<StaffQRScanner>
 
     try {
       HapticFeedback.mediumImpact();
-      await _checkInAttendee(qrCode);
+
+      // Only process our custom event QR code format
+      final parts = qrCode.split('|');
+      if (parts.length == 5) {
+        // Process as event QR code
+        await _checkInAttendee(qrCode);
+      } else {
+        // Show error for non-event QR codes
+        setState(() {
+          _scanResult = 'Error: Not a valid event QR code';
+        });
+        _showErrorSnackBar('This QR code is not for event check-in');
+      }
     } catch (e) {
       if (mounted) {
+        setState(() {
+          _scanResult = 'Error: ${e.toString()}';
+        });
         _showErrorSnackBar('Failed to process QR code: ${e.toString()}');
       }
     } finally {
       if (mounted) {
         setState(() {
           _isProcessing = false;
+        });
+
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted) {
+            setState(() {
+              _canScan = true;
+            });
+          }
         });
       }
     }
@@ -378,10 +430,11 @@ class _StaffQRScannerState extends State<StaffQRScanner>
     }
 
     try {
+      HapticFeedback.mediumImpact();
+
+      // Parse QR code using new format
       final qrParts = qrCode.split('|');
-      if (qrParts.length < 5) {
-        throw Exception('Invalid QR code format');
-      }
+      if (qrParts.length < 5) throw Exception('Invalid QR code format');
 
       final attendeeId = qrParts[0];
       final eventId = qrParts[1];
@@ -410,37 +463,37 @@ class _StaffQRScannerState extends State<StaffQRScanner>
         eventId,
       );
 
-      if (attendeeData == null) {
-        throw Exception('Attendee not found');
-      }
+      if (attendeeData == null) throw Exception('Attendee not found');
 
       // Check if already attended
       if (attendeeData['hasAttended'] == true) {
         if (mounted) {
-          setState(() {
-            _scanResult = '${attendeeData['fullName']} already checked in!';
-          });
+          setState(
+            () =>
+                _scanResult = '${attendeeData['fullName']} already checked in!',
+          );
         }
         return;
       }
 
-      // Check in attendee
-      await _databaseService.checkInAttendee(
-        attendeeId,
-        eventId,
+      // Check in attendee - pass current staff user ID for confirmedBy field
+      await _databaseService.markAttendanceByQRCode(
+        qrCode,
         FirebaseAuth.instance.currentUser!.uid,
+        isOrganizer: false,
       );
 
       if (mounted) {
-        setState(() {
-          _scanResult = '${attendeeData['fullName']} checked in successfully!';
-        });
+        setState(
+          () =>
+              _scanResult =
+                  '${attendeeData['fullName']} checked in successfully!',
+        );
+        _showSuccessSnackBar('Attendee checked in successfully!');
       }
     } catch (e) {
       if (mounted) {
-        setState(() {
-          _scanResult = 'Error: ${e.toString()}';
-        });
+        setState(() => _scanResult = 'Error: ${e.toString()}');
         _showErrorSnackBar(e.toString());
       }
     }
@@ -453,89 +506,58 @@ class _StaffQRScannerState extends State<StaffQRScanner>
     });
   }
 
-  void _manualEntry() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return StaffManualEntryDialog(
-          selectedEvent: _selectedEvent,
-          onCheckIn: (String attendeeId, String eventId) {
-            _processManualEntry(attendeeId, eventId);
-          },
-        );
-      },
-    );
-  }
-
-  Future<void> _processManualEntry(String attendeeId, String eventId) async {
-    if (_isProcessing || _organizerId == null) return;
-
-    setState(() => _isProcessing = true);
-
-    try {
-      // Get attendee data
-      final attendeeData = await _databaseService.getAttendeeByIdAndEvent(
-        attendeeId,
-        eventId,
-      );
-
-      if (attendeeData == null) throw Exception('Attendee not found');
-
-      // Verify event belongs to organizer
-      if (attendeeData['organizerId'] != _organizerId) {
-        throw Exception('Attendee not registered for your organizer\'s event');
-      }
-
-      // Check if already attended
-      if (attendeeData['hasAttended'] == true) {
-        setState(
-          () => _scanResult = '${attendeeData['fullName']} already checked in!',
-        );
-        return;
-      }
-
-      // Check in attendee
-      await _databaseService.checkInAttendee(
-        attendeeId,
-        eventId,
-        FirebaseAuth.instance.currentUser!.uid,
-      );
-
-      setState(
-        () =>
-            _scanResult =
-                '${attendeeData['fullName']} checked in successfully!',
-      );
-    } catch (e) {
-      setState(() => _scanResult = 'Error: ${e.toString()}');
-      _showErrorSnackBar(e.toString());
-    } finally {
-      setState(() => _isProcessing = false);
-    }
-  }
-
   void _resetScanner() {
     if (_isDisposed) return;
 
     setState(() {
       _scanResult = '';
       _isProcessing = false;
-      _lastScanTime = DateTime.now().subtract(_scanCooldown);
+      _scannerPaused = false;
     });
   }
 
-  void _showErrorSnackBar(String message) {
-    if (!mounted) return;
+  void _showSuccessSnackBar(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle, color: Colors.white),
+              const SizedBox(width: 8),
+              Expanded(child: Text(message)),
+            ],
+          ),
+          backgroundColor: AppConstants.successColor,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: AppConstants.errorColor,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        margin: const EdgeInsets.all(16),
-      ),
-    );
+  void _showErrorSnackBar(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.error_outline, color: Colors.white),
+              const SizedBox(width: 8),
+              Expanded(child: Text(message)),
+            ],
+          ),
+          backgroundColor: AppConstants.errorColor,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
   }
 
   @override
