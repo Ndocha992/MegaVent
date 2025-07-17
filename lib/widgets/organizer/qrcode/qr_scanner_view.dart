@@ -3,7 +3,7 @@ import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:ai_barcode_scanner/ai_barcode_scanner.dart';
 import 'package:megavent/utils/constants.dart';
 
-class QRScannerView extends StatelessWidget {
+class QRScannerView extends StatefulWidget {
   final bool isProcessing;
   final double screenWidth;
   final Function(String) onDetect;
@@ -20,15 +20,27 @@ class QRScannerView extends StatelessWidget {
   });
 
   @override
+  State<QRScannerView> createState() => _QRScannerViewState();
+}
+
+class _QRScannerViewState extends State<QRScannerView> {
+  bool _hasScanned = false;
+  String _lastScannedCode = '';
+
+  @override
   Widget build(BuildContext context) {
+    final scannerHeight =
+        widget.screenWidth * 1.2; // Made bigger for better visibility
+    final scanWindowSize = widget.screenWidth * 0.8; // Larger scan window
+
     return Container(
-      height: screenWidth * 0.8, // Square aspect ratio based on screen width
-      margin: const EdgeInsets.symmetric(horizontal: 16),
+      height: scannerHeight,
+      margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
+            color: Colors.black.withOpacity(0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -38,56 +50,164 @@ class QRScannerView extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         child: Stack(
           children: [
-            // AI Barcode Scanner View
+            // AI Barcode Scanner with simplified configuration
             AiBarcodeScanner(
               onDetect: (BarcodeCapture capture) {
-                final String? scannedValue =
-                    capture.barcodes.isNotEmpty
-                        ? capture.barcodes.first.rawValue
-                        : null;
-                if (scannedValue != null && scannedValue.isNotEmpty) {
-                  onDetect(scannedValue);
+                if (capture.barcodes.isNotEmpty && !_hasScanned) {
+                  final String? scannedValue = capture.barcodes.first.rawValue;
+                  if (scannedValue != null &&
+                      scannedValue.isNotEmpty &&
+                      scannedValue.split('|').length == 5 &&
+                      scannedValue != _lastScannedCode) {
+                    setState(() {
+                      _hasScanned = true;
+                      _lastScannedCode = scannedValue;
+                    });
+
+                    // Add a small delay to show success feedback
+                    Future.delayed(const Duration(milliseconds: 500), () {
+                      widget.onDetect(scannedValue);
+
+                      // Reset after processing
+                      Future.delayed(const Duration(seconds: 2), () {
+                        if (mounted) {
+                          setState(() {
+                            _hasScanned = false;
+                            _lastScannedCode = '';
+                          });
+                        }
+                      });
+                    });
+                  }
                 }
               },
+
+              // Validator to ensure we only process valid QR codes
               validator: (value) {
-                return value.barcodes.isNotEmpty;
+                return value.barcodes.isNotEmpty &&
+                    value.barcodes.first.rawValue != null &&
+                    value.barcodes.first.rawValue!.isNotEmpty;
               },
+
+              // Configure scan window for better detection
+              scanWindow: Rect.fromCenter(
+                center: Offset(widget.screenWidth / 2, scannerHeight / 2),
+                width: scanWindowSize,
+                height: scanWindowSize,
+              ),
+
+              // Simplified overlay without complex painting
               overlayBuilder: (
                 context,
                 constraints,
                 controller,
                 isPermissionGranted,
               ) {
-                return CustomQROverlay(
-                  constraints: constraints,
-                  cutOutSize: screenWidth * 0.6,
-                  borderColor: AppConstants.primaryColor,
-                );
+                if (isPermissionGranted == false) {
+                  return Container(
+                    color: Colors.black,
+                    child: const Center(
+                      child: Text(
+                        'Camera permission required',
+                        style: TextStyle(color: Colors.white, fontSize: 16),
+                      ),
+                    ),
+                  );
+                }
+
+                return _buildSimpleOverlay(constraints, scanWindowSize);
               },
+
+              // Handle disposal
               onDispose: () {
-                // Handle disposal if needed
+                debugPrint("QR Scanner disposed");
               },
             ),
 
-            // Processing overlay
-            if (isProcessing)
+            // Success feedback overlay
+            if (_hasScanned && !widget.isProcessing)
               Container(
-                color: Colors.black54,
+                color: Colors.green.withOpacity(0.3),
                 child: Center(
                   child: Container(
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Center(
-                          child: SpinKitThreeBounce(
-                            color: AppConstants.primaryColor,
-                            size: 20.0,
+                        const Icon(
+                          Icons.check_circle,
+                          color: Colors.green,
+                          size: 48,
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'QR Code Detected!',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green,
                           ),
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            _lastScannedCode.length > 50
+                                ? '${_lastScannedCode.substring(0, 50)}...'
+                                : _lastScannedCode,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontFamily: 'monospace',
+                              color: Colors.black87,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+            // Processing overlay
+            if (widget.isProcessing)
+              Container(
+                color: Colors.black54,
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SpinKitThreeBounce(
+                          color: AppConstants.primaryColor,
+                          size: 24.0,
                         ),
                         const SizedBox(height: 16),
                         Text(
@@ -107,140 +227,149 @@ class QRScannerView extends StatelessWidget {
       ),
     );
   }
-}
 
-// Custom overlay for the QR scanner
-class CustomQROverlay extends StatelessWidget {
-  final BoxConstraints constraints;
-  final double cutOutSize;
-  final Color borderColor;
+  Widget _buildSimpleOverlay(
+    BoxConstraints constraints,
+    double scanWindowSize,
+  ) {
+    return Stack(
+      children: [
+        // Semi-transparent overlay
+        Container(
+          width: constraints.maxWidth,
+          height: constraints.maxHeight,
+          color: Colors.black.withOpacity(0.6),
+        ),
 
-  const CustomQROverlay({
-    super.key,
-    required this.constraints,
-    required this.cutOutSize,
-    required this.borderColor,
-  });
+        // Clear scanning area with animated border
+        Center(
+          child: Container(
+            width: scanWindowSize,
+            height: scanWindowSize,
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: _hasScanned ? Colors.green : AppConstants.primaryColor,
+                width: 3,
+              ),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Stack(
+              children: [
+                // Corner indicators with padding
+                ...List.generate(4, (index) {
+                  final isTop = index < 2;
+                  final isLeft = index % 2 == 0;
+                  const padding = 8.0;
 
-  @override
-  Widget build(BuildContext context) {
-    return CustomPaint(
-      painter: QROverlayPainter(
-        cutOutSize: cutOutSize,
-        borderColor: borderColor,
-      ),
-      child: Container(),
+                  return Positioned(
+                    top: isTop ? padding : null,
+                    bottom: isTop ? null : padding,
+                    left: isLeft ? padding : null,
+                    right: isLeft ? null : padding,
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        border: Border(
+                          top:
+                              isTop
+                                  ? BorderSide(
+                                    color:
+                                        _hasScanned
+                                            ? Colors.green
+                                            : AppConstants.primaryColor,
+                                    width: 3,
+                                  )
+                                  : BorderSide.none,
+                          bottom:
+                              !isTop
+                                  ? BorderSide(
+                                    color:
+                                        _hasScanned
+                                            ? Colors.green
+                                            : AppConstants.primaryColor,
+                                    width: 3,
+                                  )
+                                  : BorderSide.none,
+                          left:
+                              isLeft
+                                  ? BorderSide(
+                                    color:
+                                        _hasScanned
+                                            ? Colors.green
+                                            : AppConstants.primaryColor,
+                                    width: 3,
+                                  )
+                                  : BorderSide.none,
+                          right:
+                              !isLeft
+                                  ? BorderSide(
+                                    color:
+                                        _hasScanned
+                                            ? Colors.green
+                                            : AppConstants.primaryColor,
+                                    width: 3,
+                                  )
+                                  : BorderSide.none,
+                        ),
+                        borderRadius: BorderRadius.only(
+                          topLeft:
+                              (isTop && isLeft)
+                                  ? const Radius.circular(12)
+                                  : Radius.zero,
+                          topRight:
+                              (isTop && !isLeft)
+                                  ? const Radius.circular(12)
+                                  : Radius.zero,
+                          bottomLeft:
+                              (!isTop && isLeft)
+                                  ? const Radius.circular(12)
+                                  : Radius.zero,
+                          bottomRight:
+                              (!isTop && !isLeft)
+                                  ? const Radius.circular(12)
+                                  : Radius.zero,
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+
+                // Scanning animation line
+                if (!_hasScanned && !widget.isProcessing)
+                  TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0.0, end: 1.0),
+                    duration: const Duration(seconds: 2),
+                    builder: (context, value, child) {
+                      return Positioned(
+                        top: value * (scanWindowSize - 4),
+                        left: 0,
+                        right: 0,
+                        child: Container(
+                          height: 2,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                Colors.transparent,
+                                AppConstants.primaryColor.withOpacity(0.8),
+                                Colors.transparent,
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                    onEnd: () {
+                      if (mounted && !_hasScanned) {
+                        setState(() {}); // Restart animation
+                      }
+                    },
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
-}
-
-class QROverlayPainter extends CustomPainter {
-  final double cutOutSize;
-  final Color borderColor;
-  final double borderWidth;
-  final double borderLength;
-  final double borderRadius;
-
-  QROverlayPainter({
-    required this.cutOutSize,
-    required this.borderColor,
-    this.borderWidth = 6.0,
-    this.borderLength = 40.0,
-    this.borderRadius = 20.0,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final overlayColor = const Color.fromRGBO(0, 0, 0, 80);
-    final borderPaint =
-        Paint()
-          ..color = borderColor
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = borderWidth
-          ..strokeCap = StrokeCap.round;
-
-    final backgroundPaint =
-        Paint()
-          ..color = overlayColor
-          ..style = PaintingStyle.fill;
-
-    final boxPaint =
-        Paint()
-          ..color = borderColor
-          ..style = PaintingStyle.fill
-          ..blendMode = BlendMode.dstOut;
-
-    final cutOutRect = Rect.fromLTWH(
-      size.width / 2 - cutOutSize / 2,
-      size.height / 2 - cutOutSize / 2,
-      cutOutSize,
-      cutOutSize,
-    );
-
-    // Draw background
-    canvas.saveLayer(
-      Rect.fromLTWH(0, 0, size.width, size.height),
-      backgroundPaint,
-    );
-    canvas.drawRect(
-      Rect.fromLTWH(0, 0, size.width, size.height),
-      backgroundPaint,
-    );
-
-    // Draw cutout
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(cutOutRect, Radius.circular(borderRadius)),
-      boxPaint,
-    );
-    canvas.restore();
-
-    // Draw corner borders
-    final path =
-        Path()
-          // Top left
-          ..moveTo(cutOutRect.left, cutOutRect.top + borderLength)
-          ..lineTo(cutOutRect.left, cutOutRect.top + borderRadius)
-          ..quadraticBezierTo(
-            cutOutRect.left,
-            cutOutRect.top,
-            cutOutRect.left + borderRadius,
-            cutOutRect.top,
-          )
-          ..lineTo(cutOutRect.left + borderLength, cutOutRect.top)
-          // Top right
-          ..moveTo(cutOutRect.right - borderLength, cutOutRect.top)
-          ..lineTo(cutOutRect.right - borderRadius, cutOutRect.top)
-          ..quadraticBezierTo(
-            cutOutRect.right,
-            cutOutRect.top,
-            cutOutRect.right,
-            cutOutRect.top + borderRadius,
-          )
-          ..lineTo(cutOutRect.right, cutOutRect.top + borderLength)
-          // Bottom right
-          ..moveTo(cutOutRect.right, cutOutRect.bottom - borderLength)
-          ..lineTo(cutOutRect.right, cutOutRect.bottom - borderRadius)
-          ..quadraticBezierTo(
-            cutOutRect.right,
-            cutOutRect.bottom,
-            cutOutRect.right - borderRadius,
-            cutOutRect.bottom,
-          )
-          ..lineTo(cutOutRect.right - borderLength, cutOutRect.bottom)
-          // Bottom left
-          ..moveTo(cutOutRect.left + borderLength, cutOutRect.bottom)
-          ..lineTo(cutOutRect.left + borderRadius, cutOutRect.bottom)
-          ..quadraticBezierTo(
-            cutOutRect.left,
-            cutOutRect.bottom,
-            cutOutRect.left,
-            cutOutRect.bottom - borderRadius,
-          )
-          ..lineTo(cutOutRect.left, cutOutRect.bottom - borderLength);
-
-    canvas.drawPath(path, borderPaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

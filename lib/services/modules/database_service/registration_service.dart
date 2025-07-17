@@ -198,7 +198,11 @@ class RegistrationService {
   }
 
   // Mark attendee as attended using QR code
-  Future<void> markAttendanceByQRCode(String qrCodeData, String staffId) async {
+  Future<void> markAttendanceByQRCode(
+    String qrCodeData,
+    String userId, {
+    bool isOrganizer = false,
+  }) async {
     try {
       final user = _auth.currentUser;
       if (user == null) {
@@ -211,11 +215,12 @@ class RegistrationService {
         throw Exception('Invalid QR code format');
       }
 
-      final userId = qrData['userId']!;
+      final userIdFromQR = qrData['userId']!;
       final eventId = qrData['eventId']!;
+      final organizerId = qrData['organizerId']!;
 
       // Verify QR code
-      if (!Registration.verifyQRCode(qrCodeData, userId, eventId)) {
+      if (!Registration.verifyQRCode(qrCodeData, userIdFromQR, eventId)) {
         throw Exception('Invalid or tampered QR code');
       }
 
@@ -246,69 +251,11 @@ class RegistrationService {
         throw Exception('Attendance already marked for this user');
       }
 
-      // Use batch write for consistency
-      final batch = _firestore.batch();
-
-      // Update registration to mark as attended
-      batch.update(registrationDoc.reference, {
-        'attended': true,
-        'attendedAt': DateTime.now(),
-        'confirmedBy': staffId,
-      });
-
-      // Update event attended count
-      final eventRef = _firestore.collection('events').doc(eventId);
-      batch.update(eventRef, {
-        'attendedCount': FieldValue.increment(1),
-        'updatedAt': DateTime.now(),
-      });
-
-      await batch.commit();
-      _notifier.notifyListeners();
-    } catch (e) {
-      throw Exception('Failed to mark attendance: $e');
-    }
-  }
-
-  // Original mark attendance method (modified to work with staff)
-  Future<void> markAttendance(
-    String userId,
-    String eventId,
-    String staffId,
-  ) async {
-    try {
-      final user = _auth.currentUser;
-      if (user == null) {
-        throw Exception('User not authenticated');
-      }
-
-      // Check if current user can manage this event
-      if (!await _canManageEvent(eventId)) {
-        throw Exception(
-          'Unauthorized: You can only mark attendance for your organizer\'s events',
-        );
-      }
-
-      // Find the registration
-      final registrationSnapshot =
-          await _firestore
-              .collection('registrations')
-              .where('userId', isEqualTo: userId)
-              .where('eventId', isEqualTo: eventId)
-              .limit(1)
-              .get();
-
-      if (registrationSnapshot.docs.isEmpty) {
-        throw Exception('Registration not found');
-      }
-
-      final registrationDoc = registrationSnapshot.docs.first;
-      final registrationData = registrationDoc.data();
-
-      // If already attended, don't increment again
-      if (registrationData['attended'] == true) {
-        return;
-      }
+      // Determine confirmedBy value
+      final confirmedBy =
+          isOrganizer
+              ? organizerId // Save organizer ID
+              : userId; // Save staff ID
 
       // Use batch write for consistency
       final batch = _firestore.batch();
@@ -317,7 +264,7 @@ class RegistrationService {
       batch.update(registrationDoc.reference, {
         'attended': true,
         'attendedAt': DateTime.now(),
-        'confirmedBy': staffId,
+        'confirmedBy': confirmedBy,
       });
 
       // Update event attended count
@@ -547,70 +494,6 @@ class RegistrationService {
       };
     } catch (e) {
       throw Exception('Failed to get attendee: $e');
-    }
-  }
-
-  // Check in attendee (modified for staff)
-  Future<void> checkInAttendee(
-    String attendeeId,
-    String eventId,
-    String staffId,
-  ) async {
-    try {
-      final user = _auth.currentUser;
-      if (user == null) {
-        throw Exception('User not authenticated');
-      }
-
-      // Check if current user can manage this event
-      if (!await _canManageEvent(eventId)) {
-        throw Exception(
-          'Unauthorized: You can only check in attendees for your organizer\'s events',
-        );
-      }
-
-      // Find the registration
-      final registrationSnapshot =
-          await _firestore
-              .collection('registrations')
-              .where('userId', isEqualTo: attendeeId)
-              .where('eventId', isEqualTo: eventId)
-              .limit(1)
-              .get();
-
-      if (registrationSnapshot.docs.isEmpty) {
-        throw Exception('Registration not found');
-      }
-
-      final registrationDoc = registrationSnapshot.docs.first;
-      final registrationData = registrationDoc.data();
-
-      // If already attended, don't increment again
-      if (registrationData['attended'] == true) {
-        return;
-      }
-
-      // Use batch write for consistency
-      final batch = _firestore.batch();
-
-      // Update registration to mark as attended
-      batch.update(registrationDoc.reference, {
-        'attended': true,
-        'attendedAt': DateTime.now(),
-        'confirmedBy': staffId,
-      });
-
-      // Update event attended count
-      final eventRef = _firestore.collection('events').doc(eventId);
-      batch.update(eventRef, {
-        'attendedCount': FieldValue.increment(1),
-        'updatedAt': DateTime.now(),
-      });
-
-      await batch.commit();
-      _notifier.notifyListeners();
-    } catch (e) {
-      throw Exception('Failed to check in attendee: $e');
     }
   }
 
