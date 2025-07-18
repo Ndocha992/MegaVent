@@ -425,7 +425,9 @@ class _QRScannerState extends State<QRScanner> with WidgetsBindingObserver {
 
       // Verify organizer matches
       if (organizerId != _organizerId) {
-        throw Exception('Attendee not registered for event. Organizer mismatch: $_organizerId vs $organizerId');
+        throw Exception(
+          'Attendee not registered for event. Organizer mismatch: $_organizerId vs $organizerId',
+        );
       }
 
       // Get attendee data

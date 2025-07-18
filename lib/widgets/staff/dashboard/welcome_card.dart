@@ -16,7 +16,7 @@ class StaffWelcomeCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Welcome Back!',
+                  'Welcome Back Staff!',
                   style: AppConstants.headlineMedium.copyWith(
                     color: Colors.white,
                   ),
