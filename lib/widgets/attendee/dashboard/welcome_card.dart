@@ -16,7 +16,7 @@ class AttendeeWelcomeCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Welcome Back!',
+                  'Welcome Back Attendee!',
                   style: AppConstants.headlineMedium.copyWith(
                     color: Colors.white,
                   ),

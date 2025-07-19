@@ -355,9 +355,7 @@ class _QRScannerState extends State<QRScanner> with WidgetsBindingObserver {
         !_scannerPaused &&
         _canScan) {
       if (qrCode.isNotEmpty) {
-        setState(() {
-          _canScan = false;
-        });
+        setState(() => _canScan = false);
         _processQRCode(qrCode);
       }
     }
@@ -366,63 +364,43 @@ class _QRScannerState extends State<QRScanner> with WidgetsBindingObserver {
   Future<void> _processQRCode(String qrCode) async {
     if (_isProcessing || _selectedEvent == null || _isDisposed) return;
 
-    setState(() {
-      _isProcessing = true;
-    });
+    setState(() => _isProcessing = true);
 
     try {
       HapticFeedback.mediumImpact();
 
-      // Only process our custom event QR code format
+      // Process as event QR code format
       final parts = qrCode.split('|');
       if (parts.length == 5) {
-        // Process as event QR code
         await _checkInAttendee(qrCode);
       } else {
-        // Show error for non-event QR codes
-        setState(() {
-          _scanResult = 'Error: Not a valid event QR code';
-        });
-        _showErrorSnackBar('This QR code is not for event check-in');
+        setState(() => _scanResult = 'QR Code Content: $qrCode');
+        _showSuccessSnackBar('QR Code scanned successfully!');
       }
     } catch (e) {
       if (mounted) {
-        setState(() {
-          _scanResult = 'Error: ${e.toString()}';
-        });
+        setState(() => _scanResult = 'Error: ${e.toString()}');
         _showErrorSnackBar('Failed to process QR code: ${e.toString()}');
       }
     } finally {
       if (mounted) {
-        setState(() {
-          _isProcessing = false;
-        });
-
+        setState(() => _isProcessing = false);
         Future.delayed(const Duration(seconds: 2), () {
-          if (mounted) {
-            setState(() {
-              _canScan = true;
-            });
-          }
+          if (mounted) setState(() => _canScan = true);
         });
       }
     }
   }
 
   Future<void> _checkInAttendee(String qrCode) async {
-    if (_isProcessing ||
-        _selectedEvent == null ||
-        _organizerId == null ||
-        _isDisposed) {
+    if (_selectedEvent == null || _organizerId == null || _isDisposed) {
       return;
     }
 
     try {
       HapticFeedback.mediumImpact();
-
-      // Parse QR code using new format
       final qrParts = qrCode.split('|');
-      if (qrParts.length < 5) throw Exception('Invalid QR code format');
+      if (qrParts.length < 5) throw Exception('Invalid QR format');
 
       final attendeeId = qrParts[0];
       final eventId = qrParts[1];
@@ -430,19 +408,26 @@ class _QRScannerState extends State<QRScanner> with WidgetsBindingObserver {
       final organizerId = qrParts[3];
       final hash = qrParts[4];
 
-      // Verify QR code integrity
+      // Verify event matches selected event
+      if (eventId != _selectedEvent!.id) {
+        throw Exception(
+          'QR is for different event: ${_selectedEvent!.id} vs $eventId',
+        );
+      }
+
+      // Verify QR integrity
       final rawData = '$attendeeId|$eventId|$timestamp|$organizerId';
       final bytes = utf8.encode(rawData);
       final digest = sha256.convert(bytes);
       final expectedHash = digest.toString().substring(0, 16);
 
-      if (hash != expectedHash) {
-        throw Exception('Invalid or tampered QR code');
-      }
+      if (hash != expectedHash) throw Exception('Invalid QR: Hash mismatch');
 
-      // Verify event belongs to organizer
+      // Verify organizer matches
       if (organizerId != _organizerId) {
-        throw Exception('Attendee not registered for your event');
+        throw Exception(
+          'Attendee not registered for event. Organizer mismatch: $_organizerId vs $organizerId',
+        );
       }
 
       // Get attendee data
@@ -450,40 +435,28 @@ class _QRScannerState extends State<QRScanner> with WidgetsBindingObserver {
         attendeeId,
         eventId,
       );
-
       if (attendeeData == null) throw Exception('Attendee not found');
 
       // Check if already attended
       if (attendeeData['hasAttended'] == true) {
-        if (mounted) {
-          setState(
-            () =>
-                _scanResult = '${attendeeData['fullName']} already checked in!',
-          );
-        }
+        final name = attendeeData['fullName'] ?? 'Attendee';
+        setState(() => _scanResult = '$name already checked in!');
         return;
       }
 
-      // Check in attendee
       await _databaseService.markAttendanceByQRCode(
         qrCode,
         FirebaseAuth.instance.currentUser!.uid,
-        isOrganizer: false,
+        isOrganizer: true,
       );
 
-      if (mounted) {
-        setState(
-          () =>
-              _scanResult =
-                  '${attendeeData['fullName']} checked in successfully!',
-        );
-        _showSuccessSnackBar('Attendee checked in successfully!');
-      }
+      // Show success
+      final name = attendeeData['fullName'] ?? 'Attendee';
+      setState(() => _scanResult = '$name checked in successfully!');
+      _showSuccessSnackBar('Attendee checked in successfully!');
     } catch (e) {
-      if (mounted) {
-        setState(() => _scanResult = 'Error: ${e.toString()}');
-        _showErrorSnackBar(e.toString());
-      }
+      setState(() => _scanResult = 'Error: ${e.toString()}');
+      _showErrorSnackBar(e.toString());
     }
   }
 

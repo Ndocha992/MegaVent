@@ -57,10 +57,12 @@ class _AttendeesBottomSheetState extends State<AttendeesBottomSheet> {
         widget.event.id,
       );
 
-      // Create a map for quick lookup
+      // FIXED: Create registration map using composite ID logic
       final userRegistrationMap = <String, Registration>{};
       for (final registration in registrations) {
-        userRegistrationMap[registration.userId] = registration;
+        // Create composite key matching the attendee.id format
+        final compositeId = '${registration.userId}_${registration.eventId}';
+        userRegistrationMap[compositeId] = registration;
       }
 
       setState(() {
@@ -258,6 +260,7 @@ class _AttendeesBottomSheetState extends State<AttendeesBottomSheet> {
         itemCount: _filteredAttendees.length,
         itemBuilder: (context, index) {
           final attendee = _filteredAttendees[index];
+          // FIXED: Use composite ID to get the correct registration
           final registration = _userRegistrationMap[attendee.id];
           return AttendeeCard(
             attendee: attendee,
@@ -268,9 +271,15 @@ class _AttendeesBottomSheetState extends State<AttendeesBottomSheet> {
       ),
     );
   }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 }
 
-// Updated AttendeeCard to work with Attendee objects and profile images
+// FIXED: Updated AttendeeCard to properly use registration data
 class AttendeeCard extends StatelessWidget {
   final Attendee attendee;
   final Registration? registration;
@@ -327,8 +336,6 @@ class AttendeeCard extends StatelessWidget {
   }
 
   Widget _buildInitialsAvatar() {
-    final hasAttended = registration?.hasAttended ?? false;
-
     return CircleAvatar(
       radius: 24,
       backgroundColor:
@@ -354,9 +361,10 @@ class AttendeeCard extends StatelessWidget {
     }
   }
 
+  // FIXED: Proper getters that use registration data when available
   String get attendanceStatus {
     if (!attendee.isApproved) return 'Pending Approval';
-    return registration?.hasAttended ?? false ? 'Attended' : 'Registered';
+    return hasAttended ? 'Attended' : 'Registered';
   }
 
   DateTime get registeredAt {
@@ -365,6 +373,10 @@ class AttendeeCard extends StatelessWidget {
 
   bool get hasAttended {
     return registration?.hasAttended ?? false;
+  }
+
+  String get qrCode {
+    return registration?.qrCode ?? 'No QR Code';
   }
 
   @override
@@ -453,7 +465,9 @@ class AttendeeCard extends StatelessWidget {
                       color:
                           hasAttended
                               ? AppConstants.successColor
-                              : Colors.orange,
+                              : (!attendee.isApproved
+                                  ? AppConstants.errorColor
+                                  : Colors.orange),
                     ),
                     const SizedBox(width: 4),
                     Text(
@@ -464,7 +478,9 @@ class AttendeeCard extends StatelessWidget {
                         color:
                             hasAttended
                                 ? AppConstants.successColor
-                                : Colors.orange,
+                                : (!attendee.isApproved
+                                    ? AppConstants.errorColor
+                                    : Colors.orange),
                       ),
                     ),
                     const Spacer(),
@@ -480,14 +496,14 @@ class AttendeeCard extends StatelessWidget {
 
           const SizedBox(width: 16),
 
-          // Action Button
+          // Action Button - Show QR Code
           IconButton(
             onPressed: () {
-              // Handle QR code or more details
-              _showAttendeeDetails(context, attendee, registration, eventName);
+              _showAttendeeQRDialog(context);
             },
             icon: const Icon(Icons.qr_code),
             color: AppConstants.primaryColor,
+            tooltip: 'Show QR Code',
           ),
         ],
       ),
@@ -509,20 +525,7 @@ class AttendeeCard extends StatelessWidget {
     }
   }
 
-  void _showAttendeeDetails(
-    BuildContext context,
-    Attendee attendee,
-    Registration? registration,
-    String eventName,
-  ) {
-    showDialog(
-      context: context,
-      builder:
-          (context) => AttendeeQRDialog(
-            attendee: attendee,
-            registration: registration,
-            eventName: eventName,
-          ),
-    );
+  void _showAttendeeQRDialog(BuildContext context) {
+    showAttendeeQRDialog(context, attendee, registration, eventName);
   }
 }
