@@ -136,13 +136,10 @@ class _StaffEventsDetailsState extends State<StaffEventsDetails> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Container(
-            color: AppConstants.primaryColor.withOpacity(0.1),
-            child: const Center(
-              child: SpinKitThreeBounce(
-                color: AppConstants.primaryColor,
-                size: 20.0,
-              ),
+          const Center(
+            child: SpinKitThreeBounce(
+              color: AppConstants.primaryColor,
+              size: 20.0,
             ),
           ),
           SizedBox(height: 16),

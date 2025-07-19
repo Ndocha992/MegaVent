@@ -1,18 +1,16 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:megavent/models/registration.dart';
+import 'package:megavent/widgets/staff/events/event_details/event_actions/bottom_sheet_header.dart';
+import 'package:megavent/widgets/staff/events/event_details/event_actions/search_bar.dart';
+import 'package:megavent/widgets/staff/events/event_details/event_actions/stat_card.dart';
 import 'package:provider/provider.dart';
 import 'package:megavent/models/attendee.dart';
 import 'package:megavent/models/event.dart';
 import 'package:megavent/services/database_service.dart';
 import 'package:megavent/utils/constants.dart';
 import 'package:megavent/widgets/organizer/attendees/attendee_qr_dialog.dart';
-import 'package:megavent/widgets/organizer/events/event_details/event_actions/search_bar.dart';
-import 'package:megavent/widgets/organizer/events/event_details/event_actions/stat_card.dart';
-import 'bottom_sheet_header.dart';
 
 class StaffAttendeesBottomSheet extends StatefulWidget {
   final Event event;
@@ -33,48 +31,15 @@ class _StaffAttendeesBottomSheetState extends State<StaffAttendeesBottomSheet> {
   final TextEditingController _searchController = TextEditingController();
   bool _isLoading = true;
   String? _error;
-  String? _organizerId;
 
   @override
   void initState() {
     super.initState();
     _searchController.addListener(_filterAttendees);
-    _loadStaffOrganizerId();
-  }
-
-  Future<void> _loadStaffOrganizerId() async {
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        final staffDoc =
-            await FirebaseFirestore.instance
-                .collection('staff')
-                .doc(user.uid)
-                .get();
-
-        if (staffDoc.exists) {
-          setState(() {
-            _organizerId = staffDoc.data()?['organizerId'];
-          });
-          await _loadAttendees();
-        } else {
-          setState(() {
-            _error = 'Staff data not found';
-            _isLoading = false;
-          });
-        }
-      }
-    } catch (e) {
-      setState(() {
-        _error = 'Failed to load staff data: ${e.toString()}';
-        _isLoading = false;
-      });
-    }
+    _loadAttendees();
   }
 
   Future<void> _loadAttendees() async {
-    if (_organizerId == null) return;
-
     try {
       setState(() {
         _isLoading = true;
@@ -86,12 +51,7 @@ class _StaffAttendeesBottomSheetState extends State<StaffAttendeesBottomSheet> {
         listen: false,
       );
 
-      // Load attendees for the staff's organizer (all attendees)
-      final attendees = await databaseService.getStaffAttendees(
-        FirebaseAuth.instance.currentUser!.uid,
-      );
-
-      // Load all registrations for the staff's organizer
+      // Use staff-specific method to get all registrations for this organizer
       final allRegistrations = await databaseService.getAllRegistrations();
 
       // Filter registrations for this specific event
@@ -100,17 +60,46 @@ class _StaffAttendeesBottomSheetState extends State<StaffAttendeesBottomSheet> {
               .where((reg) => reg.eventId == widget.event.id)
               .toList();
 
-      // Filter attendees to only show those registered for this event
-      final eventAttendeeIds =
-          eventRegistrations.map((reg) => reg.userId).toSet();
-      final eventAttendees =
-          attendees
-              .where((attendee) => eventAttendeeIds.contains(attendee.id))
-              .toList();
+      // Get unique user IDs from event registrations
+      final userIds =
+          eventRegistrations.map((reg) => reg.userId).toSet().toList();
 
-      // Create a map for quick lookup
+      // Get attendee details for each registered user
+      List<Attendee> eventAttendees = [];
+      for (String userId in userIds) {
+        try {
+          final attendeeData = await databaseService.getAttendeeByIdAndEvent(
+            userId,
+            widget.event.id,
+          );
+
+          if (attendeeData != null) {
+            // Convert the map data to Attendee object
+            final attendee = Attendee(
+              id: attendeeData['id'] ?? userId,
+              fullName: attendeeData['fullName'] ?? 'Unknown',
+              email: attendeeData['email'] ?? '',
+              phone: attendeeData['phone'] ?? '',
+              profileImage: attendeeData['profileImage'],
+              isApproved: attendeeData['isApproved'] ?? true,
+              createdAt: attendeeData['createdAt'] ?? DateTime.now(),
+              updatedAt: attendeeData['updatedAt'] ?? DateTime.now(),
+            );
+            eventAttendees.add(attendee);
+          }
+        } catch (e) {
+          print('Error loading attendee $userId: $e');
+          // Continue with other attendees even if one fails
+        }
+      }
+
+      // Create registration map using composite IDs for consistency
       final userRegistrationMap = <String, Registration>{};
       for (final registration in eventRegistrations) {
+        // Create composite key matching the attendee.id format
+        final compositeId = '${registration.userId}_${registration.eventId}';
+        userRegistrationMap[compositeId] = registration;
+        // Also map using just userId for backward compatibility
         userRegistrationMap[registration.userId] = registration;
       }
 
@@ -178,7 +167,7 @@ class _StaffAttendeesBottomSheetState extends State<StaffAttendeesBottomSheet> {
               child: Row(
                 children: [
                   Expanded(
-                    child: StatCardWidget(
+                    child: StaffStatCardWidget(
                       title: 'Registered',
                       value: '${_allAttendees.length}',
                       color: AppConstants.primaryColor,
@@ -187,7 +176,7 @@ class _StaffAttendeesBottomSheetState extends State<StaffAttendeesBottomSheet> {
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: StatCardWidget(
+                    child: StaffStatCardWidget(
                       title: 'Attended',
                       value: '$attendedCount',
                       color: AppConstants.successColor,
@@ -196,7 +185,7 @@ class _StaffAttendeesBottomSheetState extends State<StaffAttendeesBottomSheet> {
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: StatCardWidget(
+                    child: StaffStatCardWidget(
                       title: 'No Show',
                       value: '$noShowCount',
                       color: AppConstants.errorColor,
@@ -213,7 +202,7 @@ class _StaffAttendeesBottomSheetState extends State<StaffAttendeesBottomSheet> {
           if (!_isLoading && _error == null)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: SearchBarWidget(
+              child: StaffSearchBarWidget(
                 controller: _searchController,
                 hintText: 'Search attendees by name, email, or phone...',
               ),
@@ -266,7 +255,7 @@ class _StaffAttendeesBottomSheetState extends State<StaffAttendeesBottomSheet> {
             ),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: _loadStaffOrganizerId,
+              onPressed: _loadAttendees,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppConstants.primaryColor,
                 foregroundColor: Colors.white,
@@ -304,13 +293,17 @@ class _StaffAttendeesBottomSheetState extends State<StaffAttendeesBottomSheet> {
     }
 
     return RefreshIndicator(
-      onRefresh: _loadStaffOrganizerId,
+      onRefresh: _loadAttendees,
       child: ListView.builder(
         padding: const EdgeInsets.symmetric(horizontal: 20),
         itemCount: _filteredAttendees.length,
         itemBuilder: (context, index) {
           final attendee = _filteredAttendees[index];
-          final registration = _userRegistrationMap[attendee.id];
+          // Try both composite ID and userId for registration lookup
+          Registration? registration =
+              _userRegistrationMap[attendee.id] ??
+              _userRegistrationMap[attendee.id.split('_').first];
+
           return AttendeeCard(
             attendee: attendee,
             registration: registration,
@@ -320,9 +313,15 @@ class _StaffAttendeesBottomSheetState extends State<StaffAttendeesBottomSheet> {
       ),
     );
   }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 }
 
-// Updated AttendeeCard to work with Attendee objects and profile images
+// Updated AttendeeCard to properly use registration data
 class AttendeeCard extends StatelessWidget {
   final Attendee attendee;
   final Registration? registration;
@@ -379,8 +378,6 @@ class AttendeeCard extends StatelessWidget {
   }
 
   Widget _buildInitialsAvatar() {
-    final hasAttended = registration?.hasAttended ?? false;
-
     return CircleAvatar(
       radius: 24,
       backgroundColor:
@@ -406,9 +403,10 @@ class AttendeeCard extends StatelessWidget {
     }
   }
 
+  // Proper getters that use registration data when available
   String get attendanceStatus {
     if (!attendee.isApproved) return 'Pending Approval';
-    return registration?.hasAttended ?? false ? 'Attended' : 'Registered';
+    return hasAttended ? 'Attended' : 'Registered';
   }
 
   DateTime get registeredAt {
@@ -417,6 +415,10 @@ class AttendeeCard extends StatelessWidget {
 
   bool get hasAttended {
     return registration?.hasAttended ?? false;
+  }
+
+  String get qrCode {
+    return registration?.qrCode ?? 'No QR Code';
   }
 
   @override
@@ -505,7 +507,9 @@ class AttendeeCard extends StatelessWidget {
                       color:
                           hasAttended
                               ? AppConstants.successColor
-                              : Colors.orange,
+                              : (!attendee.isApproved
+                                  ? AppConstants.errorColor
+                                  : Colors.orange),
                     ),
                     const SizedBox(width: 4),
                     Text(
@@ -516,7 +520,9 @@ class AttendeeCard extends StatelessWidget {
                         color:
                             hasAttended
                                 ? AppConstants.successColor
-                                : Colors.orange,
+                                : (!attendee.isApproved
+                                    ? AppConstants.errorColor
+                                    : Colors.orange),
                       ),
                     ),
                     const Spacer(),
@@ -532,14 +538,14 @@ class AttendeeCard extends StatelessWidget {
 
           const SizedBox(width: 16),
 
-          // Action Button
+          // Action Button - Show QR Code
           IconButton(
             onPressed: () {
-              // Handle QR code or more details
-              _showAttendeeDetails(context, attendee, registration, eventName);
+              _showAttendeeQRDialog(context);
             },
             icon: const Icon(Icons.qr_code),
             color: AppConstants.primaryColor,
+            tooltip: 'Show QR Code',
           ),
         ],
       ),
@@ -561,20 +567,7 @@ class AttendeeCard extends StatelessWidget {
     }
   }
 
-  void _showAttendeeDetails(
-    BuildContext context,
-    Attendee attendee,
-    Registration? registration,
-    String eventName,
-  ) {
-    showDialog(
-      context: context,
-      builder:
-          (context) => AttendeeQRDialog(
-            attendee: attendee,
-            registration: registration,
-            eventName: eventName,
-          ),
-    );
+  void _showAttendeeQRDialog(BuildContext context) {
+    showAttendeeQRDialog(context, attendee, registration, eventName);
   }
 }
