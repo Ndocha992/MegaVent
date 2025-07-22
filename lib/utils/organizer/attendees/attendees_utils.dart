@@ -48,12 +48,12 @@ class AttendeesUtils {
       case 1: // Attended
         return attendees.where((a) {
           final registration = userRegistrationMap[a.id];
-          return registration?.hasAttended ?? false;
+          return registration?.attended ?? false;
         }).toList();
       case 2: // No Show (Not Attended)
         return attendees.where((a) {
           final registration = userRegistrationMap[a.id];
-          return registration != null && !registration.hasAttended;
+          return registration != null && !registration.attended;
         }).toList();
       default:
         return attendees;
@@ -106,7 +106,7 @@ class AttendeesUtils {
     Registration? registration,
   ) {
     if (!attendee.isApproved) return 'Pending Approval';
-    return registration?.hasAttended ?? false ? 'Attended' : 'Registered';
+    return registration?.attended ?? false ? 'Attended' : 'Registered';
   }
 
   /// Get attendee status color using registration data
@@ -115,7 +115,7 @@ class AttendeesUtils {
     Registration? registration,
   ) {
     if (!attendee.isApproved) return 'warning';
-    return registration?.hasAttended ?? false ? 'success' : 'primary';
+    return registration?.attended ?? false ? 'success' : 'primary';
   }
 
   /// Check if attendee is recent using registration data
@@ -219,8 +219,8 @@ class AttendeesUtils {
             return a.isApproved ? -1 : 1;
           }
 
-          final attendedA = regA?.hasAttended ?? false;
-          final attendedB = regB?.hasAttended ?? false;
+          final attendedA = regA?.attended ?? false;
+          final attendedB = regB?.attended ?? false;
 
           if (attendedA && !attendedB) return -1;
           if (!attendedA && attendedB) return 1;
@@ -272,8 +272,7 @@ class AttendeesUtils {
 
     if (relevantRegistrations.isEmpty) return 0.0;
 
-    final attendedCount =
-        relevantRegistrations.where((r) => r.hasAttended).length;
+    final attendedCount = relevantRegistrations.where((r) => r.attended).length;
     return (attendedCount / relevantRegistrations.length) * 100;
   }
 
@@ -307,7 +306,7 @@ class AttendeesUtils {
 
       if (!attendee.isApproved) {
         statusCounts['Pending'] = statusCounts['Pending']! + 1;
-      } else if (registration?.hasAttended ?? false) {
+      } else if (registration?.attended ?? false) {
         statusCounts['Attended'] = statusCounts['Attended']! + 1;
       } else {
         statusCounts['Registered'] = statusCounts['Registered']! + 1;
@@ -471,7 +470,7 @@ class AttendeesUtils {
               ? eventIdToNameMap[registration.eventId] ?? 'Unknown'
               : 'Unknown';
       final registeredAt = registration?.registeredAt ?? DateTime.now();
-      final hasAttended = registration?.hasAttended ?? false;
+      final attended = registration?.attended ?? false;
 
       buffer.writeln(
         '"${attendee.fullName}",'
@@ -480,7 +479,7 @@ class AttendeesUtils {
         '"$eventName",'
         '"${getAttendeeStatus(attendee, registration)}",'
         '"${getReadableDate(registeredAt)}",'
-        '${hasAttended ? 'Yes' : 'No'},'
+        '${attended ? 'Yes' : 'No'},'
         '${attendee.isApproved ? 'Yes' : 'No'}',
       );
     }
@@ -530,13 +529,13 @@ class AttendeesUtils {
     final attendedCount =
         attendees.where((a) {
           final registration = userRegistrationMap[a.id];
-          return registration?.hasAttended ?? false;
+          return registration?.attended ?? false;
         }).length;
 
     final registeredCount =
         attendees.where((a) {
           final registration = userRegistrationMap[a.id];
-          return a.isApproved && !(registration?.hasAttended ?? false);
+          return a.isApproved && !(registration?.attended ?? false);
         }).length;
 
     final recentCount =

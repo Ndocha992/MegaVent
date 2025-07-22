@@ -397,8 +397,8 @@ class _AttendeeProfileState extends State<AttendeeProfile> {
       // Create attendee stats from the fetched data
       final attendeeStats = AttendeeStats(
         registeredEvents: myRegistrations.length,
-        attendedEvents: myRegistrations.where((r) => r.hasAttended).length,
-        notAttendedEvents: myRegistrations.where((r) => !r.hasAttended).length,
+        attendedEvents: myRegistrations.where((r) => r.attended).length,
+        notAttendedEvents: myRegistrations.where((r) => !r.attended).length,
         upcomingEvents: upcomingEventsList.length,
       );
 

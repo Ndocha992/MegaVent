@@ -411,7 +411,7 @@ class AttendeeService {
                     ? (eventData['date'] as Timestamp).toDate()
                     : null,
             // From Registration model
-            'hasAttended': registrationData['attended'] ?? false,
+            'attended': registrationData['attended'] ?? false,
             'registeredAt':
                 registrationData['registeredAt'] != null
                     ? (registrationData['registeredAt'] as Timestamp).toDate()
@@ -580,7 +580,7 @@ class AttendeeService {
       for (final regDoc in registrationsSnapshot.docs) {
         final regData = regDoc.data();
         final eventId = regData['eventId'];
-        final hasAttended = regData['attended'] ?? false;
+        final attended = regData['attended'] ?? false;
 
         try {
           // Get event details to check if it's upcoming or past
@@ -595,7 +595,7 @@ class AttendeeService {
             if (eventDate.isAfter(now)) {
               upcomingEvents++;
             } else {
-              if (hasAttended) {
+              if (attended) {
                 attendedEvents++;
               } else {
                 notAttendedEvents++;
@@ -615,35 +615,6 @@ class AttendeeService {
       );
     } catch (e) {
       throw Exception('Failed to get attendee personal stats: $e');
-    }
-  }
-
-  Future<List<Attendee>> getStaffAttendees(String staffId) async {
-    try {
-      final registrationsSnapshot =
-          await _firestore
-              .collection('registrations')
-              .where('confirmedBy', isEqualTo: staffId)
-              .orderBy('attendedAt', descending: true)
-              .limit(5)
-              .get();
-
-      List<Attendee> attendees = [];
-
-      for (final regDoc in registrationsSnapshot.docs) {
-        final regData = regDoc.data();
-        final userId = regData['userId'];
-
-        final userDoc =
-            await _firestore.collection('attendees').doc(userId).get();
-        if (userDoc.exists) {
-          attendees.add(Attendee.fromFirestore(userDoc));
-        }
-      }
-
-      return attendees;
-    } catch (e) {
-      throw Exception('Failed to get staff attendees: $e');
     }
   }
 

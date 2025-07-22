@@ -16,9 +16,10 @@ class StaffDashboardStats {
       totalEvents: map['totalEvents'] ?? 0,
       totalConfirmed: map['totalConfirmed'] ?? 0,
       upcomingEvents: map['upcomingEvents'] ?? 0,
-      lastUpdated: map['lastUpdated'] != null
-          ? DateTime.parse(map['lastUpdated'])
-          : DateTime.now(),
+      lastUpdated:
+          map['lastUpdated'] != null
+              ? DateTime.parse(map['lastUpdated'])
+              : DateTime.now(),
     );
   }
 

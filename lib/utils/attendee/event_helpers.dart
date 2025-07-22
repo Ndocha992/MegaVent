@@ -121,7 +121,10 @@ class EventHelpers {
   }
 
   // Helper method to get event status information
-  static Map<String, dynamic> getEventStatus(Event event, Registration registration) {
+  static Map<String, dynamic> getEventStatus(
+    Event event,
+    Registration registration,
+  ) {
     final now = DateTime.now();
     final eventStart = getEventStartDateTime(event);
     final eventEnd = getEventEndDateTime(event);
@@ -133,7 +136,7 @@ class EventHelpers {
     bool hasEnded = false;
     bool isOngoing = false;
 
-    if (registration.hasAttended) {
+    if (registration.attended) {
       statusText = 'Attended';
       statusColor = AppConstants.successColor;
     } else if (eventEnd.isBefore(now)) {
@@ -169,8 +172,18 @@ class EventHelpers {
   // Helper method to get month name
   static String getMonthName(int month) {
     const months = [
-      'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
-      'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC',
+      'JAN',
+      'FEB',
+      'MAR',
+      'APR',
+      'MAY',
+      'JUN',
+      'JUL',
+      'AUG',
+      'SEP',
+      'OCT',
+      'NOV',
+      'DEC',
     ];
     return months[month - 1];
   }

@@ -72,6 +72,48 @@ class _AttendeeDashboardState extends State<AttendeeDashboard> {
       // Load all available events
       final allEvents = await _databaseService.getAllAvailableEvents();
 
+      // Filter events that haven't ended yet
+      final now = DateTime.now();
+      final activeEvents =
+          allEvents.where((event) {
+            try {
+              // Parse the end time (e.g., "10:00 PM")
+              final endTimeParts =
+                  event.endTime.replaceAll(' ', '').toLowerCase();
+              final isPM = endTimeParts.contains('pm');
+              final timeOnly = endTimeParts.replaceAll(RegExp(r'[ap]m'), '');
+
+              final timeParts = timeOnly.split(':');
+              if (timeParts.length != 2) return false;
+
+              int hour = int.parse(timeParts[0]);
+              final minute = int.parse(timeParts[1]);
+
+              // Convert to 24-hour format
+              if (isPM && hour != 12) {
+                hour += 12;
+              } else if (!isPM && hour == 12) {
+                hour = 0;
+              }
+
+              // Combine end date with end time
+              final eventEndDateTime = DateTime(
+                event.endDate.year,
+                event.endDate.month,
+                event.endDate.day,
+                hour,
+                minute,
+              );
+
+              // Return true if event hasn't ended yet
+              return now.isBefore(eventEndDateTime);
+            } catch (e) {
+              // If time parsing fails, exclude the event
+              print('Error parsing time for event ${event.id}: $e');
+              return false;
+            }
+          }).toList();
+
       // Get events for which user is registered by directly querying database
       List<Event> myRegisteredEvents = [];
       if (myRegistrations.isNotEmpty) {
@@ -79,12 +121,50 @@ class _AttendeeDashboardState extends State<AttendeeDashboard> {
         final eventIds =
             myRegistrations.map((reg) => reg.eventId).toSet().toList();
 
-        // Fetch events directly from database
+        // Fetch events directly from database and filter active ones
         for (String eventId in eventIds) {
           try {
             final event = await _databaseService.getEventById(eventId);
             if (event != null) {
-              myRegisteredEvents.add(event);
+              // Apply the same filtering logic to registered events
+              try {
+                final endTimeParts =
+                    event.endTime.replaceAll(' ', '').toLowerCase();
+                final isPM = endTimeParts.contains('pm');
+                final timeOnly = endTimeParts.replaceAll(RegExp(r'[ap]m'), '');
+
+                final timeParts = timeOnly.split(':');
+                if (timeParts.length == 2) {
+                  int hour = int.parse(timeParts[0]);
+                  final minute = int.parse(timeParts[1]);
+
+                  // Convert to 24-hour format
+                  if (isPM && hour != 12) {
+                    hour += 12;
+                  } else if (!isPM && hour == 12) {
+                    hour = 0;
+                  }
+
+                  // Combine end date with end time
+                  final eventEndDateTime = DateTime(
+                    event.endDate.year,
+                    event.endDate.month,
+                    event.endDate.day,
+                    hour,
+                    minute,
+                  );
+
+                  // Only add if event hasn't ended yet
+                  if (now.isBefore(eventEndDateTime)) {
+                    myRegisteredEvents.add(event);
+                  }
+                }
+              } catch (e) {
+                print(
+                  'Error parsing time for registered event ${event.id}: $e',
+                );
+                // If parsing fails, exclude the event for safety
+              }
             } else {
               debugPrint('Event not found for ID: $eventId');
             }
@@ -94,59 +174,91 @@ class _AttendeeDashboardState extends State<AttendeeDashboard> {
         }
       }
 
-      // Get latest events from all organizers (limit to 10)
-      final latestEvents = List<Event>.from(allEvents)
+      // Get latest active events from all organizers (limit to 10)
+      final latestEvents = List<Event>.from(activeEvents)
         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
-      // Calculate upcoming events correctly
-      final now = DateTime.now();
-
+      // Calculate upcoming events correctly using the same filtering logic
       final upcomingEventsList =
           myRegisteredEvents.where((event) {
-            // Parse start time
-            final startTimeParts = event.startTime.split(':');
-            final startHour = int.parse(startTimeParts[0]);
-            final startMinute = int.parse(startTimeParts[1].split(' ')[0]);
-            final isStartPM = event.startTime.contains('PM') && startHour != 12;
+            try {
+              // Parse start time
+              final startTimeParts =
+                  event.startTime.replaceAll(' ', '').toLowerCase();
+              final isStartPM = startTimeParts.contains('pm');
+              final startTimeOnly = startTimeParts.replaceAll(
+                RegExp(r'[ap]m'),
+                '',
+              );
 
-            // Parse end time
-            final endTimeParts = event.endTime.split(':');
-            final endHour = int.parse(endTimeParts[0]);
-            final endMinute = int.parse(endTimeParts[1].split(' ')[0]);
-            final isEndPM = event.endTime.contains('PM') && endHour != 12;
+              final startParts = startTimeOnly.split(':');
+              if (startParts.length != 2) return false;
 
-            // Create DateTime for event start and end
-            final eventStartDateTime = DateTime(
-              event.startDate.year,
-              event.startDate.month,
-              event.startDate.day,
-              isStartPM ? startHour + 12 : startHour,
-              startMinute,
-            );
+              int startHour = int.parse(startParts[0]);
+              final startMinute = int.parse(startParts[1]);
 
-            final eventEndDateTime = DateTime(
-              event.endDate.year,
-              event.endDate.month,
-              event.endDate.day,
-              isEndPM ? endHour + 12 : endHour,
-              endMinute,
-            );
+              // Convert to 24-hour format
+              if (isStartPM && startHour != 12) {
+                startHour += 12;
+              } else if (!isStartPM && startHour == 12) {
+                startHour = 0;
+              }
 
-            // An event is upcoming if:
-            // 1. It hasn't started yet (start time is in the future)
-            // 2. It hasn't ended yet (end time is in the future)
-            final isUpcoming =
-                eventStartDateTime.isAfter(now) &&
-                eventEndDateTime.isAfter(now);
+              // Parse end time
+              final endTimeParts =
+                  event.endTime.replaceAll(' ', '').toLowerCase();
+              final isEndPM = endTimeParts.contains('pm');
+              final endTimeOnly = endTimeParts.replaceAll(RegExp(r'[ap]m'), '');
 
-            return isUpcoming;
+              final endParts = endTimeOnly.split(':');
+              if (endParts.length != 2) return false;
+
+              int endHour = int.parse(endParts[0]);
+              final endMinute = int.parse(endParts[1]);
+
+              // Convert to 24-hour format
+              if (isEndPM && endHour != 12) {
+                endHour += 12;
+              } else if (!isEndPM && endHour == 12) {
+                endHour = 0;
+              }
+
+              // Create DateTime for event start and end
+              final eventStartDateTime = DateTime(
+                event.startDate.year,
+                event.startDate.month,
+                event.startDate.day,
+                startHour,
+                startMinute,
+              );
+
+              final eventEndDateTime = DateTime(
+                event.endDate.year,
+                event.endDate.month,
+                event.endDate.day,
+                endHour,
+                endMinute,
+              );
+
+              // An event is upcoming if:
+              // 1. It hasn't started yet (start time is in the future)
+              // 2. It hasn't ended yet (end time is in the future)
+              final isUpcoming =
+                  eventStartDateTime.isAfter(now) &&
+                  eventEndDateTime.isAfter(now);
+
+              return isUpcoming;
+            } catch (e) {
+              print('Error parsing time for upcoming event ${event.id}: $e');
+              return false;
+            }
           }).toList();
 
       // Create attendee stats from the fetched data
       final attendeeStats = AttendeeStats(
         registeredEvents: myRegistrations.length,
-        attendedEvents: myRegistrations.where((r) => r.hasAttended).length,
-        notAttendedEvents: myRegistrations.where((r) => !r.hasAttended).length,
+        attendedEvents: myRegistrations.where((r) => r.attended).length,
+        notAttendedEvents: myRegistrations.where((r) => !r.attended).length,
         upcomingEvents: upcomingEventsList.length,
       );
 
@@ -203,7 +315,7 @@ class _AttendeeDashboardState extends State<AttendeeDashboard> {
                             leading: const Icon(Icons.person),
                             title: Text(event.name),
                             subtitle: Text(
-                              'Attended: ${record.hasAttended ? "Yes" : "No"}',
+                              'Attended: ${record.attended ? "Yes" : "No"}',
                             ),
                           );
                         },

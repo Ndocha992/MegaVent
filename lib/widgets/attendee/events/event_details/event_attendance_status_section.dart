@@ -9,8 +9,8 @@ class EventAttendanceStatusSection extends StatelessWidget {
   const EventAttendanceStatusSection({super.key, this.registration});
 
   // Getters that use registration data when available
-  bool get hasAttended {
-    return registration?.hasAttended ?? false;
+  bool get attended {
+    return registration?.attended ?? false;
   }
 
   DateTime? get registrationDate {
@@ -101,14 +101,14 @@ class EventAttendanceStatusSection extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: _getStatusColor(hasAttended).withOpacity(0.1),
+                  color: _getStatusColor(attended).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
-                  hasAttended
+                  attended
                       ? Icons.check_circle_outline
                       : Icons.schedule_outlined,
-                  color: _getStatusColor(hasAttended),
+                  color: _getStatusColor(attended),
                   size: 20,
                 ),
               ),
@@ -120,14 +120,14 @@ class EventAttendanceStatusSection extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: _getStatusColor(hasAttended).withOpacity(0.1),
+              color: _getStatusColor(attended).withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
               children: [
                 Icon(
-                  hasAttended ? Icons.check_circle : Icons.schedule,
-                  color: _getStatusColor(hasAttended),
+                  attended ? Icons.check_circle : Icons.schedule,
+                  color: _getStatusColor(attended),
                   size: 24,
                 ),
                 const SizedBox(width: 12),
@@ -138,24 +138,24 @@ class EventAttendanceStatusSection extends StatelessWidget {
                       Text(
                         'Attendance Status',
                         style: TextStyle(
-                          color: _getStatusColor(hasAttended),
+                          color: _getStatusColor(attended),
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
                         ),
                       ),
                       Text(
-                        hasAttended ? 'Present' : 'Not Marked',
+                        attended ? 'Present' : 'Not Marked',
                         style: TextStyle(
-                          color: _getStatusColor(hasAttended).withOpacity(0.8),
+                          color: _getStatusColor(attended).withOpacity(0.8),
                           fontSize: 12,
                         ),
                       ),
                       Text(
-                        hasAttended
+                        attended
                             ? 'You have been marked as present for this event'
                             : 'Attendance will be marked during the event',
                         style: TextStyle(
-                          color: _getStatusColor(hasAttended).withOpacity(0.6),
+                          color: _getStatusColor(attended).withOpacity(0.6),
                           fontSize: 10,
                         ),
                       ),
@@ -176,7 +176,7 @@ class EventAttendanceStatusSection extends StatelessWidget {
     );
   }
 
-  Color _getStatusColor(bool hasAttended) {
-    return hasAttended ? AppConstants.successColor : AppConstants.warningColor;
+  Color _getStatusColor(bool attended) {
+    return attended ? AppConstants.successColor : AppConstants.warningColor;
   }
 }

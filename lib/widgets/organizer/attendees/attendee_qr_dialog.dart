@@ -28,8 +28,8 @@ class AttendeeQRDialog extends StatelessWidget {
   }
 
   // Getters that use registration data when available
-  bool get hasAttended {
-    return registration?.hasAttended ?? false;
+  bool get attended {
+    return registration?.attended ?? false;
   }
 
   DateTime get registeredAt {
@@ -38,7 +38,7 @@ class AttendeeQRDialog extends StatelessWidget {
 
   String get attendanceStatus {
     if (!attendee.isApproved) return 'Pending Approval';
-    return hasAttended ? 'Attended' : 'Registered';
+    return attended ? 'Attended' : 'Registered';
   }
 
   String get eventId {
@@ -87,7 +87,7 @@ class AttendeeQRDialog extends StatelessWidget {
     return CircleAvatar(
       radius: 20,
       backgroundColor:
-          hasAttended ? AppConstants.successColor : AppConstants.primaryColor,
+          attended ? AppConstants.successColor : AppConstants.primaryColor,
       child: Text(
         _getAttendeeInitials(attendee.fullName),
         style: const TextStyle(
@@ -272,7 +272,7 @@ class AttendeeQRDialog extends StatelessWidget {
                     'Status',
                     attendanceStatus,
                     statusColor:
-                        hasAttended ? AppConstants.successColor : Colors.orange,
+                        attended ? AppConstants.successColor : Colors.orange,
                   ),
                   _buildDetailRow(
                     'Approved',

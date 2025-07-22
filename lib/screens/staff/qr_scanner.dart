@@ -448,7 +448,7 @@ class _StaffQRScannerState extends State<StaffQRScanner>
       if (attendeeData == null) throw Exception('Attendee not found');
 
       // Check if already attended
-      if (attendeeData['hasAttended'] == true) {
+      if (attendeeData['attended'] == true) {
         final name = attendeeData['fullName'] ?? 'Attendee';
         setState(() => _scanResult = '$name already checked in!');
         return;
@@ -457,7 +457,6 @@ class _StaffQRScannerState extends State<StaffQRScanner>
       await _databaseService.markAttendanceByQRCode(
         qrCode,
         FirebaseAuth.instance.currentUser!.uid,
-        isOrganizer: true,
       );
 
       // Show success

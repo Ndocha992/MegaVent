@@ -44,8 +44,8 @@ class _AttendeesDetailsState extends State<AttendeesDetails> {
   }
 
   // Getters that use registration data when available (similar to QR dialog)
-  bool get hasAttended {
-    return currentRegistration?.hasAttended ?? false;
+  bool get attended {
+    return currentRegistration?.attended ?? false;
   }
 
   DateTime get registeredAt {
@@ -54,7 +54,7 @@ class _AttendeesDetailsState extends State<AttendeesDetails> {
 
   String get attendanceStatus {
     if (!currentAttendee.isApproved) return 'Pending Approval';
-    return hasAttended ? 'Attended' : 'Registered';
+    return attended ? 'Attended' : 'Registered';
   }
 
   @override

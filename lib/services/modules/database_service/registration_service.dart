@@ -198,11 +198,7 @@ class RegistrationService {
   }
 
   // Mark attendee as attended using QR code
-  Future<void> markAttendanceByQRCode(
-    String qrCodeData,
-    String userId, {
-    bool isOrganizer = false,
-  }) async {
+  Future<void> markAttendanceByQRCode(String qrCodeData, String userId) async {
     try {
       final user = _auth.currentUser;
       if (user == null) {
@@ -217,7 +213,6 @@ class RegistrationService {
 
       final userIdFromQR = qrData['userId']!;
       final eventId = qrData['eventId']!;
-      final organizerId = qrData['organizerId']!;
 
       // Verify QR code
       if (!Registration.verifyQRCode(qrCodeData, userIdFromQR, eventId)) {
@@ -251,11 +246,8 @@ class RegistrationService {
         throw Exception('Attendance already marked for this user');
       }
 
-      // Determine confirmedBy value
-      final confirmedBy =
-          isOrganizer
-              ? organizerId // Save organizer ID
-              : userId; // Save staff ID
+      // FIXED: Determine confirmedBy value using current user's ID
+      final confirmedBy = userId;
 
       // Use batch write for consistency
       final batch = _firestore.batch();
@@ -369,7 +361,6 @@ class RegistrationService {
   /**
    * ====== ORGANIZER REGISTRATION METHODS ======
    */
-
   // Get all registrations for current organizer's events (modified for staff)
   Future<List<Registration>> getAllRegistrations() async {
     try {
@@ -483,7 +474,7 @@ class RegistrationService {
             (attendeeData['updatedAt'] as Timestamp?)?.toDate() ??
             DateTime.now(),
         // Registration specific fields
-        'hasAttended': registrationData['attended'] ?? false,
+        'attended': registrationData['attended'] ?? false,
         'registeredAt':
             (registrationData['registeredAt'] as Timestamp?)?.toDate() ??
             DateTime.now(),

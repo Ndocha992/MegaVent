@@ -1,166 +1,42 @@
 import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:megavent/models/attendee.dart';
 import 'package:megavent/models/registration.dart';
 import 'package:megavent/utils/constants.dart';
 
-class StaffLatestAttendeesCard extends StatefulWidget {
+class StaffLatestAttendeesCard extends StatelessWidget {
   final List<Attendee> attendees;
   final List<Registration> registrations;
+  final Map<String, String> eventNames;
+  final Map<String, Registration> compositeIdToRegistrationMap;
+  final String currentStaffId;
 
   const StaffLatestAttendeesCard({
     super.key,
     required this.attendees,
     required this.registrations,
+    required this.eventNames,
+    required this.compositeIdToRegistrationMap,
+    required this.currentStaffId,
   });
-
-  @override
-  State<StaffLatestAttendeesCard> createState() =>
-      _StaffLatestAttendeesCardState();
-}
-
-class _StaffLatestAttendeesCardState extends State<StaffLatestAttendeesCard> {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  Map<String, String> eventNames = {};
-  bool isLoadingEvents = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _fetchEventNames();
-  }
-
-  Future<void> _fetchEventNames() async {
-    try {
-      final currentUserId = FirebaseAuth.instance.currentUser?.uid;
-      if (currentUserId == null) {
-        setState(() {
-          isLoadingEvents = false;
-        });
-        return;
-      }
-
-      // Get staff confirmed registrations first
-      final staffConfirmedRegistrations =
-          widget.registrations
-              .where(
-                (registration) =>
-                    registration.confirmedBy == currentUserId &&
-                    registration.hasAttended &&
-                    registration.attendedAt != null,
-              )
-              .toList();
-
-      if (staffConfirmedRegistrations.isEmpty) {
-        setState(() {
-          isLoadingEvents = false;
-        });
-        return;
-      }
-
-      // Get unique event IDs
-      final eventIds =
-          staffConfirmedRegistrations
-              .map((registration) => registration.eventId)
-              .toSet()
-              .toList();
-
-      // Fetch event names from Firestore
-      final Map<String, String> fetchedEventNames = {};
-
-      for (String eventId in eventIds) {
-        try {
-          final eventDoc =
-              await _firestore.collection('events').doc(eventId).get();
-          if (eventDoc.exists) {
-            final eventData = eventDoc.data() as Map<String, dynamic>;
-            fetchedEventNames[eventId] = eventData['name'] ?? 'Unknown Event';
-          } else {
-            fetchedEventNames[eventId] = 'Unknown Event';
-          }
-        } catch (e) {
-          debugPrint('Error fetching event $eventId: $e');
-          fetchedEventNames[eventId] = 'Unknown Event';
-        }
-      }
-
-      setState(() {
-        eventNames = fetchedEventNames;
-        isLoadingEvents = false;
-      });
-    } catch (e) {
-      debugPrint('Error fetching event names: $e');
-      setState(() {
-        isLoadingEvents = false;
-      });
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     final currentUserId = FirebaseAuth.instance.currentUser?.uid;
-
     if (currentUserId == null) {
       return _buildEmptyAttendeesState(context);
     }
 
-    // Filter registrations to only show those confirmed by this staff member
-    final staffConfirmedRegistrations =
-        widget.registrations
-            .where(
-              (registration) =>
-                  registration.confirmedBy == currentUserId &&
-                  registration.hasAttended &&
-                  registration.attendedAt != null,
-            )
+    // Filter attendees to show only those with confirmed registrations
+    final confirmedAttendees =
+        attendees
+            .where((a) {
+              final reg = compositeIdToRegistrationMap[a.id];
+              return reg != null && reg.confirmedBy == currentStaffId;
+            })
+            .take(5)
             .toList();
-
-    // Sort by attended date (most recent first)
-    staffConfirmedRegistrations.sort(
-      (a, b) => (b.attendedAt ?? DateTime.now()).compareTo(
-        a.attendedAt ?? DateTime.now(),
-      ),
-    );
-
-    // Get the attendees for these registrations with null safety
-    final staffScannedAttendees = <Map<String, dynamic>>[];
-    for (final registration in staffConfirmedRegistrations.take(5)) {
-      try {
-        // Find the attendee by userId (not composite ID)
-        final attendee = widget.attendees.cast<Attendee?>().firstWhere(
-          (attendee) => attendee?.id == registration.userId,
-          orElse: () => null,
-        );
-
-        if (attendee != null) {
-          staffScannedAttendees.add({
-            'attendee': attendee,
-            'registration': registration,
-          });
-        } else {
-          // Create a placeholder attendee if not found
-          staffScannedAttendees.add({
-            'attendee': Attendee(
-              id: registration.userId,
-              fullName: 'Unknown Attendee',
-              email: 'unknown@example.com',
-              phone: 'N/A',
-              profileImage: null,
-              isApproved: true,
-              createdAt: registration.registeredAt,
-              updatedAt: registration.registeredAt,
-            ),
-            'registration': registration,
-          });
-        }
-      } catch (e) {
-        // Log the error but continue processing other registrations
-        debugPrint('Error processing registration ${registration.userId}: $e');
-        continue;
-      }
-    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -169,7 +45,7 @@ class _StaffLatestAttendeesCardState extends State<StaffLatestAttendeesCard> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text('Latest Scanned Attendees', style: AppConstants.headlineSmall),
-            if (staffScannedAttendees.isNotEmpty)
+            if (confirmedAttendees.isNotEmpty)
               Text(
                 'Scanned by you',
                 style: AppConstants.bodySmall.copyWith(
@@ -179,23 +55,16 @@ class _StaffLatestAttendeesCardState extends State<StaffLatestAttendeesCard> {
           ],
         ),
         const SizedBox(height: 16),
-        if (isLoadingEvents)
-          const Center(
-            child: Padding(
-              padding: EdgeInsets.all(32.0),
-              child: CircularProgressIndicator(),
-            ),
-          )
-        else if (staffScannedAttendees.isEmpty)
+        if (confirmedAttendees.isEmpty)
           _buildEmptyAttendeesState(context)
         else
           Column(
             children:
-                staffScannedAttendees.map((data) {
-                  final attendee = data['attendee'] as Attendee;
-                  final registration = data['registration'] as Registration;
+                confirmedAttendees.map((attendee) {
+                  final registration =
+                      compositeIdToRegistrationMap[attendee.id];
                   final eventName =
-                      eventNames[registration.eventId] ?? 'Loading...';
+                      eventNames[registration?.eventId] ?? 'Unknown Event';
 
                   return LatestAttendeeCard(
                     attendee: attendee,
@@ -274,8 +143,8 @@ class LatestAttendeeCard extends StatelessWidget {
   });
 
   // Getters that use registration data when available
-  bool get hasAttended {
-    return registration?.hasAttended ?? false;
+  bool get attended {
+    return registration?.attended ?? false;
   }
 
   DateTime get registeredAt {
@@ -288,7 +157,7 @@ class LatestAttendeeCard extends StatelessWidget {
 
   String get attendanceStatus {
     if (!attendee.isApproved) return 'Pending Approval';
-    return hasAttended ? 'Attended' : 'Registered';
+    return attended ? 'Attended' : 'Registered';
   }
 
   bool _isBase64(String? value) {
@@ -339,7 +208,7 @@ class LatestAttendeeCard extends StatelessWidget {
     return CircleAvatar(
       radius: 24,
       backgroundColor:
-          hasAttended ? AppConstants.successColor : AppConstants.primaryColor,
+          attended ? AppConstants.successColor : AppConstants.primaryColor,
       child: Text(
         _getInitials(attendee.fullName),
         style: const TextStyle(
@@ -414,7 +283,7 @@ class LatestAttendeeCard extends StatelessWidget {
                 Stack(
                   children: [
                     _buildAttendeeAvatar(),
-                    if (confirmedBy && hasAttended)
+                    if (confirmedBy && attended)
                       Positioned(
                         bottom: 0,
                         right: 0,
@@ -476,16 +345,26 @@ class LatestAttendeeCard extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        attendee.email,
-                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        attendee.phone,
-                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                      ),
-                      const SizedBox(height: 2),
+                      if (attendee.email.isNotEmpty) ...[
+                        Text(
+                          attendee.email,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                      ],
+                      if (attendee.phone.isNotEmpty) ...[
+                        Text(
+                          attendee.phone,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                      ],
                       Text(
                         eventName,
                         style: TextStyle(
@@ -498,23 +377,21 @@ class LatestAttendeeCard extends StatelessWidget {
                       Row(
                         children: [
                           Icon(
-                            hasAttended
-                                ? Icons.check_circle
-                                : Icons.access_time,
+                            attended ? Icons.check_circle : Icons.access_time,
                             size: 16,
                             color:
-                                hasAttended
+                                attended
                                     ? AppConstants.successColor
                                     : Colors.orange,
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            hasAttended ? 'Attended' : 'Not Attended',
+                            attended ? 'Attended' : 'Not Attended',
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
                               color:
-                                  hasAttended
+                                  attended
                                       ? AppConstants.successColor
                                       : Colors.orange,
                             ),

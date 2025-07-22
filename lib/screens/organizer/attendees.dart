@@ -169,7 +169,7 @@ class _AttendeesState extends State<Attendees> with TickerProviderStateMixin {
             userId: userId,
             eventId: eventId,
             registeredAt: DateTime.now(),
-            hasAttended: false,
+            attended: false,
             qrCode: '',
             confirmedBy: '',
           ),
