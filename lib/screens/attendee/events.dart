@@ -41,7 +41,7 @@ class _AttendeeAllEventsState extends State<AttendeeAllEvents>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _databaseService = Provider.of<DatabaseService>(context, listen: false);
     _initializeData();
   }
@@ -222,19 +222,31 @@ class _AttendeeAllEventsState extends State<AttendeeAllEvents>
       case 1: // Upcoming
         events = events.where((event) => event.startDate.isAfter(now)).toList();
         break;
-      case 2: // Past
-        events =
-            events.where((event) => event.startDate.isBefore(now)).toList();
+      case 2: // Ongoing
+        events = events.where((event) => _isEventOngoing(event)).toList();
+        break;
+      case 3: // Past
+        events = events.where((event) => event.endDate.isBefore(now)).toList();
         break;
     }
 
     // Sort events by start date
     events.sort((a, b) {
-      if (a.startDate.isAfter(now) && b.startDate.isAfter(now)) {
+      bool aIsOngoing = _isEventOngoing(a);
+      bool bIsOngoing = _isEventOngoing(b);
+      bool aIsUpcoming = a.startDate.isAfter(now);
+      bool bIsUpcoming = b.startDate.isAfter(now);
+
+      // Ongoing events first
+      if (aIsOngoing && !bIsOngoing) return -1;
+      if (!aIsOngoing && bIsOngoing) return 1;
+
+      // Then upcoming events
+      if (aIsUpcoming && bIsUpcoming) {
         return a.startDate.compareTo(b.startDate);
       } else if (a.startDate.isBefore(now) && b.startDate.isBefore(now)) {
         return b.startDate.compareTo(a.startDate);
-      } else if (a.startDate.isAfter(now)) {
+      } else if (aIsUpcoming) {
         return -1;
       } else {
         return 1;
@@ -242,6 +254,11 @@ class _AttendeeAllEventsState extends State<AttendeeAllEvents>
     });
 
     return events;
+  }
+
+  bool _isEventOngoing(Event event) {
+    DateTime now = DateTime.now();
+    return event.startDate.isBefore(now) && event.endDate.isAfter(now);
   }
 
   bool _isSameDay(DateTime date1, DateTime date2) {
@@ -419,9 +436,11 @@ class _AttendeeAllEventsState extends State<AttendeeAllEvents>
         unselectedLabelColor: AppConstants.textSecondaryColor,
         indicatorColor: AppConstants.primaryColor,
         indicatorWeight: 3,
+        isScrollable: true,
         tabs: const [
-          Tab(text: 'All Events'),
+          Tab(text: 'All'),
           Tab(text: 'Upcoming'),
+          Tab(text: 'Ongoing'),
           Tab(text: 'Past'),
         ],
       ),
@@ -680,6 +699,30 @@ class _AttendeeAllEventsState extends State<AttendeeAllEvents>
   }
 
   Widget _buildEmptyState() {
+    String emptyTitle = 'No events found';
+    String emptyMessage = 'Try adjusting your search or filter criteria';
+
+    if (!(_searchQuery.isNotEmpty || _hasActiveFilters())) {
+      switch (_tabController.index) {
+        case 0:
+          emptyTitle = 'No events found';
+          emptyMessage = 'No events are available at the moment';
+          break;
+        case 1:
+          emptyTitle = 'No upcoming events';
+          emptyMessage = 'All your events have started or ended';
+          break;
+        case 2:
+          emptyTitle = 'No ongoing events';
+          emptyMessage = 'No events are currently in progress';
+          break;
+        case 3:
+          emptyTitle = 'No past events';
+          emptyMessage = 'No events have ended yet';
+          break;
+      }
+    }
+
     return Container(
       color: AppConstants.backgroundColor,
       child: Center(
@@ -696,14 +739,14 @@ class _AttendeeAllEventsState extends State<AttendeeAllEvents>
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  Icons.event_busy,
+                  _getEmptyStateIcon(),
                   size: 60,
                   color: AppConstants.primaryColor,
                 ),
               ),
               const SizedBox(height: 24),
               Text(
-                'No events found',
+                emptyTitle,
                 style: AppConstants.titleLarge.copyWith(
                   color: AppConstants.textSecondaryColor,
                 ),
@@ -711,9 +754,7 @@ class _AttendeeAllEventsState extends State<AttendeeAllEvents>
               ),
               const SizedBox(height: 8),
               Text(
-                _searchQuery.isNotEmpty || _hasActiveFilters()
-                    ? 'Try adjusting your search or filter criteria'
-                    : 'No events are available at the moment',
+                emptyMessage,
                 textAlign: TextAlign.center,
                 style: AppConstants.bodyMedium.copyWith(
                   color: AppConstants.textSecondaryColor,
@@ -745,6 +786,21 @@ class _AttendeeAllEventsState extends State<AttendeeAllEvents>
         ),
       ),
     );
+  }
+
+  IconData _getEmptyStateIcon() {
+    switch (_tabController.index) {
+      case 0:
+        return Icons.event_note;
+      case 1:
+        return Icons.event_available;
+      case 2:
+        return Icons.play_circle_outline;
+      case 3:
+        return Icons.event_busy;
+      default:
+        return Icons.event_note;
+    }
   }
 
   void _showFilterDialog() {

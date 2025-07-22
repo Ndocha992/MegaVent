@@ -39,7 +39,10 @@ class _StaffEventsState extends State<StaffEvents>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(
+      length: 4,
+      vsync: this,
+    ); // Changed from 3 to 4
     _databaseService = Provider.of<DatabaseService>(context, listen: false);
     _loadStaffOrganizerId();
   }
@@ -125,6 +128,12 @@ class _StaffEventsState extends State<StaffEvents>
     await _loadEvents();
   }
 
+  // Helper method to check if event is ongoing
+  bool _isEventOngoing(Event event) {
+    DateTime now = DateTime.now();
+    return event.startDate.isBefore(now) && event.endDate.isAfter(now);
+  }
+
   List<Event> get _filteredEvents {
     List<Event> events = List.from(_events);
 
@@ -161,9 +170,11 @@ class _StaffEventsState extends State<StaffEvents>
       case 1: // Upcoming
         events = events.where((event) => event.startDate.isAfter(now)).toList();
         break;
-      case 2: // Past
-        events =
-            events.where((event) => event.startDate.isBefore(now)).toList();
+      case 2: // Ongoing
+        events = events.where((event) => _isEventOngoing(event)).toList();
+        break;
+      case 3: // Past
+        events = events.where((event) => event.endDate.isBefore(now)).toList();
         break;
     }
 
@@ -320,17 +331,18 @@ class _StaffEventsState extends State<StaffEvents>
         _events
             .where((event) => event.startDate.isAfter(DateTime.now()))
             .length;
+    final ongoingCount =
+        _events.where((event) => _isEventOngoing(event)).length;
     final pastCount =
-        _events
-            .where((event) => event.startDate.isBefore(DateTime.now()))
-            .length;
+        _events.where((event) => event.endDate.isBefore(DateTime.now())).length;
 
     return Row(
       children: [
-        _buildStatCard('Upcoming', upcomingCount, AppConstants.successColor),
-        const SizedBox(width: 12),
+        _buildStatCard('Upcoming', upcomingCount, AppConstants.primaryColor),
+        const SizedBox(width: 8),
+        _buildStatCard('Ongoing', ongoingCount, AppConstants.successColor),
+        const SizedBox(width: 8),
         _buildStatCard('Past', pastCount, AppConstants.textSecondaryColor),
-        const SizedBox(width: 12),
       ],
     );
   }
@@ -379,9 +391,11 @@ class _StaffEventsState extends State<StaffEvents>
         unselectedLabelColor: AppConstants.textSecondaryColor,
         indicatorColor: AppConstants.primaryColor,
         indicatorWeight: 3,
+        isScrollable: true,
         tabs: const [
-          Tab(text: 'All Events'),
+          Tab(text: 'All'),
           Tab(text: 'Upcoming'),
+          Tab(text: 'Ongoing'),
           Tab(text: 'Past'),
         ],
       ),
