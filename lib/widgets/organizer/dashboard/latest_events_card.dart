@@ -41,14 +41,59 @@ class _LatestEventsCardState extends State<LatestEventsCard> {
       _databaseService.streamEventsByOrganizer().listen(
         (events) {
           if (mounted) {
-            // Sort events by creation date (most recent first) and limit
-            final sortedEvents = List<Event>.from(events);
-            sortedEvents.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+            // Filter events that haven't ended yet
+            final now = DateTime.now();
+            final activeEvents =
+                events.where((event) {
+                  try {
+                    // Parse the end time (e.g., "10:00 PM")
+                    final endTimeParts =
+                        event.endTime.replaceAll(' ', '').toLowerCase();
+                    final isPM = endTimeParts.contains('pm');
+                    final timeOnly = endTimeParts.replaceAll(
+                      RegExp(r'[ap]m'),
+                      '',
+                    );
 
+                    final timeParts = timeOnly.split(':');
+                    if (timeParts.length != 2) return false;
+
+                    int hour = int.parse(timeParts[0]);
+                    final minute = int.parse(timeParts[1]);
+
+                    // Convert to 24-hour format
+                    if (isPM && hour != 12) {
+                      hour += 12;
+                    } else if (!isPM && hour == 12) {
+                      hour = 0;
+                    }
+
+                    // Combine end date with end time
+                    final eventEndDateTime = DateTime(
+                      event.endDate.year,
+                      event.endDate.month,
+                      event.endDate.day,
+                      hour,
+                      minute,
+                    );
+
+                    // Return true if event hasn't ended yet
+                    return now.isBefore(eventEndDateTime);
+                  } catch (e) {
+                    // If time parsing fails, exclude the event
+                    print('Error parsing time for event ${event.id}: $e');
+                    return false;
+                  }
+                }).toList();
+
+            // Sort events by creation date (most recent first)
+            activeEvents.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+            // Limit events if specified
             final limitedEvents =
                 widget.limit != null
-                    ? sortedEvents.take(widget.limit!).toList()
-                    : sortedEvents;
+                    ? activeEvents.take(widget.limit!).toList()
+                    : activeEvents;
 
             setState(() {
               _events = limitedEvents;

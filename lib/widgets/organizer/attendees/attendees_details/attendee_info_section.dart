@@ -15,13 +15,13 @@ class AttendeeInfoSectionWidget extends StatelessWidget {
   });
 
   // Getters that use registration data when available
-  bool get hasAttended {
-    return registration?.hasAttended ?? false;
+  bool get attended {
+    return registration?.attended ?? false;
   }
 
   String get attendanceStatus {
     if (!attendee.isApproved) return 'Pending Approval';
-    return hasAttended ? 'Attended' : 'Registered';
+    return attended ? 'Attended' : 'Registered';
   }
 
   @override

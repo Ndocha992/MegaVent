@@ -36,7 +36,10 @@ class _EventsState extends State<Events> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(
+      length: 4,
+      vsync: this,
+    ); // Changed from 3 to 4
     _databaseService = Provider.of<DatabaseService>(context, listen: false);
     _initializeData();
   }
@@ -134,9 +137,18 @@ class _EventsState extends State<Events> with TickerProviderStateMixin {
       case 1: // Upcoming
         events = events.where((event) => event.startDate.isAfter(now)).toList();
         break;
-      case 2: // Past
+      case 2: // Ongoing
         events =
-            events.where((event) => event.startDate.isBefore(now)).toList();
+            events
+                .where(
+                  (event) =>
+                      event.startDate.isBefore(now) &&
+                      event.endDate.isAfter(now),
+                )
+                .toList();
+        break;
+      case 3: // Past
+        events = events.where((event) => event.endDate.isBefore(now)).toList();
         break;
     }
 
@@ -311,21 +323,29 @@ class _EventsState extends State<Events> with TickerProviderStateMixin {
   }
 
   Widget _buildStatsRow() {
+    DateTime now = DateTime.now();
+
     final upcomingCount =
+        _events.where((event) => event.startDate.isAfter(now)).length;
+
+    final ongoingCount =
         _events
-            .where((event) => event.startDate.isAfter(DateTime.now()))
+            .where(
+              (event) =>
+                  event.startDate.isBefore(now) && event.endDate.isAfter(now),
+            )
             .length;
+
     final pastCount =
-        _events
-            .where((event) => event.startDate.isBefore(DateTime.now()))
-            .length;
+        _events.where((event) => event.endDate.isBefore(now)).length;
 
     return Row(
       children: [
         _buildStatCard('Upcoming', upcomingCount, AppConstants.successColor),
         const SizedBox(width: 12),
-        _buildStatCard('Past', pastCount, AppConstants.textSecondaryColor),
+        _buildStatCard('Ongoing', ongoingCount, AppConstants.primaryColor),
         const SizedBox(width: 12),
+        _buildStatCard('Past', pastCount, AppConstants.textSecondaryColor),
       ],
     );
   }
@@ -374,9 +394,11 @@ class _EventsState extends State<Events> with TickerProviderStateMixin {
         unselectedLabelColor: AppConstants.textSecondaryColor,
         indicatorColor: AppConstants.primaryColor,
         indicatorWeight: 3,
+        isScrollable: true,
         tabs: const [
-          Tab(text: 'All Events'),
+          Tab(text: 'All'),
           Tab(text: 'Upcoming'),
+          Tab(text: 'Ongoing'),
           Tab(text: 'Past'),
         ],
       ),

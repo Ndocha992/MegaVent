@@ -7,7 +7,7 @@ class Registration {
   final String userId;
   final String eventId;
   final DateTime registeredAt;
-  final bool hasAttended;
+  final bool attended;
   final DateTime? attendedAt;
   final String qrCode;
   final String? confirmedBy; // Made nullable
@@ -17,7 +17,7 @@ class Registration {
     required this.userId,
     required this.eventId,
     required this.registeredAt,
-    this.hasAttended = false,
+    this.attended = false,
     this.attendedAt,
     required this.qrCode,
     this.confirmedBy, // Made optional
@@ -33,7 +33,7 @@ class Registration {
       eventId: data['eventId'] ?? '',
       registeredAt:
           (data['registeredAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      hasAttended: data['attended'] ?? false,
+      attended: data['attended'] ?? false,
       attendedAt: (data['attendedAt'] as Timestamp?)?.toDate(),
       qrCode: data['qrCode'] ?? '',
       confirmedBy: data['confirmedBy'], // This can be null
@@ -46,7 +46,7 @@ class Registration {
       'userId': userId,
       'eventId': eventId,
       'registeredAt': Timestamp.fromDate(registeredAt),
-      'attended': hasAttended,
+      'attended': attended,
       'attendedAt': attendedAt != null ? Timestamp.fromDate(attendedAt!) : null,
       'qrCode': qrCode,
       'confirmedBy': confirmedBy, // This can be null
@@ -136,7 +136,7 @@ class Registration {
       userId: userId ?? this.userId,
       eventId: eventId ?? this.eventId,
       registeredAt: registeredAt ?? this.registeredAt,
-      hasAttended: attended ?? hasAttended,
+      attended: attended ?? this.attended,
       attendedAt: attendedAt ?? this.attendedAt,
       qrCode: qrCode ?? this.qrCode,
       confirmedBy: confirmedBy ?? this.confirmedBy,
@@ -145,7 +145,7 @@ class Registration {
 
   @override
   String toString() {
-    return 'Registration(id: $id, userId: $userId, eventId: $eventId, registeredAt: $registeredAt, attended: $hasAttended, attendedAt: $attendedAt, qrCode: $qrCode, confirmedBy: $confirmedBy)';
+    return 'Registration(id: $id, userId: $userId, eventId: $eventId, registeredAt: $registeredAt, attended: $attended, attendedAt: $attendedAt, qrCode: $qrCode, confirmedBy: $confirmedBy)';
   }
 
   @override
@@ -157,7 +157,7 @@ class Registration {
         other.userId == userId &&
         other.eventId == eventId &&
         other.registeredAt == registeredAt &&
-        other.hasAttended == hasAttended &&
+        other.attended == attended &&
         other.attendedAt == attendedAt &&
         other.qrCode == qrCode &&
         other.confirmedBy == confirmedBy;
@@ -169,7 +169,7 @@ class Registration {
         userId.hashCode ^
         eventId.hashCode ^
         registeredAt.hashCode ^
-        hasAttended.hashCode ^
+        attended.hashCode ^
         attendedAt.hashCode ^
         qrCode.hashCode ^
         confirmedBy.hashCode;

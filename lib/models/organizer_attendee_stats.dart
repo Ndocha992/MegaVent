@@ -46,7 +46,7 @@ class OrganizerAttendeeStats {
     Map<String, String> eventIdToNameMap, // Map of eventId to eventName
   ) {
     final total = registrations.length;
-    final attended = registrations.where((r) => r.hasAttended).length;
+    final attended = registrations.where((r) => r.attended).length;
     final registered = total;
     final noShow = total - attended;
     final attendanceRate = total > 0 ? (attended / total) * 100 : 0.0;

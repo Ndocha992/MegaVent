@@ -100,8 +100,8 @@ class AttendeeCard extends StatelessWidget {
     }
   }
 
-  bool get hasAttended {
-    return registration?.hasAttended ?? false;
+  bool get attended {
+    return registration?.attended ?? false;
   }
 
   DateTime get registeredAt {
@@ -146,7 +146,7 @@ class AttendeeCard extends StatelessWidget {
     return CircleAvatar(
       radius: 24,
       backgroundColor:
-          hasAttended ? AppConstants.successColor : AppConstants.primaryColor,
+          attended ? AppConstants.successColor : AppConstants.primaryColor,
       child: Text(
         _getInitials(attendee.fullName),
         style: const TextStyle(
@@ -258,23 +258,21 @@ class AttendeeCard extends StatelessWidget {
                       Row(
                         children: [
                           Icon(
-                            hasAttended
-                                ? Icons.check_circle
-                                : Icons.access_time,
+                            attended ? Icons.check_circle : Icons.access_time,
                             size: 16,
                             color:
-                                hasAttended
+                                attended
                                     ? AppConstants.successColor
                                     : Colors.orange,
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            hasAttended ? 'Attended' : 'Not Attended',
+                            attended ? 'Attended' : 'Not Attended',
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
                               color:
-                                  hasAttended
+                                  attended
                                       ? AppConstants.successColor
                                       : Colors.orange,
                             ),

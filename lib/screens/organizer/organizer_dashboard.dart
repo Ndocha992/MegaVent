@@ -593,7 +593,7 @@ class _OrganizerDashboardState extends State<OrganizerDashboard> {
               userId: attendee.id.split('_').first,
               eventId: attendee.id.split('_').last,
               registeredAt: attendee.createdAt,
-              hasAttended: false,
+              attended: false,
               qrCode: '',
               confirmedBy: '',
             ),

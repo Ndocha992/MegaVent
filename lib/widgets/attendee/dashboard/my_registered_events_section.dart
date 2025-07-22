@@ -27,27 +27,26 @@ class MyRegisteredEventsSection extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text('My Registered Events', style: AppConstants.headlineSmall),
-            TextButton(
-              onPressed: onViewAll,
-              child: const Text('View All'),
-            ),
+            TextButton(onPressed: onViewAll, child: const Text('View All')),
           ],
         ),
         const SizedBox(height: 16),
         myRegistrations.isEmpty
-            ? _buildEmptyEventsState('You haven\'t registered for any events yet')
+            ? _buildEmptyEventsState(
+              'You haven\'t registered for any events yet',
+            )
             : ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: myRegistrations.take(3).length,
-                separatorBuilder: (context, index) => const SizedBox(height: 12),
-                itemBuilder: (context, index) {
-                  final registration = myRegistrations[index];
-                  final event = eventCache[registration.eventId];
-                  if (event == null) return const SizedBox.shrink();
-                  return _buildMyEventTile(event, registration);
-                },
-              ),
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: myRegistrations.take(3).length,
+              separatorBuilder: (context, index) => const SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                final registration = myRegistrations[index];
+                final event = eventCache[registration.eventId];
+                if (event == null) return const SizedBox.shrink();
+                return _buildMyEventTile(event, registration);
+              },
+            ),
       ],
     );
   }
@@ -64,7 +63,7 @@ class MyRegisteredEventsSection extends StatelessWidget {
     bool hasEnded = false;
     bool isOngoing = false;
 
-    if (registration.hasAttended) {
+    if (registration.attended) {
       statusText = 'Attended';
       statusColor = AppConstants.successColor;
     } else if (eventEnd.isBefore(now)) {
@@ -96,9 +95,10 @@ class MyRegisteredEventsSection extends StatelessWidget {
               height: 60,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: isUpcoming || isOngoing
-                      ? AppConstants.primaryGradient
-                      : hasEnded
+                  colors:
+                      isUpcoming || isOngoing
+                          ? AppConstants.primaryGradient
+                          : hasEnded
                           ? [Colors.grey.shade400, Colors.grey.shade600]
                           : AppConstants.primaryGradient,
                 ),
@@ -206,8 +206,18 @@ class MyRegisteredEventsSection extends StatelessWidget {
 
   String _getMonthName(int month) {
     const months = [
-      'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
-      'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC',
+      'JAN',
+      'FEB',
+      'MAR',
+      'APR',
+      'MAY',
+      'JUN',
+      'JUL',
+      'AUG',
+      'SEP',
+      'OCT',
+      'NOV',
+      'DEC',
     ];
     return months[month - 1];
   }

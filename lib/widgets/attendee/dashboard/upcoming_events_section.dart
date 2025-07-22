@@ -79,7 +79,7 @@ class UpcomingEventsSection extends StatelessWidget {
     bool hasEnded = false;
     bool isOngoing = false;
 
-    if (registration.hasAttended) {
+    if (registration.attended) {
       statusText = 'Attended';
       statusColor = AppConstants.successColor;
     } else if (eventEnd.isBefore(now)) {

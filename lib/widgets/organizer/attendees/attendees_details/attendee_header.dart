@@ -47,8 +47,8 @@ class _AttendeeHeaderWidgetState extends State<AttendeeHeaderWidget> {
   }
 
   // Getters that use registration data when available
-  bool get hasAttended {
-    return widget.registration?.hasAttended ?? false;
+  bool get attended {
+    return widget.registration?.attended ?? false;
   }
 
   bool _isBase64(String? value) {
@@ -294,7 +294,7 @@ class _AttendeeHeaderWidgetState extends State<AttendeeHeaderWidget> {
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: _getStatusColor(hasAttended),
+                        color: _getStatusColor(attended),
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
@@ -305,7 +305,7 @@ class _AttendeeHeaderWidgetState extends State<AttendeeHeaderWidget> {
                         ],
                       ),
                       child: Text(
-                        hasAttended ? 'ATTENDED' : 'REGISTERED',
+                        attended ? 'ATTENDED' : 'REGISTERED',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 12,
@@ -334,7 +334,7 @@ class _AttendeeHeaderWidgetState extends State<AttendeeHeaderWidget> {
     }
   }
 
-  Color _getStatusColor(bool hasAttended) {
-    return hasAttended ? AppConstants.successColor : AppConstants.warningColor;
+  Color _getStatusColor(bool attended) {
+    return attended ? AppConstants.successColor : AppConstants.warningColor;
   }
 }

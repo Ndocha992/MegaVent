@@ -93,7 +93,7 @@ class _AttendeesBottomSheetState extends State<AttendeesBottomSheet> {
   }
 
   int get attendedCount {
-    return _allRegistrations.where((reg) => reg.hasAttended).length;
+    return _allRegistrations.where((reg) => reg.attended).length;
   }
 
   int get noShowCount {
@@ -339,7 +339,7 @@ class AttendeeCard extends StatelessWidget {
     return CircleAvatar(
       radius: 24,
       backgroundColor:
-          hasAttended ? AppConstants.successColor : AppConstants.primaryColor,
+          attended ? AppConstants.successColor : AppConstants.primaryColor,
       child: Text(
         _getInitials(attendee.fullName),
         style: const TextStyle(
@@ -364,15 +364,15 @@ class AttendeeCard extends StatelessWidget {
   // FIXED: Proper getters that use registration data when available
   String get attendanceStatus {
     if (!attendee.isApproved) return 'Pending Approval';
-    return hasAttended ? 'Attended' : 'Registered';
+    return attended ? 'Attended' : 'Registered';
   }
 
   DateTime get registeredAt {
     return registration?.registeredAt ?? attendee.createdAt;
   }
 
-  bool get hasAttended {
-    return registration?.hasAttended ?? false;
+  bool get attended {
+    return registration?.attended ?? false;
   }
 
   String get qrCode {
@@ -460,10 +460,10 @@ class AttendeeCard extends StatelessWidget {
                 Row(
                   children: [
                     Icon(
-                      hasAttended ? Icons.check_circle : Icons.access_time,
+                      attended ? Icons.check_circle : Icons.access_time,
                       size: 16,
                       color:
-                          hasAttended
+                          attended
                               ? AppConstants.successColor
                               : (!attendee.isApproved
                                   ? AppConstants.errorColor
@@ -476,7 +476,7 @@ class AttendeeCard extends StatelessWidget {
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                         color:
-                            hasAttended
+                            attended
                                 ? AppConstants.successColor
                                 : (!attendee.isApproved
                                     ? AppConstants.errorColor

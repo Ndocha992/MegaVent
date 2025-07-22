@@ -14,8 +14,8 @@ class AttendanceStatusSectionWidget extends StatelessWidget {
   });
 
   // Getters that use registration data when available
-  bool get hasAttended {
-    return registration?.hasAttended ?? false;
+  bool get attended {
+    return registration?.attended ?? false;
   }
 
   @override
@@ -42,14 +42,14 @@ class AttendanceStatusSectionWidget extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: _getStatusColor(hasAttended).withOpacity(0.1),
+                  color: _getStatusColor(attended).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
-                  hasAttended
+                  attended
                       ? Icons.check_circle_outline
                       : Icons.schedule_outlined,
-                  color: _getStatusColor(hasAttended),
+                  color: _getStatusColor(attended),
                   size: 20,
                 ),
               ),
@@ -70,29 +70,29 @@ class AttendanceStatusSectionWidget extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: _getStatusColor(hasAttended).withOpacity(0.1),
+                    color: _getStatusColor(attended).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Column(
                     children: [
                       Icon(
-                        hasAttended ? Icons.check_circle : Icons.schedule,
-                        color: _getStatusColor(hasAttended),
+                        attended ? Icons.check_circle : Icons.schedule,
+                        color: _getStatusColor(attended),
                         size: 32,
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        hasAttended ? 'Attended' : 'Not Attended',
+                        attended ? 'Attended' : 'Not Attended',
                         style: TextStyle(
-                          color: _getStatusColor(hasAttended),
+                          color: _getStatusColor(attended),
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
                         ),
                       ),
                       Text(
-                        hasAttended ? 'Event completed' : 'Awaiting attendance',
+                        attended ? 'Event completed' : 'Awaiting attendance',
                         style: TextStyle(
-                          color: _getStatusColor(hasAttended).withOpacity(0.7),
+                          color: _getStatusColor(attended).withOpacity(0.7),
                           fontSize: 12,
                         ),
                       ),
@@ -107,7 +107,7 @@ class AttendanceStatusSectionWidget extends StatelessWidget {
     );
   }
 
-  Color _getStatusColor(bool hasAttended) {
-    return hasAttended ? AppConstants.successColor : AppConstants.warningColor;
+  Color _getStatusColor(bool attended) {
+    return attended ? AppConstants.successColor : AppConstants.warningColor;
   }
 }

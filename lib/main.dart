@@ -5,6 +5,7 @@ import 'package:megavent/screens/admin/organizer.dart';
 import 'package:megavent/screens/admin/profile.dart';
 import 'package:megavent/screens/attendee/attendee_dashboard.dart';
 import 'package:megavent/screens/attendee/events.dart';
+import 'package:megavent/screens/attendee/events_details.dart';
 import 'package:megavent/screens/attendee/my_events.dart';
 import 'package:megavent/screens/attendee/profile.dart';
 import 'package:megavent/screens/authentication/forgot_password_screen.dart';
@@ -151,6 +152,8 @@ class _MyAppState extends State<MyApp> {
         // Attendee routes
         '/attendee-dashboard': (context) => const AttendeeDashboard(),
         '/attendee-all-events': (context) => const AttendeeAllEvents(),
+        '/attendee-all-events-details':
+            (context) => const AttendeeEventsDetails(),
         '/attendee-my-events': (context) => const AttendeeMyEvents(),
         '/attendee-profile': (context) => const AttendeeProfile(),
         // Staff routes

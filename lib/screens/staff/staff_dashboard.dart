@@ -35,8 +35,8 @@ class _StaffDashboardState extends State<StaffDashboard> {
   List<Event> _events = [];
   List<Attendee> _attendees = [];
   List<Registration> _registrations = [];
+  List<Registration> _staffConfirmedRegistrations = [];
   Map<String, String> _eventIdToNameMap = {};
-  Map<String, String> _attendeeIdToNameMap = {}; // Add this line
   StaffDashboardStats _dashboardStats = StaffDashboardStats(
     totalEvents: 0,
     totalConfirmed: 0,
@@ -45,6 +45,9 @@ class _StaffDashboardState extends State<StaffDashboard> {
   bool _isLoading = true;
   String? _error;
   String? _organizerId;
+
+  Map<String, Registration> _compositeIdToRegistrationMap = {};
+  Map<String, Attendee> _compositeIdToAttendeeMap = {};
 
   @override
   void initState() {
@@ -58,6 +61,8 @@ class _StaffDashboardState extends State<StaffDashboard> {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
+        print('🔍 STAFF DEBUG: Loading organizer ID for staff: ${user.uid}');
+
         final staffDoc =
             await FirebaseFirestore.instance
                 .collection('staff')
@@ -65,13 +70,27 @@ class _StaffDashboardState extends State<StaffDashboard> {
                 .get();
 
         if (staffDoc.exists) {
+          final organizerId = staffDoc.data()?['organizerId'];
+          print('✅ STAFF DEBUG: Found organizer ID: $organizerId');
+
           setState(() {
-            _organizerId = staffDoc.data()?['organizerId'];
+            _organizerId = organizerId;
           });
           await _loadDashboardData();
+        } else {
+          print('❌ STAFF DEBUG: Staff document does not exist');
+          setState(() {
+            _error = 'Staff record not found';
+          });
         }
+      } else {
+        print('❌ STAFF DEBUG: No authenticated user found');
+        setState(() {
+          _error = 'User not authenticated';
+        });
       }
     } catch (e) {
+      print('❌ STAFF DEBUG: Error loading staff organizer ID: $e');
       setState(() {
         _error = 'Failed to load staff data: ${e.toString()}';
       });
@@ -79,7 +98,10 @@ class _StaffDashboardState extends State<StaffDashboard> {
   }
 
   Future<void> _loadDashboardData() async {
-    if (_organizerId == null) return;
+    if (_organizerId == null) {
+      print('❌ STAFF DEBUG: No organizer ID available');
+      return;
+    }
 
     try {
       setState(() {
@@ -87,68 +109,249 @@ class _StaffDashboardState extends State<StaffDashboard> {
         _error = null;
       });
 
-      final results = await Future.wait([
-        _databaseService.getEventsForOrganizer(_organizerId!),
-        _databaseService.getStaffAttendees(
-          FirebaseAuth.instance.currentUser!.uid,
-        ),
-        _databaseService.getStaffDashboardStats(
-          FirebaseAuth.instance.currentUser!.uid,
-        ),
-        _databaseService.getEventIdToNameMap(),
-        _databaseService.getAllRegistrations(),
-      ]);
+      final currentStaffId = FirebaseAuth.instance.currentUser!.uid;
+      print(
+        '🔍 STAFF DEBUG: Loading dashboard data for organizer: $_organizerId, staff: $currentStaffId',
+      );
+
+      // 1. Load organizer's events
+      final events = await _databaseService.getEventsForOrganizer(
+        _organizerId!,
+      );
+      print('📊 STAFF DEBUG: Loaded ${events.length} events');
+
+      if (events.isEmpty) {
+        setState(() {
+          _events = events;
+          _attendees = [];
+          _registrations = [];
+          _staffConfirmedRegistrations = [];
+          _eventIdToNameMap = {};
+          _dashboardStats = StaffDashboardStats(
+            totalEvents: 0,
+            totalConfirmed: 0,
+            upcomingEvents: 0,
+          );
+          _isLoading = false;
+        });
+        return;
+      }
+
+      // 2. Get all registrations for organizer's events
+      final eventIds = events.map((e) => e.id).toList();
+      final allRegistrations = await _getAllRegistrationsForEvents(eventIds);
+      print(
+        '📊 STAFF DEBUG: Loaded ${allRegistrations.length} total registrations',
+      );
+
+      // 3. Filter registrations confirmed by current staff
+      final staffConfirmedRegistrations =
+          allRegistrations
+              .where((reg) => reg.confirmedBy == currentStaffId && reg.attended)
+              .toList();
+      print(
+        '📊 STAFF DEBUG: Found ${staffConfirmedRegistrations.length} registrations confirmed by staff',
+      );
+
+      // 4. Get all attendees for organizer's events (similar to organizer dashboard)
+      final attendees = await _getAllAttendeesForOrganizer(_organizerId!);
+      print('📊 STAFF DEBUG: Loaded ${attendees.length} attendees');
+
+      // 5. Sort attendees by registration date and get latest 5
+      final sortedAttendees =
+          _sortAttendeesByRegistrationDate(
+            attendees,
+            allRegistrations,
+          ).take(5).toList();
+
+      print(
+        '📊 STAFF DEBUG: Sorted and limited to ${sortedAttendees.length} latest attendees',
+      );
 
       setState(() {
-        _events = results[0] as List<Event>;
-        final allRegistrations = results[4] as List<Registration>;
-        _attendees =
-            (results[1] as List<Attendee>)
-              ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-        _attendees = _attendees.take(5).toList();
-
-        final statsData = results[2] as Map<String, dynamic>;
-
-        // Get all registrations for activity tracking
+        _events = events;
+        _attendees = sortedAttendees;
         _registrations = allRegistrations;
+        _staffConfirmedRegistrations = staffConfirmedRegistrations;
 
-        // Create event ID to name map from the events we have
+        // Create event ID to name map
         _eventIdToNameMap = {};
         for (final event in _events) {
           _eventIdToNameMap[event.id] = event.name;
         }
 
-        // Also add from the database service result
-        final dbEventNames = results[3] as Map<String, String>;
-        _eventIdToNameMap.addAll(dbEventNames);
-
-        // Create attendee ID to name map
-        _attendeeIdToNameMap = {};
-        for (final attendee in _attendees) {
-          _attendeeIdToNameMap[attendee.id] = attendee.fullName;
+        // Create composite ID to registration map
+        _compositeIdToRegistrationMap = {};
+        for (final registration in _registrations) {
+          final compositeId = Registration.getCompositeId(
+            registration.userId,
+            registration.eventId,
+          );
+          _compositeIdToRegistrationMap[compositeId] = registration;
         }
 
-        // Calculate stats from events
-        final totalEvents = _events.length;
-        final now = DateTime.now();
-        final upcomingEvents =
-            _events.where((event) => event.startDate.isAfter(now)).length;
+        // Create composite ID to attendee map
+        _compositeIdToAttendeeMap = {};
+        for (final attendee in attendees) {
+          _compositeIdToAttendeeMap[attendee.id] = attendee;
+        }
+
+        // Update stats
+        final upcomingEventsCount =
+            _events.where((e) => e.startDate.isAfter(DateTime.now())).length;
 
         _dashboardStats = StaffDashboardStats(
-          totalEvents: totalEvents,
-          totalConfirmed: statsData['totalConfirmed'] ?? 0,
-          upcomingEvents: upcomingEvents,
+          totalEvents: _events.length,
+          totalConfirmed: staffConfirmedRegistrations.length,
+          upcomingEvents: upcomingEventsCount,
+        );
+
+        print(
+          '📊 STAFF DEBUG: Final stats - Events: ${_events.length}, Confirmed by Staff: ${staffConfirmedRegistrations.length}, Upcoming: $upcomingEventsCount',
         );
 
         _isLoading = false;
       });
     } catch (e) {
+      print('❌ STAFF DEBUG: Error loading dashboard data: $e');
       setState(() {
         _error = 'Failed to load dashboard data: ${e.toString()}';
         _isLoading = false;
       });
-      debugPrint('Dashboard loading error: $e');
     }
+  }
+
+  // NEW: Custom method to get all registrations for specific events
+  Future<List<Registration>> _getAllRegistrationsForEvents(
+    List<String> eventIds,
+  ) async {
+    try {
+      if (eventIds.isEmpty) return [];
+
+      // Split into chunks of 10 for Firestore whereIn limit
+      List<Registration> allRegistrations = [];
+      final chunks = <List<String>>[];
+      for (int i = 0; i < eventIds.length; i += 10) {
+        chunks.add(eventIds.skip(i).take(10).toList());
+      }
+
+      for (final chunk in chunks) {
+        final snapshot =
+            await FirebaseFirestore.instance
+                .collection('registrations')
+                .where('eventId', whereIn: chunk)
+                .orderBy('registeredAt', descending: true)
+                .get();
+
+        final chunkRegistrations =
+            snapshot.docs
+                .map((doc) => Registration.fromFirestore(doc))
+                .toList();
+
+        allRegistrations.addAll(chunkRegistrations);
+      }
+
+      return allRegistrations;
+    } catch (e) {
+      throw Exception('Failed to get registrations for events: $e');
+    }
+  }
+
+  // NEW: Custom method to get all attendees for specific organizer (similar to organizer dashboard)
+  Future<List<Attendee>> _getAllAttendeesForOrganizer(
+    String organizerId,
+  ) async {
+    try {
+      // Get all events by this organizer
+      final eventsSnapshot =
+          await FirebaseFirestore.instance
+              .collection('events')
+              .where('organizerId', isEqualTo: organizerId)
+              .get();
+
+      if (eventsSnapshot.docs.isEmpty) {
+        return [];
+      }
+
+      final eventIds = eventsSnapshot.docs.map((doc) => doc.id).toList();
+
+      // Get all registrations for these events
+      final registrations = await _getAllRegistrationsForEvents(eventIds);
+
+      List<Attendee> attendees = [];
+
+      for (final registration in registrations) {
+        try {
+          // Get user details
+          final userDoc =
+              await FirebaseFirestore.instance
+                  .collection('attendees')
+                  .doc(registration.userId)
+                  .get();
+          if (!userDoc.exists) continue;
+
+          final userData = userDoc.data() as Map<String, dynamic>;
+
+          // Composite ID format
+          final compositeId = Registration.getCompositeId(
+            registration.userId,
+            registration.eventId,
+          );
+
+          // Create Attendee object with unique ID combining userId and eventId
+          final attendee = Attendee(
+            id: compositeId,
+            fullName: userData['fullName'] ?? userData['name'] ?? 'Unknown',
+            email: userData['email'] ?? '',
+            phone: userData['phone'] ?? '',
+            profileImage: userData['profileImage'],
+            isApproved: true,
+            createdAt:
+                (userData['createdAt'] as Timestamp?)?.toDate() ??
+                DateTime.now(),
+            updatedAt:
+                (userData['updatedAt'] as Timestamp?)?.toDate() ??
+                DateTime.now(),
+          );
+
+          attendees.add(attendee);
+        } catch (e) {
+          print(
+            '❌ STAFF DEBUG: Error processing attendee for registration ${registration.id}: $e',
+          );
+          continue;
+        }
+      }
+
+      return attendees;
+    } catch (e) {
+      throw Exception('Failed to get attendees for organizer: $e');
+    }
+  }
+
+  // Helper method to sort attendees by registration date (same as organizer dashboard)
+  List<Attendee> _sortAttendeesByRegistrationDate(
+    List<Attendee> attendees,
+    List<Registration> registrations,
+  ) {
+    // Create a map of composite ID to registration date for quick lookup
+    final registrationDateMap = <String, DateTime>{};
+    for (final registration in registrations) {
+      final compositeId = Registration.getCompositeId(
+        registration.userId,
+        registration.eventId,
+      );
+      registrationDateMap[compositeId] = registration.registeredAt;
+    }
+
+    // Sort attendees by registration date (most recent first)
+    attendees.sort((a, b) {
+      final dateA = registrationDateMap[a.id] ?? a.createdAt;
+      final dateB = registrationDateMap[b.id] ?? b.createdAt;
+      return dateB.compareTo(dateA);
+    });
+
+    return attendees;
   }
 
   void _handleQuickAction(String action) {
@@ -251,6 +454,9 @@ class _StaffDashboardState extends State<StaffDashboard> {
             StaffLatestAttendeesCard(
               attendees: _attendees,
               registrations: _registrations,
+              eventNames: _eventIdToNameMap,
+              compositeIdToRegistrationMap: _compositeIdToRegistrationMap,
+              currentStaffId: FirebaseAuth.instance.currentUser!.uid,
             ),
             const SizedBox(height: 24),
             StaffQuickActionsGrid(onNavigate: _handleQuickAction),
@@ -273,7 +479,7 @@ class _StaffDashboardState extends State<StaffDashboard> {
         Container(
           decoration: AppConstants.cardDecoration,
           child:
-              _events.isEmpty
+              _events.isEmpty && _attendees.isEmpty
                   ? _buildEmptyActivityState()
                   : ListView.separated(
                     shrinkWrap: true,
@@ -283,6 +489,7 @@ class _StaffDashboardState extends State<StaffDashboard> {
                         (context, index) => const Divider(height: 1),
                     itemBuilder: (context, index) {
                       final activities = _getRecentActivities();
+                      if (activities.isEmpty) return _buildEmptyActivityState();
                       final activity = activities[index];
 
                       return ListTile(
@@ -338,7 +545,7 @@ class _StaffDashboardState extends State<StaffDashboard> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Activity will appear here as you manage your events',
+              'Activity will appear here as you manage events',
               textAlign: TextAlign.center,
               style: AppConstants.bodySmall.copyWith(
                 color: AppConstants.textSecondaryColor,
@@ -347,7 +554,9 @@ class _StaffDashboardState extends State<StaffDashboard> {
             const SizedBox(height: 16),
             ElevatedButton.icon(
               onPressed: () {
-                Navigator.of(context).pushReplacementNamed('/organizer-events');
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => const StaffEvents()),
+                );
               },
               icon: const Icon(Icons.event),
               label: const Text('View Events'),
@@ -383,7 +592,9 @@ class _StaffDashboardState extends State<StaffDashboard> {
             Text('Upcoming Events', style: AppConstants.headlineSmall),
             TextButton(
               onPressed: () {
-                Navigator.of(context).pushReplacementNamed('/organizer-events');
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => const StaffEvents()),
+                );
               },
               child: const Text('View All Events'),
             ),
@@ -530,7 +741,7 @@ class _StaffDashboardState extends State<StaffDashboard> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Create your first event to get started',
+              'Upcoming events will appear here',
               textAlign: TextAlign.center,
               style: AppConstants.bodySmall.copyWith(
                 color: AppConstants.textSecondaryColor,
@@ -542,26 +753,101 @@ class _StaffDashboardState extends State<StaffDashboard> {
     );
   }
 
+  // Updated recent activities method (similar to organizer dashboard logic)
   List<Map<String, dynamic>> _getRecentActivities() {
-    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
-    if (currentUserId == null) return [];
+    if (_events.isEmpty && _attendees.isEmpty) {
+      print('📊 STAFF DEBUG: No data available for recent activities');
+      return [];
+    }
 
-    return _registrations
-        .where((reg) => reg.confirmedBy == currentUserId)
-        .where((reg) => reg.attendedAt != null)
-        .map((reg) {
-          // Get attendee name from the map, fallback to userId if not found
-          final attendeeName = _attendeeIdToNameMap[reg.userId] ?? reg.userId;
+    List<Map<String, dynamic>> activities = [];
 
-          return {
-            'title': 'Confirmed attendance for $attendeeName',
-            'time': _getTimeAgo(reg.attendedAt!),
-            'icon': Icons.check_circle,
-            'color': AppConstants.successColor,
-            'isNew': true,
-          };
-        })
-        .toList();
+    // Add recent event activities (organizer events this staff can see)
+    for (final event in _events.take(2)) {
+      activities.add({
+        'title': 'Event "${event.name}" created by your Organizer',
+        'time': _getTimeAgo(event.createdAt),
+        'icon': Icons.event,
+        'color': AppConstants.primaryColor,
+        'isNew': _isRecent(event.createdAt),
+        'dateTime': event.createdAt,
+      });
+    }
+
+    // Add recent attendee registration activities
+    for (final attendee in _attendees.take(3)) {
+      // Find the registration for this attendee
+      final registration = _registrations.firstWhere(
+        (reg) =>
+            Registration.getCompositeId(reg.userId, reg.eventId) == attendee.id,
+        orElse:
+            () => Registration(
+              id: '',
+              userId: attendee.id.split('_').first,
+              eventId: attendee.id.split('_').last,
+              registeredAt: attendee.createdAt,
+              attended: false,
+              qrCode: '',
+              confirmedBy: '',
+            ),
+      );
+
+      final eventName =
+          _eventIdToNameMap[registration.eventId] ?? 'Unknown Event';
+
+      activities.add({
+        'title': '${attendee.fullName} registered for "$eventName"',
+        'time': _getTimeAgo(registration.registeredAt),
+        'icon': Icons.person_add,
+        'color': AppConstants.successColor,
+        'isNew': _isRecent(registration.registeredAt),
+        'dateTime': registration.registeredAt,
+      });
+    }
+
+    // Add staff confirmation activities
+    for (final registration in _staffConfirmedRegistrations.take(2)) {
+      final attendee =
+          _compositeIdToAttendeeMap[Registration.getCompositeId(
+            registration.userId,
+            registration.eventId,
+          )];
+      final eventName =
+          _eventIdToNameMap[registration.eventId] ?? 'Unknown Event';
+      final attendeeName =
+          attendee?.fullName ??
+          'Attendee ${registration.userId.substring(0, 8)}';
+
+      activities.add({
+        'title': 'Confirmed $attendeeName for "$eventName"',
+        'time':
+            registration.attendedAt != null
+                ? _getTimeAgo(registration.attendedAt!)
+                : 'Recently',
+        'icon': Icons.check_circle,
+        'color': AppConstants.accentColor,
+        'isNew':
+            registration.attendedAt != null
+                ? _isRecent(registration.attendedAt!)
+                : true,
+        'dateTime': registration.attendedAt ?? DateTime.now(),
+      });
+    }
+
+    // Sort by most recent
+    activities.sort((a, b) => b['dateTime'].compareTo(a['dateTime']));
+
+    // Remove the dateTime field after sorting
+    for (var activity in activities) {
+      activity.remove('dateTime');
+    }
+
+    print('📊 STAFF DEBUG: Generated ${activities.length} recent activities');
+    return activities.take(6).toList();
+  }
+
+  bool _isRecent(DateTime dateTime) {
+    return DateTime.now().difference(dateTime).inDays < 7;
   }
 
   String _getTimeAgo(DateTime dateTime) {

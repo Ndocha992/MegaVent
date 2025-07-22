@@ -68,15 +68,13 @@ class AdminRegistrationsSection extends StatelessWidget {
                               ),
                               decoration: BoxDecoration(
                                 color:
-                                    registration.hasAttended
+                                    registration.attended
                                         ? AppConstants.successColor
                                         : AppConstants.warningColor,
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
-                                registration.hasAttended
-                                    ? 'Attended'
-                                    : 'Pending',
+                                registration.attended ? 'Attended' : 'Pending',
                                 style: AppConstants.bodySmall.copyWith(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,

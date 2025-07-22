@@ -124,14 +124,6 @@ class DatabaseService extends ChangeNotifier {
     return _eventService.getEventsForOrganizer(organizerId);
   }
 
-  Future<List<Attendee>> getStaffAttendees(String staffId) {
-    return _attendeeService.getStaffAttendees(staffId);
-  }
-
-  Future<Map<String, dynamic>> getStaffDashboardStats(String staffId) {
-    return _dashboardService.getStaffDashboardStats(staffId);
-  }
-
   // Stream current staff data (for authenticated staff user)
   Stream<Staff?> streamCurrentStaffData() =>
       _staffService.streamCurrentStaffData();
@@ -240,15 +232,8 @@ class DatabaseService extends ChangeNotifier {
   ) => _registrationService.getRegistrationByUserAndEvent(userId, eventId);
 
   // MARK ATTENDANCE BY QR CODE UPDATED - ADDED isOrganizer PARAMETER
-  Future<void> markAttendanceByQRCode(
-    String qrCodeData,
-    String userId, {
-    bool isOrganizer = false,
-  }) => _registrationService.markAttendanceByQRCode(
-    qrCodeData,
-    userId,
-    isOrganizer: isOrganizer,
-  );
+  Future<void> markAttendanceByQRCode(String qrCodeData, String userId) =>
+      _registrationService.markAttendanceByQRCode(qrCodeData, userId);
 
   // Get registration by QR code
   Future<Registration?> getRegistrationByQRCode(String qrCodeData) =>

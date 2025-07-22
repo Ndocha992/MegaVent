@@ -245,14 +245,10 @@ class AttendeeSidebar extends StatelessWidget {
                               context: context,
                               barrierDismissible: false,
                               builder:
-                                  (context) => Container(
-                                    color: AppConstants.primaryColor
-                                        .withOpacity(0.1),
-                                    child: const Center(
-                                      child: SpinKitThreeBounce(
-                                        color: AppConstants.primaryColor,
-                                        size: 20.0,
-                                      ),
+                                  (context) => const Center(
+                                    child: SpinKitThreeBounce(
+                                      color: AppConstants.primaryColor,
+                                      size: 20.0,
                                     ),
                                   ),
                             );
@@ -295,13 +291,10 @@ class AttendeeSidebar extends StatelessWidget {
                   ),
                   child:
                       authService.isLoading
-                          ? Container(
-                            color: AppConstants.primaryColor.withOpacity(0.1),
-                            child: const Center(
-                              child: SpinKitThreeBounce(
-                                color: AppConstants.primaryColor,
-                                size: 20.0,
-                              ),
+                          ? const Center(
+                            child: SpinKitThreeBounce(
+                              color: AppConstants.primaryColor,
+                              size: 20.0,
                             ),
                           )
                           : const Text(

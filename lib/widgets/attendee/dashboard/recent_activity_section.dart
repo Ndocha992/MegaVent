@@ -22,46 +22,49 @@ class RecentActivitySection extends StatelessWidget {
         const SizedBox(height: 16),
         Container(
           decoration: AppConstants.cardDecoration,
-          child: myRegistrations.isEmpty
-              ? _buildEmptyActivityState()
-              : ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: _getRecentActivities().length,
-                  separatorBuilder: (context, index) => const Divider(height: 1),
-                  itemBuilder: (context, index) {
-                    final activities = _getRecentActivities();
-                    final activity = activities[index];
-                    return ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: activity['color'].withOpacity(0.1),
-                        child: Icon(
-                          activity['icon'],
-                          color: activity['color'],
-                          size: 20,
+          child:
+              myRegistrations.isEmpty
+                  ? _buildEmptyActivityState()
+                  : ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: _getRecentActivities().length,
+                    separatorBuilder:
+                        (context, index) => const Divider(height: 1),
+                    itemBuilder: (context, index) {
+                      final activities = _getRecentActivities();
+                      final activity = activities[index];
+                      return ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: activity['color'].withOpacity(0.1),
+                          child: Icon(
+                            activity['icon'],
+                            color: activity['color'],
+                            size: 20,
+                          ),
                         ),
-                      ),
-                      title: Text(
-                        activity['title'],
-                        style: AppConstants.titleMedium,
-                      ),
-                      subtitle: Text(
-                        activity['time'],
-                        style: AppConstants.bodySmall,
-                      ),
-                      trailing: activity['isNew']
-                          ? Container(
-                              width: 8,
-                              height: 8,
-                              decoration: const BoxDecoration(
-                                color: AppConstants.successColor,
-                                shape: BoxShape.circle,
-                              ),
-                            )
-                          : null,
-                    );
-                  },
-                ),
+                        title: Text(
+                          activity['title'],
+                          style: AppConstants.titleMedium,
+                        ),
+                        subtitle: Text(
+                          activity['time'],
+                          style: AppConstants.bodySmall,
+                        ),
+                        trailing:
+                            activity['isNew']
+                                ? Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: const BoxDecoration(
+                                    color: AppConstants.successColor,
+                                    shape: BoxShape.circle,
+                                  ),
+                                )
+                                : null,
+                      );
+                    },
+                  ),
         ),
       ],
     );
@@ -117,7 +120,7 @@ class RecentActivitySection extends StatelessWidget {
       });
 
       // Add attendance activity if attended
-      if (registration.hasAttended && registration.attendedAt != null) {
+      if (registration.attended && registration.attendedAt != null) {
         activities.add({
           'title': 'Attended "${event.name}"',
           'time': _getTimeAgo(registration.attendedAt!),
