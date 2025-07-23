@@ -55,8 +55,18 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
             
-            <!-- Deep link intent filter for your custom scheme -->
+            <!-- Deep link intent filter for https link -->
             <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <!-- Replace with your actual Vercel domain -->
+                <data android:scheme="https"
+                    android:host="https://megaventqr.vercel.app" />
+            </intent-filter>
+
+            <!-- Deep link intent filter for your custom scheme -->
+            <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />

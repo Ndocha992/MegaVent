@@ -34,6 +34,25 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<!-- Add this to your Info.plist -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>megavent.deeplink</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>megavent</string>
+				<string>https</string>
+			</array>
+		</dict>
+	</array>
+
+	<!-- Add associated domains for your Vercel app -->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:https://megaventqr.vercel.app</string>
+	</array>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>

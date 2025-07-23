@@ -23,6 +23,15 @@ class DeepLinkService {
     _setupDeepLinks();
   }
 
+  void handleWebAppRedirect(String eventId, bool autoRegister) {
+    if (_context == null) return;
+
+    print(
+      'Handling web app redirect - EventId: $eventId, AutoRegister: $autoRegister',
+    );
+    _handleEventRegistration(eventId, autoRegister);
+  }
+
   void _setupDeepLinks() {
     // Listen for incoming links when app is already running
     _linkSubscription = _appLinks.uriLinkStream.listen(
@@ -53,46 +62,43 @@ class DeepLinkService {
   void _handleDeepLink(Uri link) {
     if (_context == null) return;
 
-    // Parse parameters
-    final String? eventId = link.queryParameters['eventId'];
-    final bool autoRegister = link.queryParameters['autoRegister'] == 'true';
+    print('Processing deep link: ${link.toString()}');
 
-    if (eventId != null && link.path.contains('register')) {
+    // Handle custom scheme (megavent://)
+    bool isCustomSchemeRegister =
+        link.scheme == 'megavent' &&
+        (link.host == 'register' || link.path.contains('register'));
+
+    // Handle web app URLs (https://megaventqr.vercel.app)
+    bool isWebAppRegister =
+        (link.host == 'megaventqr.vercel.app' ||
+            link.host == 'www.megaventqr.vercel.app') &&
+        link.scheme == 'https';
+
+    // Handle any path that contains register
+    bool isRegisterPath = link.path.contains('register');
+
+    String? eventId =
+        link.queryParameters['eventId'] ?? link.queryParameters['eventid'];
+
+    bool autoRegister =
+        link.queryParameters['autoRegister'] == 'true' ||
+        link.queryParameters['autoregister'] == 'true';
+
+    print(
+      'Link analysis: scheme=${link.scheme}, host=${link.host}, path=${link.path}',
+    );
+    print('Event ID: $eventId, Auto Register: $autoRegister');
+    print('Is Custom Scheme Register: $isCustomSchemeRegister');
+    print('Is Web App Register: $isWebAppRegister');
+    print('Is Register Path: $isRegisterPath');
+
+    if (eventId != null &&
+        (isCustomSchemeRegister || isWebAppRegister || isRegisterPath)) {
       _handleEventRegistration(eventId, autoRegister);
-    } else if (link.path.contains('download')) {
-      _handleAppDownload();
+    } else {
+      print('Deep link does not contain valid event registration parameters');
     }
-  }
-
-  void _handleAppDownload() {
-    const appUrl = 'https://mediafire.com/app-download-link';
-    if (_context != null) {
-      _showDialog(
-        title: 'Download MegaVent',
-        content: 'You need to install the MegaVent app to use this feature',
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(_context!).pop(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(_context!).pop();
-              launchURL(appUrl);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppConstants.primaryColor,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Download App'),
-          ),
-        ],
-      );
-    }
-  }
-
-  void launchURL(String url) async {
-    // Implementation to launch URL
   }
 
   void _handleEventRegistration(String eventId, bool autoRegister) async {
@@ -425,71 +431,38 @@ class DeepLinkService {
     }
   }
 
-  // Store event for registration after login - COMPLETED IMPLEMENTATION
+  // Store event for registration after login
   Future<void> _storeEventForLaterRegistration(
     String eventId,
     bool autoRegister,
   ) async {
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
-      await prefs.setString('pending_event_registration', eventId);
+      await prefs.setString('pending_event_id', eventId);
       await prefs.setBool('pending_auto_register', autoRegister);
-
-      print('Event stored for later registration: $eventId');
     } catch (e) {
-      print('Error storing event for later: $e');
+      print('Error storing event: $e');
     }
   }
 
-  // Check for pending registration after login - COMPLETED IMPLEMENTATION
+  // Check for pending registration after login
   Future<void> checkPendingRegistration() async {
     if (_context == null) return;
 
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
-      String? eventId = prefs.getString('pending_event_registration');
+      String? eventId = prefs.getString('pending_event_id');
       bool autoRegister = prefs.getBool('pending_auto_register') ?? false;
 
       if (eventId != null) {
-        // Clear the stored data
-        await prefs.remove('pending_event_registration');
+        // Clear storage immediately
+        await prefs.remove('pending_event_id');
         await prefs.remove('pending_auto_register');
 
-        // Show message and handle registration
-        _showMessage('Completing your event registration...', isError: false);
-
-        // Add a small delay to let the user see the message
-        await Future.delayed(const Duration(milliseconds: 1500));
-
-        // Handle the registration
-        final authService = Provider.of<AuthService>(_context!, listen: false);
-        final databaseService = Provider.of<DatabaseService>(
-          _context!,
-          listen: false,
-        );
-
-        // Check user type again
-        final userData = await authService.getUserData();
-        if (!userData['success']) return;
-
-        final userType = userData['role'];
-
-        if (userType == 'attendee') {
-          if (autoRegister) {
-            await _attemptAutoRegistration(
-              eventId,
-              authService,
-              databaseService,
-            );
-          } else {
-            _navigateToEventDetails(eventId);
-          }
-        } else {
-          _showEventDetailsForNonAttendee(eventId, userType);
-        }
+        _handleEventRegistration(eventId, autoRegister);
       }
     } catch (e) {
-      print('Error checking pending registration: $e');
+      print('Error checking pending: $e');
     }
   }
 
