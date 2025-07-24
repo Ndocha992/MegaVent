@@ -55,12 +55,31 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
             
-            <!-- Deep link intent filter for your custom scheme -->
+            <!-- Deep link intent filter for https link (FIXED: removed https:// from host) -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https"
+                    android:host="megaventqr.vercel.app" />
+            </intent-filter>
+
+            <!-- Deep link intent filter for your custom scheme -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="megavent" />
+            </intent-filter>
+            
+            <!-- Additional intent filter for specific registration path -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https"
+                    android:host="megaventqr.vercel.app"
+                    android:pathPrefix="/register" />
             </intent-filter>
         </activity>
         

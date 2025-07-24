@@ -18,10 +18,12 @@ class AttendeeShareEventBottomSheet extends StatefulWidget {
   const AttendeeShareEventBottomSheet({super.key, required this.event});
 
   @override
-  State<AttendeeShareEventBottomSheet> createState() => _AttendeeShareEventBottomSheetState();
+  State<AttendeeShareEventBottomSheet> createState() =>
+      _AttendeeShareEventBottomSheetState();
 }
 
-class _AttendeeShareEventBottomSheetState extends State<AttendeeShareEventBottomSheet> {
+class _AttendeeShareEventBottomSheetState
+    extends State<AttendeeShareEventBottomSheet> {
   final GlobalKey _qrKey = GlobalKey();
   bool _isSharing = false;
   String? _registrationLink;
@@ -207,11 +209,12 @@ class _AttendeeShareEventBottomSheetState extends State<AttendeeShareEventBottom
   }
 
   void _generateRegistrationLink() {
-    // Generate deep link that opens app or download page
-    final String appDeepLink = 'megavent://register?eventId=${widget.event.id}&autoRegister=true';
-    
+    final String webAppUrl = 'https://megaventqr.vercel.app';
+    final String registrationLink =
+        '$webAppUrl?eventId=${widget.event.id}&autoRegister=true';
+
     setState(() {
-      _registrationLink = appDeepLink;
+      _registrationLink = registrationLink;
     });
   }
 

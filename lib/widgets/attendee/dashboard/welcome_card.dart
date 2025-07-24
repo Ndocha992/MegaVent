@@ -23,7 +23,7 @@ class AttendeeWelcomeCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Ready to create amazing events?',
+                  'Ready to explore amazing events?',
                   style: AppConstants.bodyMedium.copyWith(
                     color: Colors.white.withOpacity(0.9),
                   ),

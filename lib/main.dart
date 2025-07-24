@@ -97,10 +97,10 @@ class _MyAppState extends State<MyApp> {
       listen: false,
     );
 
-    // Only listen for deep link related auth changes
     authService.addListener(() {
       if (authService.isLoggedIn) {
-        // Check for pending event registration after successful login
+        // Reinitialize deep links with current context
+        DeepLinkService().initialize(navigatorKey.currentContext!);
         DeepLinkService().checkPendingRegistration();
       }
     });
@@ -135,6 +135,29 @@ class _MyAppState extends State<MyApp> {
         scaffoldBackgroundColor: AppConstants.backgroundColor,
       ),
       home: const SplashScreen(),
+      // Handle both custom scheme and web URLs
+      onGenerateRoute: (settings) {
+        // Handle web app redirects
+        if (settings.name?.startsWith('https://megaventqr.vercel.app') ==
+            true) {
+          final uri = Uri.parse(settings.name!);
+          final eventId = uri.queryParameters['eventId'];
+          final autoRegister = uri.queryParameters['autoRegister'] == 'true';
+
+          if (eventId != null) {
+            // Use DeepLinkService to handle the registration
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              DeepLinkService().handleWebAppRedirect(eventId, autoRegister);
+            });
+          }
+
+          // Return splash screen while processing
+          return MaterialPageRoute(builder: (_) => const SplashScreen());
+        }
+
+        // Handle normal routes
+        return _generateRoute(settings);
+      },
       routes: {
         // Auth routes
         '/login': (context) => const LoginScreen(),
@@ -152,8 +175,13 @@ class _MyAppState extends State<MyApp> {
         // Attendee routes
         '/attendee-dashboard': (context) => const AttendeeDashboard(),
         '/attendee-all-events': (context) => const AttendeeAllEvents(),
-        '/attendee-all-events-details':
-            (context) => const AttendeeEventsDetails(),
+        '/attendee-event-details': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments as Map;
+          return AttendeeEventsDetails(
+            eventId: args['eventId'],
+            autoRegister: args['autoRegister'] ?? false,
+          );
+        },
         '/attendee-my-events': (context) => const AttendeeMyEvents(),
         '/attendee-profile': (context) => const AttendeeProfile(),
         // Staff routes
@@ -168,5 +196,71 @@ class _MyAppState extends State<MyApp> {
         '/admin-profile': (context) => const AdminProfile(),
       },
     );
+  }
+
+  Route<dynamic>? _generateRoute(RouteSettings settings) {
+    switch (settings.name) {
+      case '/login':
+        return MaterialPageRoute(builder: (_) => const LoginScreen());
+      case '/register':
+        return MaterialPageRoute(builder: (_) => const RegisterScreen());
+      case '/verify-email':
+        return MaterialPageRoute(builder: (_) => const VerificationScreen());
+      case '/forgot-password':
+        return MaterialPageRoute(builder: (_) => const ForgotPasswordScreen());
+      // Organizer routes
+      case '/organizer-dashboard':
+        return MaterialPageRoute(builder: (_) => const OrganizerDashboard());
+      case '/organizer-events':
+        return MaterialPageRoute(builder: (_) => const Events());
+      case '/organizer-scanqr':
+        return MaterialPageRoute(builder: (_) => const QRScanner());
+      case '/organizer-staff':
+        return MaterialPageRoute(builder: (_) => const StaffScreen());
+      case '/organizer-attendees':
+        return MaterialPageRoute(builder: (_) => const Attendees());
+      case '/organizer-profile':
+        return MaterialPageRoute(builder: (_) => const Profile());
+      case '/organizer-event-details':
+        return MaterialPageRoute(builder: (_) => const EventsDetails());
+      // Attendee routes
+      case '/attendee-dashboard':
+        return MaterialPageRoute(builder: (_) => const AttendeeDashboard());
+      case '/attendee-all-events':
+        return MaterialPageRoute(builder: (_) => const AttendeeAllEvents());
+      case '/attendee-event-details':
+        final args = settings.arguments as Map?;
+        return MaterialPageRoute(
+          builder:
+              (_) => AttendeeEventsDetails(
+                eventId: args?['eventId'] ?? '',
+                autoRegister: args?['autoRegister'] ?? false,
+              ),
+        );
+      case '/attendee-my-events':
+        return MaterialPageRoute(builder: (_) => const AttendeeMyEvents());
+      case '/attendee-profile':
+        return MaterialPageRoute(builder: (_) => const AttendeeProfile());
+      // Staff routes
+      case '/staff-dashboard':
+        return MaterialPageRoute(builder: (_) => const StaffDashboard());
+      case '/staff-events':
+        return MaterialPageRoute(builder: (_) => const StaffEvents());
+      case '/staff-scanqr':
+        return MaterialPageRoute(builder: (_) => const StaffQRScanner());
+      case '/staff-profile':
+        return MaterialPageRoute(builder: (_) => const StaffProfile());
+      case '/staff-event-details':
+        return MaterialPageRoute(builder: (_) => const StaffEventsDetails());
+      // Admin routes
+      case '/admin-dashboard':
+        return MaterialPageRoute(builder: (_) => const AdminDashboard());
+      case '/admin-organizers':
+        return MaterialPageRoute(builder: (_) => const OrganizerScreen());
+      case '/admin-profile':
+        return MaterialPageRoute(builder: (_) => const AdminProfile());
+      default:
+        return null;
+    }
   }
 }

@@ -209,10 +209,8 @@ class _StaffShareEventBottomSheetState
   }
 
   void _generateRegistrationLink() {
-    // Generate deep link that opens app or download page
     final String appDeepLink =
         'megavent://register?eventId=${widget.event.id}&autoRegister=true';
-
     setState(() {
       _registrationLink = appDeepLink;
     });
